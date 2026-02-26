@@ -532,6 +532,15 @@ export default function VisionHistoryPage() {
                                           {member.email}
                                         </p>
                                       </div>
+                                      {/* Botón de Álbum por participante */}
+                                      <Link
+                                        href={`/dashboard/game-changer/legacy-capture?visionId=${vision.id}&participantId=${member.id}&level=${atomo.level}`}
+                                        className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg text-white text-xs font-medium transition-all"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <Camera className="w-3.5 h-3.5" />
+                                        Álbum
+                                      </Link>
                                     </div>
                                   ))}
                                 </div>
@@ -562,16 +571,6 @@ export default function VisionHistoryPage() {
                             </p>
                           </div>
                         )}
-                        
-                        {/* Botón para acceder al Álbum de Recuerdos - Para Game Changers */}
-                        <Link
-                          href={`/dashboard/game-changer/legacy-capture?visionId=${vision.id}`}
-                          className="mt-4 flex items-center justify-center gap-2 w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl text-white font-semibold transition-all"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Camera className="w-5 h-5" />
-                          Completar Álbum de Recuerdos
-                        </Link>
                       </div>
                     </motion.div>
                   )}
