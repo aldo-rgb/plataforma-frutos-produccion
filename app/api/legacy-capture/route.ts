@@ -90,10 +90,10 @@ export async function GET(request: NextRequest) {
             isActive: true
           },
           include: {
-            members: {
+            SmallGroupMember: {
               where: { isActive: true },
               include: {
-                user: {
+                Usuario_SmallGroupMember_userIdToUsuario: {
                   select: {
                     id: true,
                     nombre: true,
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 
         // Extraer todos los participantes de los squads
         const participantesDelSquad = squads.flatMap(squad => 
-          squad.members.map(member => member.user)
+          squad.SmallGroupMember.map(member => member.Usuario_SmallGroupMember_userIdToUsuario)
         );
 
         // Obtener capturas existentes para esta visión
