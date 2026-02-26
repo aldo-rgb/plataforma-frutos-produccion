@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Target, BarChart3, Zap,
   AlertTriangle, GraduationCap, Star, Activity,
-  FileText, Shield, Heart, ChevronRight
+  FileText, Shield, Heart
 } from 'lucide-react';
 import Link from 'next/link';
 import VisionesWidget from '@/components/dashboard/VisionesWidget';
@@ -15,7 +15,6 @@ import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
 import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
-import { ElCruceAccessWidget } from '@/components/el-cruce';
 import CartaPrellenadaWidget from '@/components/dashboard/CartaPrellenadaWidget';
 
 interface DashboardData {
@@ -279,26 +278,6 @@ export default function CoordinadorDashboard() {
         <div className="mt-8">
           <BacklogsDropsWidget />
         </div>
-
-        {/* Botón de El Atravesar - Lleva a página dedicada */}
-        <Link href="/dashboard/trainer/el-atravesar" className="block mt-8">
-          <div className="bg-gradient-to-br from-amber-900/30 via-orange-900/20 to-slate-900 border border-amber-500/30 hover:border-amber-500/50 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group hover:shadow-lg hover:shadow-amber-500/10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-base sm:text-lg">El Atravesar</h3>
-                  <p className="text-xs sm:text-sm text-slate-400">Escanea gafetes en tiempo real</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <ChevronRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          </div>
-        </Link>
 
         {/* ═══════════════════════════════════════════════════ */}
         {/*              QR PERSONAL - INVITAR PARTICIPANTES    */}
