@@ -191,6 +191,7 @@ export async function POST(request: Request) {
         createdBy: user.id,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         notes: notes || null,
+        updatedAt: new Date(),
       })),
     });
 
