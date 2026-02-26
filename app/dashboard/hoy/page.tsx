@@ -394,7 +394,9 @@ export default function TodayPage() {
     console.log('🔍 handleUploadEvidence llamado con:', { taskId, accionId, metaId });
     
     // Buscar la tarea original usando taskId o submissionId
-    const task = tasks.find(t => {
+    // Buscar tanto en tasks (HOY) como en tareasRetrasadas
+    const allTasks = [...tasks, ...tareasRetrasadas];
+    const task = allTasks.find(t => {
       // Para tareas de carta, comparar con taskId
       if (t.taskId && t.taskId === taskId) {
         return true;
@@ -411,7 +413,7 @@ export default function TodayPage() {
     if (!task) {
       console.error('❌ No se encontró la tarea');
       console.error('❌ taskId buscado:', taskId);
-      console.error('❌ Tasks disponibles:', tasks.map(t => ({
+      console.error('❌ Tasks disponibles:', allTasks.map(t => ({
         id: t.id,
         taskId: t.taskId,
         submissionId: t.submissionId,
