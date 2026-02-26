@@ -185,7 +185,8 @@ export default function LegacyCapturePage() {
     }
   };
 
-  const openCaptureModal = (participante: Participante, vision: Vision) => {
+  const openCaptureModal = async (participante: Participante, vision: Vision) => {
+    // Inicializar con campos vacíos primero
     setCaptureForm({
       visionId: vision.visionId,
       participantId: participante.id,
@@ -207,6 +208,37 @@ export default function LegacyCapturePage() {
       photoMantaUrl: '',
     });
     setShowCaptureModal(true);
+
+    // Cargar datos existentes si los hay
+    try {
+      const res = await fetch(`/api/legacy-capture/by-participant?participantId=${participante.id}&visionId=${vision.visionId}`);
+      const result = await res.json();
+      
+      if (result.success && result.capture) {
+        setCaptureForm({
+          visionId: vision.visionId,
+          participantId: participante.id,
+          participantName: participante.nombreCompleto,
+          trainingLevel: vision.trainingLevel,
+          // Campos BÁSICO
+          photoWithGCUrl: result.capture.photoWithGCUrl || '',
+          photoWithSquadUrl: result.capture.photoWithSquadUrl || '',
+          photoBlueWallUrl: result.capture.photoBlueWallUrl || '',
+          // Campos AVANZADO
+          lullabyTitle: result.capture.lullabyTitle || '',
+          lullabyArtist: result.capture.lullabyArtist || '',
+          contractPhotoUrl: result.capture.contractPhotoUrl || '',
+          contractDeclaration: result.capture.contractDeclaration || '',
+          // Campos PL
+          plLullabyTitle: result.capture.plLullabyTitle || '',
+          plLullabyArtist: result.capture.plLullabyArtist || '',
+          photoSalonUrl: result.capture.photoSalonUrl || '',
+          photoMantaUrl: result.capture.photoMantaUrl || '',
+        });
+      }
+    } catch (error) {
+      console.error('Error loading existing capture:', error);
+    }
   };
 
   const saveCapture = async () => {

@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         visionId: parsedVisionId,
       },
       include: {
-        Participant: {
+        Usuario_LegacyCaptureSession_participantIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
             profileImage: true
           }
         },
-        GC: {
+        Usuario_LegacyCaptureSession_gcIdToUsuario: {
           select: {
             id: true,
             nombre: true
@@ -78,10 +78,10 @@ export async function GET(request: NextRequest) {
       capture: {
         id: capture.id,
         participantId: capture.participantId,
-        participantName: capture.Participant.nombre,
-        participantImage: capture.Participant.profileImage,
+        participantName: capture.Usuario_LegacyCaptureSession_participantIdToUsuario.nombre,
+        participantImage: capture.Usuario_LegacyCaptureSession_participantIdToUsuario.profileImage,
         gcId: capture.gcId,
-        gcName: capture.GC.nombre,
+        gcName: capture.Usuario_LegacyCaptureSession_gcIdToUsuario.nombre,
         visionId: capture.visionId,
         visionName: capture.Vision.nombre,
         level: capture.level,
