@@ -49,6 +49,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
   const [hasActiveAdvanced, setHasActiveAdvanced] = useState(false);
   const [reportesPendientes, setReportesPendientes] = useState(0);
   const [activeRole, setActiveRole] = useState<string>(usuario.rol); // Rol activo del RoleSwitcher
+  const [activeVisionId, setActiveVisionId] = useState<number | null>(null); // Visión vigente
   const [iaRecommendation, setIaRecommendation] = useState<{
     message: string;
     emoji: string;
@@ -174,6 +175,35 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
       fetchIARecommendation();
     }
   }, [usuario.rol]);
+
+  // Obtener visión vigente (próxima a ocurrir) para coordinadores
+  useEffect(() => {
+    const fetchActiveVision = async () => {
+      try {
+        const response = await fetch('/api/coordinador/productos-activos');
+        if (response.ok) {
+          const data = await response.json();
+          // Buscar la visión más próxima (con fecha de inicio más cercana al futuro)
+          const productos = data.productos || [];
+          if (productos.length > 0) {
+            // Obtener visionId único más reciente
+            const visionIds = [...new Set(productos.map((p: any) => p.visionId).filter(Boolean))];
+            if (visionIds.length > 0) {
+              // Usar el último visionId (más reciente)
+              setActiveVisionId(visionIds[visionIds.length - 1] as number);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching active vision:', error);
+      }
+    };
+
+    // Solo para coordinadores
+    if (activeRole === 'COORDINATOR_BASIC' || activeRole === 'COORDINATOR_ADVANCED' || usuario.esCoordinador) {
+      fetchActiveVision();
+    }
+  }, [activeRole, usuario.esCoordinador]);
 
   // Obtener cantidad de reportes anónimos pendientes (para SCHOOL_ADMIN y ADMIN)
   useEffect(() => {
@@ -701,10 +731,10 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             </Link>
 
             <Link 
-              href="/dashboard/llamadas"
+              href={`/dashboard/school-admin/vision/${activeVisionId || 6}/call-management?level=BASIC`}
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname === '/dashboard/llamadas'
+                pathname.includes('/call-management')
                   ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
                   : 'text-slate-400 hover:text-white hover:bg-blue-900/20'
               }`}
@@ -747,10 +777,10 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             </Link>
 
             <Link 
-              href="/dashboard/llamadas"
+              href={`/dashboard/school-admin/vision/${activeVisionId || 6}/call-management?level=BASIC`}
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname === '/dashboard/llamadas'
+                pathname.includes('/call-management')
                   ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
                   : 'text-slate-400 hover:text-white hover:bg-blue-900/20'
               }`}
