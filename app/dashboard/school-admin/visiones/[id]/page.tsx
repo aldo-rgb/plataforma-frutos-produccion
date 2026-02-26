@@ -289,6 +289,9 @@ export default function VisionDetailPage() {
         cache: 'no-store'
       });
       const data = await res.json();
+      
+      console.log('API Response status:', res.status);
+      console.log('API Response data:', data);
 
       if (data.success) {
         console.log('Vision data:', data.vision);
@@ -331,6 +334,8 @@ export default function VisionDetailPage() {
         
         // Cargar capitán PL
         fetchPlCaptain();
+      } else {
+        console.error('Error en API visiones:', data.error);
       }
     } catch (error) {
       console.error('Error fetching vision:', error);
@@ -1396,7 +1401,15 @@ export default function VisionDetailPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-          <p className="text-white text-xl">Visión no encontrada</p>
+          <p className="text-white text-xl mb-4">Visión no encontrada</p>
+          <p className="text-slate-400 text-sm mb-6">No se pudo cargar la información de esta visión.<br/>Puede que haya sido eliminada o no tengas acceso.</p>
+          <Link 
+            href="/dashboard/school-admin/visiones"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+          >
+            <ArrowLeft size={18} />
+            Volver a Visiones
+          </Link>
         </div>
       </div>
     );
