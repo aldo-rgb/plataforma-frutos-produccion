@@ -586,9 +586,11 @@ export async function GET(
       }))
     });
   } catch (error) {
-    logger.error('Error fetching vision details:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : '';
+    logger.error('Error fetching vision details:', { error: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { success: false, error: 'Error al obtener detalles de la visión' },
+      { success: false, error: 'Error al obtener detalles de la visión', details: errorMessage },
       { status: 500 }
     );
   }
