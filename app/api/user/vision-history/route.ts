@@ -38,17 +38,17 @@ export async function GET(request: NextRequest) {
           // Sin filtro de isActive para mostrar historial completo
         },
         include: {
-          vision: {
+          Vision: {
             include: {
               Organization: {
                 select: { id: true, name: true, logoUrl: true }
               }
             }
           },
-          members: {
+          SmallGroupMember: {
             // Para historial, incluir datos de los miembros
             include: {
-              user: {
+              Usuario_SmallGroupMember_userIdToUsuario: {
                 select: { 
                   id: true, 
                   nombre: true, 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       // Contar participantes únicos (sin duplicados entre átomos)
       const participantesUnicos = new Set<number>();
       atomos.forEach(atomo => {
-        atomo.members.forEach(member => {
+        atomo.SmallGroupMember.forEach(member => {
           participantesUnicos.add(member.userId);
         });
       });
@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
       const visionMap = new Map();
       
       for (const atomo of atomos) {
-        if (atomo.vision) {
-          const existing = visionMap.get(atomo.vision.id);
+        if (atomo.Vision) {
+          const existing = visionMap.get(atomo.Vision.id);
           const atomosEnVision = existing?.atomos || [];
           const levels = existing?.levels || [];
           
@@ -88,35 +88,35 @@ export async function GET(request: NextRequest) {
           }
           
           // Incluir lista de participantes con sus datos
-          const participantesList = atomo.members.map(m => ({
-            id: m.user.id,
-            nombre: m.user.nombre,
-            imagen: m.user.profileImage || m.user.imagen,
-            email: m.user.email
+          const participantesList = atomo.SmallGroupMember.map(m => ({
+            id: m.Usuario_SmallGroupMember_userIdToUsuario.id,
+            nombre: m.Usuario_SmallGroupMember_userIdToUsuario.nombre,
+            imagen: m.Usuario_SmallGroupMember_userIdToUsuario.profileImage || m.Usuario_SmallGroupMember_userIdToUsuario.imagen,
+            email: m.Usuario_SmallGroupMember_userIdToUsuario.email
           }));
           
           atomosEnVision.push({
             id: atomo.id,
             name: atomo.name,
             level: atomo.level,
-            membersCount: atomo.members.length,
+            membersCount: atomo.SmallGroupMember.length,
             members: participantesList
           });
           
           // Contar participantes únicos en esta visión
           const participantesVision = new Set<number>(existing?.participantesIds || []);
-          atomo.members.forEach(member => {
+          atomo.SmallGroupMember.forEach(member => {
             participantesVision.add(member.userId);
           });
           
-          visionMap.set(atomo.vision.id, {
-            id: atomo.vision.id,
-            nombre: atomo.vision.nombre,
-            descripcion: atomo.vision.descripcion,
-            startDate: atomo.vision.startDate,
-            endDate: atomo.vision.endDate,
-            isActive: atomo.vision.isActive,
-            organization: atomo.vision.Organization,
+          visionMap.set(atomo.Vision.id, {
+            id: atomo.Vision.id,
+            nombre: atomo.Vision.nombre,
+            descripcion: atomo.Vision.descripcion,
+            startDate: atomo.Vision.startDate,
+            endDate: atomo.Vision.endDate,
+            isActive: atomo.Vision.isActive,
+            organization: atomo.Vision.Organization,
             totalParticipantes: participantesVision.size,
             participantesIds: Array.from(participantesVision),
             assignedAt: existing?.assignedAt || atomo.createdAt,
