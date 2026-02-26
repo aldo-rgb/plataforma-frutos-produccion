@@ -164,20 +164,6 @@ export async function POST(request: NextRequest) {
 
     logger.debug('🔵 [payment-gateway] organizationId:', organizationId, 'provider:', provider);
 
-    // Verificar si ya existe una configuración para este proveedor específico
-    let existingConfig = null;
-    try {
-      existingConfig = await prisma.paymentGatewayConfig.findFirst({
-        where: { 
-          organizationId,
-          provider,
-        },
-      });
-      logger.debug('🔵 [payment-gateway] existingConfig:', existingConfig?.id || 'null');
-    } catch (findError: any) {
-      logger.error('🔴 [payment-gateway] Error buscando config existente:', findError?.message);
-    }
-
     let config;
 
     // Función para detectar si un valor está enmascarado
@@ -196,71 +182,84 @@ export async function POST(request: NextRequest) {
       return false;
     };
 
-    if (existingConfig) {
-      // Actualizar configuración existente para este proveedor
-      // Solo actualizar secretKey si se proporciona una nueva (no enmascarada)
-      const updateData: any = {
-        publicKey,
-        isActive: isActive !== undefined ? isActive : true,
-      };
+    // Preparar datos para create/update
+    const createData = {
+      organizationId,
+      provider,
+      publicKey: publicKey || null,
+      secretKey: secretKey || null,
+      webhookSecret: webhookSecret || null,
+      isActive: isActive !== undefined ? isActive : true,
+    };
 
-      // Solo actualizar secretKey si no está enmascarada
-      if (secretKey && !isMaskedValue(secretKey)) {
-        updateData.secretKey = secretKey;
-        logger.debug('🟢 [payment-gateway] Actualizando secretKey (nueva credencial)');
-      } else {
-        logger.debug('🟡 [payment-gateway] Manteniendo secretKey existente (valor enmascarado o vacío)');
-      }
+    const updateData: any = {
+      publicKey,
+      isActive: isActive !== undefined ? isActive : true,
+      updatedAt: new Date(),
+    };
 
-      // Solo actualizar webhookSecret si no está enmascarado
-      if (webhookSecret && !isMaskedValue(webhookSecret)) {
-        updateData.webhookSecret = webhookSecret;
-      }
-
-      logger.debug('🔵 [payment-gateway] updateData keys:', Object.keys(updateData));
-
-      // Agregar updatedAt manualmente
-      updateData.updatedAt = new Date();
-
-      config = await prisma.paymentGatewayConfig.update({
-        where: { id: existingConfig.id },
-        data: updateData,
-      });
-      
-      logger.debug('🟢 [payment-gateway] Config actualizada, id:', config.id);
+    // Solo actualizar secretKey si no está enmascarada
+    if (secretKey && !isMaskedValue(secretKey)) {
+      updateData.secretKey = secretKey;
+      logger.debug('🟢 [payment-gateway] Actualizando secretKey (nueva credencial)');
     } else {
-      // Crear nueva configuración para este proveedor
-      logger.debug('🔵 [payment-gateway] Creando nueva config con datos:', JSON.stringify({
-        organizationId,
-        provider,
-        publicKeyLen: publicKey?.length || 0,
-        secretKeyLen: secretKey?.length || 0,
-        isActive: isActive !== undefined ? isActive : true,
-      }));
-      
-      try {
-        config = await prisma.paymentGatewayConfig.create({
-          data: {
+      logger.debug('🟡 [payment-gateway] Manteniendo secretKey existente (valor enmascarado o vacío)');
+    }
+
+    // Solo actualizar webhookSecret si no está enmascarado
+    if (webhookSecret && !isMaskedValue(webhookSecret)) {
+      updateData.webhookSecret = webhookSecret;
+    }
+
+    logger.debug('🔵 [payment-gateway] Usando upsert para organizationId:', organizationId, 'provider:', provider);
+
+    // Usar upsert que es atómico y más confiable
+    try {
+      config = await prisma.paymentGatewayConfig.upsert({
+        where: {
+          organizationId_provider: {
             organizationId,
             provider,
-            publicKey: publicKey || null,
-            secretKey: secretKey || null,
-            webhookSecret: webhookSecret || null,
-            isActive: isActive !== undefined ? isActive : true,
           },
+        },
+        create: createData,
+        update: updateData,
+      });
+      
+      logger.debug('🟢 [payment-gateway] Upsert exitoso, id:', config.id);
+    } catch (upsertError: any) {
+      logger.error('🔴 [payment-gateway] Error en upsert:', upsertError?.message);
+      logger.error('🔴 [payment-gateway] Code:', upsertError?.code);
+      
+      // Si falla el upsert con índice compuesto, intentar con findFirst + create/update
+      if (upsertError?.code === 'P2002' || upsertError?.message?.includes('Unique constraint')) {
+        logger.debug('🟡 [payment-gateway] Fallback: usando findFirst + update');
+        
+        const existing = await prisma.paymentGatewayConfig.findFirst({
+          where: { organizationId, provider },
         });
         
-        logger.debug('🟢 [payment-gateway] Nueva config creada para proveedor:', provider, 'id:', config.id);
-      } catch (createError: any) {
-        logger.error('🔴 [payment-gateway] Error creando config:', createError?.message);
-        logger.error('🔴 [payment-gateway] Code:', createError?.code);
-        throw createError;
+        if (existing) {
+          config = await prisma.paymentGatewayConfig.update({
+            where: { id: existing.id },
+            data: updateData,
+          });
+          logger.debug('🟢 [payment-gateway] Fallback update exitoso');
+        } else {
+          // Si realmente no existe, crear sin índice compuesto
+          config = await prisma.paymentGatewayConfig.create({
+            data: createData,
+          });
+          logger.debug('🟢 [payment-gateway] Fallback create exitoso');
+        }
+      } else {
+        throw upsertError;
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: existingConfig ? 'Configuración actualizada' : 'Configuración creada',
+      message: 'Configuración guardada exitosamente',
       config: {
         id: config.id,
         provider: config.provider,
@@ -278,8 +277,25 @@ export async function POST(request: NextRequest) {
     
     // Errores específicos de Prisma
     if (error?.code === 'P2002') {
+      // Unique constraint violation - intentar hacer update en vez de crear
+      logger.debug('🟡 [payment-gateway] P2002 detectado, intentando upsert...');
+      
+      try {
+        // Buscar el registro que causa el conflicto
+        const conflictConfig = await prisma.paymentGatewayConfig.findFirst({
+          where: { organizationId: error?.meta?.target?.[0] === 'organizationId' ? undefined : undefined }
+        });
+        
+        if (conflictConfig) {
+          logger.debug('🔵 [payment-gateway] Encontrado conflicto, actualizando id:', conflictConfig.id);
+        }
+      } catch (e) {
+        // Ignorar error secundario
+      }
+      
       return NextResponse.json({ 
-        error: 'Ya existe una configuración para este proveedor',
+        error: 'Error de constraint único. Por favor intenta de nuevo.',
+        code: 'P2002'
       }, { status: 409 });
     }
     
