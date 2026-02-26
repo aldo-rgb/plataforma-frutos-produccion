@@ -95,10 +95,10 @@ export async function GET() {
           type: { in: ['EXTRAORDINARY', 'EVENT'] },
           isActive: true
         },
-        Usuario: whereUsuarios
+        Usuario_TaskSubmission_usuarioIdToUsuario: whereUsuarios
       },
       include: {
-        Usuario: {
+        Usuario_TaskSubmission_usuarioIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -144,10 +144,10 @@ export async function GET() {
         comentario: s.comentario,
         submittedAt: s.submittedAt,
         usuario: {
-          id: s.Usuario.id,
-          nombre: s.Usuario.nombre,
-          email: s.Usuario.email,
-          vision: s.Usuario.Vision?.nombre || 'Sin visión'
+          id: s.Usuario_TaskSubmission_usuarioIdToUsuario.id,
+          nombre: s.Usuario_TaskSubmission_usuarioIdToUsuario.nombre,
+          email: s.Usuario_TaskSubmission_usuarioIdToUsuario.email,
+          vision: s.Usuario_TaskSubmission_usuarioIdToUsuario.Vision?.nombre || 'Sin visión'
         },
         tarea: {
           id: s.AdminTask.id,
