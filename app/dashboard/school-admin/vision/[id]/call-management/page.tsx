@@ -499,17 +499,20 @@ export default function CallManagementPage() {
           
           {/* Selector de Visión */}
           {visiones.length > 0 && (
-            <select
-              value={selectedVisionId}
-              onChange={(e) => setSelectedVisionId(e.target.value)}
-              className="bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              {visiones.map((vision) => (
-                <option key={vision.id} value={vision.id.toString()}>
-                  {vision.nombre}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 rounded-xl blur opacity-50 animate-pulse"></div>
+              <select
+                value={selectedVisionId}
+                onChange={(e) => setSelectedVisionId(e.target.value)}
+                className="relative bg-gradient-to-r from-slate-800 to-slate-900 border-2 border-purple-500/50 text-white rounded-xl px-6 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent shadow-lg shadow-purple-500/20 cursor-pointer hover:border-purple-400 transition-all min-w-[200px]"
+              >
+                {visiones.map((vision) => (
+                  <option key={vision.id} value={vision.id.toString()} className="bg-slate-800 py-2">
+                    🎯 {vision.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
 
