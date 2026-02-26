@@ -77,6 +77,17 @@ export const authOptions: NextAuthOptions = {
                 id: true,
               },
             },
+            // Verificar si tiene enrollments con asistencia (PRESENT)
+            vision_enrollments_vision_enrollments_userIdToUsuario: {
+              where: {
+                OR: [
+                  { attendanceStatus: { in: ['PRESENT', 'ATTENDED'] } },
+                  { level: { in: ['ADVANCED', 'PL'] } }
+                ]
+              },
+              take: 1,
+              select: { id: true }
+            }
           },
         })
 
@@ -115,6 +126,11 @@ export const authOptions: NextAuthOptions = {
         }
 
         // 6. Retornar objeto usuario (excluyendo password, incluyendo flags de onboarding)
+        // Perfil completo si: tiene apodo, O tiene currentVisionLevel, O tiene enrollment con asistencia/nivel avanzado
+        const enrollments = user.vision_enrollments_vision_enrollments_userIdToUsuario;
+        const hasCompletedTraining = user.currentVisionLevel || (enrollments && enrollments.length > 0);
+        const isProfileComplete = !!user.apodo || !!hasCompletedTraining;
+        
         return {
           id: user.id,
           email: user.email,
@@ -125,7 +141,7 @@ export const authOptions: NextAuthOptions = {
           onboardingOrigin: user.onboardingOrigin || 'ORGANIC_SIGNUP',
           organizationId: user.organizationId || undefined,
           referralCode: user.referralCode || undefined,
-          profileCompleted: !!user.apodo, // Perfil completo si tiene apodo
+          profileCompleted: isProfileComplete, // Perfil completo si tiene apodo O ya hizo entrenamiento
           // Roles múltiples
           esMentor: user.esMentor || false,
           esEntrenador: user.esEntrenador || false,
