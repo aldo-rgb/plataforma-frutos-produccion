@@ -211,50 +211,29 @@ export async function POST(request: NextRequest) {
       updateData.webhookSecret = webhookSecret;
     }
 
-    logger.debug('🔵 [payment-gateway] Usando upsert para organizationId:', organizationId, 'provider:', provider);
+    logger.debug('🔵 [payment-gateway] Buscando config existente para org:', organizationId, 'provider:', provider);
 
-    // Usar upsert que es atómico y más confiable
-    try {
-      config = await prisma.paymentGatewayConfig.upsert({
-        where: {
-          organizationId_provider: {
-            organizationId,
-            provider,
-          },
-        },
-        create: createData,
-        update: updateData,
+    // Buscar si ya existe una configuración para esta org + provider
+    const existing = await prisma.paymentGatewayConfig.findFirst({
+      where: { organizationId, provider },
+    });
+    
+    logger.debug('🔵 [payment-gateway] Config existente:', existing?.id || 'NO EXISTE');
+
+    if (existing) {
+      // Actualizar la existente
+      config = await prisma.paymentGatewayConfig.update({
+        where: { id: existing.id },
+        data: updateData,
       });
-      
-      logger.debug('🟢 [payment-gateway] Upsert exitoso, id:', config.id);
-    } catch (upsertError: any) {
-      logger.error('🔴 [payment-gateway] Error en upsert:', upsertError?.message);
-      logger.error('🔴 [payment-gateway] Code:', upsertError?.code);
-      
-      // Si falla el upsert con índice compuesto, intentar con findFirst + create/update
-      if (upsertError?.code === 'P2002' || upsertError?.message?.includes('Unique constraint')) {
-        logger.debug('🟡 [payment-gateway] Fallback: usando findFirst + update');
-        
-        const existing = await prisma.paymentGatewayConfig.findFirst({
-          where: { organizationId, provider },
-        });
-        
-        if (existing) {
-          config = await prisma.paymentGatewayConfig.update({
-            where: { id: existing.id },
-            data: updateData,
-          });
-          logger.debug('🟢 [payment-gateway] Fallback update exitoso');
-        } else {
-          // Si realmente no existe, crear sin índice compuesto
-          config = await prisma.paymentGatewayConfig.create({
-            data: createData,
-          });
-          logger.debug('🟢 [payment-gateway] Fallback create exitoso');
-        }
-      } else {
-        throw upsertError;
-      }
+      logger.debug('🟢 [payment-gateway] Config actualizada, id:', config.id);
+    } else {
+      // Crear nueva
+      logger.debug('🔵 [payment-gateway] Creando nueva config...');
+      config = await prisma.paymentGatewayConfig.create({
+        data: createData,
+      });
+      logger.debug('🟢 [payment-gateway] Config creada, id:', config.id);
     }
 
     return NextResponse.json({
