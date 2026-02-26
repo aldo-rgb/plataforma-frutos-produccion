@@ -383,5 +383,155 @@ prisma.vision_enrollments.findMany({
 5. Middleware deprecado - Next.js muestra warning pero funciona
 
 ================================================================================
+🔴 GUÍA CRÍTICA: NOMBRES DE RELACIONES PRISMA
+================================================================================
+
+CONTEXTO DEL PROBLEMA:
+----------------------
+Prisma genera nombres de relaciones VERBOSE cuando un modelo tiene múltiples 
+foreign keys que apuntan a la misma tabla. Este es el error más común en el 
+proyecto y causa errores 500 tipo:
+
+  "Unknown field 'user' for include statement on model 'SmallGroupMember'"
+  "Unknown field 'members' for include statement on model 'SmallGroup'"
+
+REGLA DE ORO:
+-------------
+NUNCA asumir nombres de relaciones. SIEMPRE verificar en prisma/schema.prisma
+buscando el modelo y sus relaciones con @relation()
+
+PATRONES DE NOMBRES CORRECTOS:
+------------------------------
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MODELO: SmallGroup (Squads/Átomos)                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ❌ INCORRECTO          │ ✅ CORRECTO                                        │
+│ members                │ SmallGroupMember                                   │
+│ leader                 │ Usuario (relación con leaderId)                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MODELO: SmallGroupMember                                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ❌ INCORRECTO          │ ✅ CORRECTO                                        │
+│ user                   │ Usuario_SmallGroupMember_userIdToUsuario           │
+│ group                  │ SmallGroup                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MODELO: vision_enrollments                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ❌ INCORRECTO          │ ✅ CORRECTO                                        │
+│ user                   │ Usuario_vision_enrollments_userIdToUsuario         │
+│ vision                 │ Vision                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MODELO: Ticket                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ❌ INCORRECTO          │ ✅ CORRECTO                                        │
+│ owner                  │ Ticket_Ticket_ownerIdToUsuario                     │
+│ assignedTo             │ Ticket_Ticket_assignedToIdToUsuario                │
+│ createdBy              │ Ticket_Ticket_createdByIdToUsuario                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MODELO: LegacyCaptureSession                                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ❌ INCORRECTO          │ ✅ CORRECTO                                        │
+│ Participant            │ Usuario_LegacyCaptureSession_participantIdToUsuario│
+│ GC                     │ Usuario_LegacyCaptureSession_gcIdToUsuario         │
+│ vision                 │ Vision                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MODELO: MissionSubmission (Tareas zona-ejecucion)                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ❌ INCORRECTO          │ ✅ CORRECTO                                        │
+│ Mission                │ TrainerMission                                     │
+│ mission.Template       │ TrainerMission.TrainerTaskTemplate                 │
+│ mission.Trainer        │ TrainerMission.Usuario                             │
+│ Questions              │ TrainerTaskQuestion                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MODELO: VisionGameChanger                                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ❌ INCORRECTO          │ ✅ CORRECTO                                        │
+│ vision                 │ Vision                                             │
+│ gameChanger            │ Usuario                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+EJEMPLO COMPLETO DE USO CORRECTO:
+---------------------------------
+
+// ❌ INCORRECTO - Causará error 500
+const squads = await prisma.smallGroup.findMany({
+  where: { visionId: 6, leaderId: gcId },
+  include: {
+    members: {                          // ❌ Error: Unknown field 'members'
+      include: {
+        user: { select: { nombre: true } }  // ❌ Error: Unknown field 'user'
+      }
+    }
+  }
+});
+
+// ✅ CORRECTO - Funciona perfectamente
+const squads = await prisma.smallGroup.findMany({
+  where: { visionId: 6, leaderId: gcId },
+  include: {
+    SmallGroupMember: {                 // ✅ Nombre correcto de la relación
+      include: {
+        Usuario_SmallGroupMember_userIdToUsuario: {  // ✅ Nombre correcto
+          select: { nombre: true }
+        }
+      }
+    }
+  }
+});
+
+// Acceder a los datos:
+const participantes = squads.flatMap(squad => 
+  squad.SmallGroupMember.map(member => 
+    member.Usuario_SmallGroupMember_userIdToUsuario
+  )
+);
+
+CÓMO VERIFICAR NOMBRES DE RELACIONES:
+-------------------------------------
+
+1. Buscar el modelo en schema.prisma:
+   grep -A30 "model SmallGroupMember {" prisma/schema.prisma
+
+2. Buscar las líneas con @relation():
+   - El nombre ANTES del tipo es el nombre a usar
+   - Ejemplo: "Usuario_SmallGroupMember_userIdToUsuario Usuario @relation(...)"
+   - Nombre a usar: Usuario_SmallGroupMember_userIdToUsuario
+
+3. Verificar desde el otro lado de la relación:
+   grep "SmallGroupMember" prisma/schema.prisma | grep -v "model"
+
+ERRORES COMUNES Y SOLUCIONES:
+-----------------------------
+
+Error: "Unknown field 'X' for include statement on model 'Y'"
+Solución: Buscar en schema.prisma el nombre correcto de la relación
+
+Error: "Cannot read properties of undefined (reading 'map')"
+Causa: Usaste el nombre incorrecto y Prisma no incluyó los datos
+Solución: Corregir el nombre de la relación en include Y en el código que accede
+
+APIS CORREGIDAS EN FEBRERO 2026:
+--------------------------------
+- /api/legacy-capture/route.ts (SmallGroupMember, Usuario_SmallGroupMember_*)
+- /api/legacy-capture/by-participant/route.ts (Usuario_LegacyCaptureSession_*)
+- /api/user/vision-history/route.ts (Vision, SmallGroupMember, Usuario_*)
+- /api/tareas/zona-ejecucion/route.ts (TrainerMission, TrainerTaskTemplate)
+- /api/school-admin/visiones/[id]/call-tracking/route.ts (Ticket_Ticket_ownerIdToUsuario)
+- lib/auth.ts (vision_enrollments_vision_enrollments_userIdToUsuario)
+
+================================================================================
 FIN DEL INSTRUCTIVO
 ================================================================================
