@@ -718,19 +718,6 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             </Link>
 
             <Link 
-              href="/dashboard/coordinador-basico/asistencia"
-              onClick={handleLinkClick}
-              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname.startsWith('/dashboard/coordinador-basico/asistencia')
-                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
-                  : 'text-slate-400 hover:text-white hover:bg-green-900/20'
-              }`}
-            >
-              <CheckCircle2 size={18} className="text-green-400" />
-              <span>Asistencia</span>
-            </Link>
-
-            <Link 
               href={`/dashboard/school-admin/vision/${activeVisionId || 6}/call-management?level=BASIC`}
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
