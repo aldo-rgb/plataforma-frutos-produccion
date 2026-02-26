@@ -103,7 +103,12 @@ export async function GET() {
             id: true,
             nombre: true,
             email: true,
-            vision: true
+            vision: true,
+            Vision: {
+              select: {
+                nombre: true
+              }
+            }
           }
         },
         AdminTask: {
