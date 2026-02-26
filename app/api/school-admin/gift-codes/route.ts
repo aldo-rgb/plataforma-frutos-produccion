@@ -38,26 +38,26 @@ export async function GET() {
         organizationId: user.organizationId,
       },
       include: {
-        vision: {
+        Vision: {
           select: {
             id: true,
             nombre: true,
           },
         },
-        creator: {
+        Usuario_GiftCode_createdByToUsuario: {
           select: {
             id: true,
             nombre: true,
           },
         },
-        user: {
+        Usuario_GiftCode_usedByToUsuario: {
           select: {
             id: true,
             nombre: true,
             email: true,
           },
         },
-        tickets: {
+        Ticket: {
           select: {
             id: true,
             level: true,
@@ -78,13 +78,13 @@ export async function GET() {
         status: gc.status,
         value: gc.value ? parseFloat(gc.value.toString()) : null,
         discountPercentage: gc.discountPercentage,
-        vision: gc.vision,
-        creator: gc.creator,
-        usedBy: gc.user,
+        vision: gc.Vision,
+        creator: gc.Usuario_GiftCode_createdByToUsuario,
+        usedBy: gc.Usuario_GiftCode_usedByToUsuario,
         usedAt: gc.usedAt?.toISOString() || null,
         expiresAt: gc.expiresAt?.toISOString() || null,
         notes: gc.notes,
-        ticketsGenerated: gc.tickets.length,
+        ticketsGenerated: gc.Ticket.length,
         createdAt: gc.createdAt.toISOString(),
       })),
     });
