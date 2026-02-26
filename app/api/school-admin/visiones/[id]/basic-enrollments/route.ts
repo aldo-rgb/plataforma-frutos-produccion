@@ -131,7 +131,7 @@ export async function GET(
         isActive: true,
       },
       include: {
-        Trainer: {
+        Usuario_SchoolProduct_trainerIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -140,7 +140,7 @@ export async function GET(
             referralCode: true,
           }
         },
-        Coordinator: {
+        Usuario_SchoolProduct_coordinatorIdToUsuario: {Product_coordinatorIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -156,10 +156,11 @@ export async function GET(
     const staffList: typeof formattedEnrollments = [];
     
     // Agregar Trainer primero
-    if (schoolProduct?.Trainer) {
+    if (schoolProduct?.Usuario_SchoolProduct_trainerIdToUsuario) {
+      const trainer = schoolProduct.Usuario_SchoolProduct_trainerIdToUsuario;
       staffList.push({
-        id: -schoolProduct.Trainer.id,
-        oderId: schoolProduct.Trainer.id,
+        id: -trainer.id,
+        oderId: trainer.id,
         visionId: visionId,
         enrolledAt: new Date(),
         enrollmentStatus: 'ACTIVE',
@@ -167,11 +168,11 @@ export async function GET(
         level: 'BASIC',
         rol: 'TRAINER',
         Usuario: {
-          id: schoolProduct.Trainer.id,
-          nombre: schoolProduct.Trainer.nombre,
-          email: schoolProduct.Trainer.email,
-          telefono: schoolProduct.Trainer.telefono,
-          referralCode: schoolProduct.Trainer.referralCode,
+          id: trainer.id,
+          nombre: trainer.nombre,
+          email: trainer.email,
+          telefono: trainer.telefono,
+          referralCode: trainer.referralCode,
           organizationId: null as any,
           createdAt: new Date(),
           Organization: null as any
@@ -182,10 +183,11 @@ export async function GET(
     }
 
     // Agregar Coordinador después del Trainer
-    if (schoolProduct?.Coordinator) {
+    if (schoolProduct?.Usuario_SchoolProduct_coordinatorIdToUsuario) {
+      const coordinator = schoolProduct.Usuario_SchoolProduct_coordinatorIdToUsuario;
       staffList.push({
-        id: -schoolProduct.Coordinator.id - 5000,
-        oderId: schoolProduct.Coordinator.id,
+        id: -coordinator.id - 5000,
+        oderId: coordinator.id,
         visionId: visionId,
         enrolledAt: new Date(),
         enrollmentStatus: 'ACTIVE',
@@ -193,11 +195,11 @@ export async function GET(
         level: 'BASIC',
         rol: 'COORDINADOR',
         Usuario: {
-          id: schoolProduct.Coordinator.id,
-          nombre: schoolProduct.Coordinator.nombre,
-          email: schoolProduct.Coordinator.email,
-          telefono: schoolProduct.Coordinator.telefono,
-          referralCode: schoolProduct.Coordinator.referralCode,
+          id: coordinator.id,
+          nombre: coordinator.nombre,
+          email: coordinator.email,
+          telefono: coordinator.telefono,
+          referralCode: coordinator.referralCode,
           organizationId: null as any,
           createdAt: new Date(),
           Organization: null as any

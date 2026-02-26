@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         imagen: true,
         isActive: true,
         // Estadísticas de entrenamientos asignados
-        ProductTrainer: {
+        SchoolProduct_SchoolProduct_trainerIdToUsuario: {
           select: {
             id: true,
             name: true,
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     // Formatear respuesta con estadísticas
     const trainersConStats = trainers.map(trainer => {
       const now = new Date()
-      const entrenamientosActivos = trainer.ProductTrainer.filter(p => {
+      const entrenamientosActivos = trainer.SchoolProduct_SchoolProduct_trainerIdToUsuario.filter(p => {
         if (!p.startDate || !p.endDate) return false
         return new Date(p.startDate) <= now && new Date(p.endDate) >= now
       })
@@ -78,9 +78,9 @@ export async function GET(request: NextRequest) {
         rol: 'TRAINER',
         isActive: trainer.isActive,
         stats: {
-          totalAsignados: trainer.ProductTrainer.length,
+          totalAsignados: trainer.SchoolProduct_SchoolProduct_trainerIdToUsuario.length,
           enCurso: entrenamientosActivos.length,
-          organizaciones: [...new Set(trainer.ProductTrainer.map(p => p.Organization?.name).filter(Boolean))]
+          organizaciones: [...new Set(trainer.SchoolProduct_SchoolProduct_trainerIdToUsuario.map(p => p.Organization?.name).filter(Boolean))]
         }
       }
     })

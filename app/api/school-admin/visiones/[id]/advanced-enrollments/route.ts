@@ -131,7 +131,7 @@ export async function GET(
         isActive: true,
       },
       include: {
-        Trainer: {
+        Usuario_SchoolProduct_trainerIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -147,10 +147,11 @@ export async function GET(
     const staffList: typeof formattedEnrollments = [];
     
     // Agregar Trainer primero
-    if (schoolProduct?.Trainer) {
+    if (schoolProduct?.Usuario_SchoolProduct_trainerIdToUsuario) {
+      const trainer = schoolProduct.Usuario_SchoolProduct_trainerIdToUsuario;
       staffList.push({
-        id: -schoolProduct.Trainer.id, // ID negativo para distinguir
-        oderId: schoolProduct.Trainer.id,
+        id: -trainer.id, // ID negativo para distinguir
+        oderId: trainer.id,
         visionId: visionId,
         enrolledAt: new Date(),
         enrollmentStatus: 'ACTIVE',
@@ -158,11 +159,11 @@ export async function GET(
         level: 'ADVANCED',
         rol: 'TRAINER',
         Usuario: {
-          id: schoolProduct.Trainer.id,
-          nombre: schoolProduct.Trainer.nombre,
-          email: schoolProduct.Trainer.email,
-          telefono: schoolProduct.Trainer.telefono,
-          referralCode: schoolProduct.Trainer.referralCode,
+          id: trainer.id,
+          nombre: trainer.nombre,
+          email: trainer.email,
+          telefono: trainer.telefono,
+          referralCode: trainer.referralCode,
           organizationId: null as any,
           createdAt: new Date(),
           Organization: null as any
