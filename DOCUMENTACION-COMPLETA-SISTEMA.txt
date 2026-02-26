@@ -432,7 +432,7 @@ const createRes = await fetch('/api/school-admin/create-gamechanger', {
 - ✅ Sistema verifica créditos antes de crear usuarios
 - ✅ Descuenta correctamente del SchoolCredit
 
-### 4. Quantum Connection Hub (Call Management) ✅
+### 4. Llamadas de Confirmacion (Call Management) ✅
 
 **Archivo:** /app/dashboard/school-admin/vision/[id]/call-management/page.tsx
 
@@ -493,7 +493,7 @@ Todos en /components/ui/:
 - ❌ Dashboard para coordinadores
 
 ### 3. Sistema de Llamadas
-- ✅ Quantum Connection Hub básico
+- ✅ Llamadas de Confirmación básico
 - ❌ Tracking completo por nivel
 - ❌ Métricas y reportes por GC
 - ❌ Sistema de alertas de llamadas perdidas

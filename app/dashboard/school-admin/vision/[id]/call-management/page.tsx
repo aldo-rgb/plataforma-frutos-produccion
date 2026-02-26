@@ -521,7 +521,7 @@ export default function CallManagementPage() {
             <div>
               <h1 className="text-2xl md:text-3xl font-black text-white mb-2 flex items-center gap-2 md:gap-3">
                 <span className="text-3xl md:text-4xl">📞</span>
-                <span className="break-words">Quantum Connection Hub</span>
+                <span className="break-words">Llamadas de Confirmación</span>
               </h1>
               <p className="text-slate-400 text-sm md:text-base">Gestión Inteligente de Llamadas - Nivel {selectedLevel === 'BASIC' ? '🌱 BÁSICO' : selectedLevel === 'ADVANCED' ? '🔥 AVANZADO' : '👑 LIDERATO'}</p>
             </div>

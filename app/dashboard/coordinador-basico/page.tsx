@@ -55,6 +55,14 @@ export default function CoordinadorBasicoDashboard() {
     declarados: { numerator: number; denominator: number }; 
     inscritos: { numerator: number; denominator: number } 
   }>({ declarados: { numerator: 0, denominator: 0 }, inscritos: { numerator: 0, denominator: 0 } });
+  const [nextBasicInfo, setNextBasicInfo] = useState<{
+    id: number;
+    visionId: number;
+    name: string;
+    startDate: string | null;
+    endDate: string | null;
+    currentEnrollment: number;
+  } | null>(null);
   
   // Estados para modales de Declarados e Inscritos
   const [showDeclaradosModal, setShowDeclaradosModal] = useState(false);
@@ -130,7 +138,36 @@ export default function CoordinadorBasicoDashboard() {
       const res = await fetch('/api/coordinador/productos-activos');
       const result = await res.json();
       if (res.ok && result.success) {
-        setProductos(result.productos || []);
+        const allProductos = result.productos || [];
+        setProductos(allProductos);
+        
+        // Encontrar el próximo básico vigente (que no esté completado)
+        const now = new Date();
+        const basicProducts = allProductos.filter((p: any) => 
+          p.levelType === 'BASIC' && 
+          p.trainingStatus !== 'COMPLETED' &&
+          p.visionId
+        );
+        
+        // Ordenar por fecha de inicio
+        basicProducts.sort((a: any, b: any) => {
+          const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+          const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
+          return dateA - dateB;
+        });
+        
+        // Tomar el primero (próximo básico)
+        if (basicProducts.length > 0) {
+          const nextBasic = basicProducts[0];
+          setNextBasicInfo({
+            id: nextBasic.id,
+            visionId: nextBasic.visionId,
+            name: nextBasic.name,
+            startDate: nextBasic.startDate,
+            endDate: nextBasic.endDate,
+            currentEnrollment: nextBasic.currentEnrollment || 0
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching productos:', error);
@@ -353,6 +390,47 @@ export default function CoordinadorBasicoDashboard() {
             <p className="text-sm text-slate-500">{session?.user?.email}</p>
           </div>
         </div>
+
+        {/* Widget de Llamadas - Próximo Básico */}
+        {nextBasicInfo && (
+          <Link 
+            href={`/dashboard/school-admin/vision/${nextBasicInfo.visionId}/call-management?level=BASIC`}
+            className="block"
+          >
+            <div className="bg-gradient-to-br from-green-900/50 via-emerald-900/30 to-slate-900 border-2 border-green-500/40 rounded-2xl p-6 transition-all cursor-pointer group hover:border-green-500/60 hover:shadow-lg hover:shadow-green-500/20">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/30 group-hover:scale-105 transition-transform">
+                    <Phone className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-lg sm:text-xl group-hover:text-green-300 transition-colors">
+                      📞 Llamadas - {nextBasicInfo.name}
+                    </h3>
+                    <p className="text-sm text-slate-400">
+                      {nextBasicInfo.startDate && nextBasicInfo.endDate ? (
+                        <>
+                          {new Date(nextBasicInfo.startDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} - {new Date(nextBasicInfo.endDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </>
+                      ) : nextBasicInfo.startDate ? (
+                        <>Inicia: {new Date(nextBasicInfo.startDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                      ) : (
+                        'Fechas por definir'
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-center px-4 py-2 bg-green-500/20 rounded-xl">
+                    <p className="text-3xl font-black text-green-400">{nextBasicInfo.currentEnrollment}</p>
+                    <p className="text-xs text-green-300/80 font-medium">Registrados</p>
+                  </div>
+                  <ChevronRight className="w-6 h-6 text-green-400 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
 
         {/* Widget de Cartas Prellenadas */}
         <div className="mt-6">
