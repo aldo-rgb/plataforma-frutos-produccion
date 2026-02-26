@@ -734,19 +734,6 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             </Link>
 
             <Link 
-              href="/dashboard/coordinador/visiones"
-              onClick={handleLinkClick}
-              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname.startsWith('/dashboard/coordinador/visiones') || pathname.startsWith('/dashboard/director/visiones')
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-blue-900/20'
-              }`}
-            >
-              <Users size={18} className="text-blue-400" />
-              <span>Mis Visiones</span>
-            </Link>
-
-            <Link 
               href="/dashboard/school-admin/legacy-audit"
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
