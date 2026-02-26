@@ -39,14 +39,14 @@ export async function POST(request: Request) {
         },
       },
       include: {
-        vision: {
+        Vision: {
           select: {
             id: true,
             nombre: true,
             startDate: true,
           },
         },
-        organization: {
+        Organization: {
           select: {
             id: true,
             name: true,
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
             website: true,
           },
         },
-        user: {
+        Usuario: {
           select: {
             id: true,
             nombre: true,
@@ -97,13 +97,13 @@ export async function POST(request: Request) {
 
         // Calcular deadline: 1 PM del primer día de la visión
         let paymentDeadline: Date | null = null;
-        if (checkout.vision.startDate) {
-          paymentDeadline = new Date(checkout.vision.startDate);
+        if (checkout.Vision.startDate) {
+          paymentDeadline = new Date(checkout.Vision.startDate);
           paymentDeadline.setHours(13, 0, 0, 0); // 1 PM
         }
 
         // Obtener nombre del checkout (NO crear usuario - solo se crea al pagar)
-        let userName = checkout.user?.nombre || checkout.firstName || 'Participante';
+        let userName = checkout.Usuario?.nombre || checkout.firstName || 'Participante';
         
         // Si hay registrationData guardado, usar el nombre de ahí
         if ((checkout as any).registrationData) {
@@ -131,17 +131,17 @@ export async function POST(request: Request) {
         const ctaText = 'COMPLETAR MI INSCRIPCIÓN';
 
         // Generar sección del logo si existe
-        const logoSection = checkout.organization.logoUrl ? `
+        const logoSection = checkout.Organization.logoUrl ? `
                 <div style="margin-bottom: 16px;">
-                  <img src="${checkout.organization.logoUrl}" alt="${checkout.organization.name}" style="max-height: 50px; max-width: 180px; object-fit: contain;" />
+                  <img src="${checkout.Organization.logoUrl}" alt="${checkout.Organization.name}" style="max-height: 50px; max-width: 180px; object-fit: contain;" />
                 </div>
         ` : '<div class="logo">🎓</div>';
 
         // Generar enlace al website si existe
-        const websiteLink = checkout.organization.website ? `
+        const websiteLink = checkout.Organization.website ? `
                 <p style="margin-top: 8px;">
-                  <a href="${checkout.organization.website}" style="color: #818cf8; text-decoration: none; font-size: 12px;">
-                    🌐 ${checkout.organization.website.replace('https://', '').replace('http://', '')}
+                  <a href="${checkout.Organization.website}" style="color: #818cf8; text-decoration: none; font-size: 12px;">
+                    🌐 ${checkout.Organization.website.replace('https://', '').replace('http://', '')}
                   </a>
                 </p>
         ` : '';
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
               </p>
               
               <p style="color: #cbd5e1; line-height: 1.6;">
-                Notamos que no completaste tu inscripción a <strong>${checkout.vision.nombre}</strong>. 
+                Notamos que no completaste tu inscripción a <strong>${checkout.Vision.nombre}</strong>. 
                 ¡Queremos ayudarte a reservar tu lugar!
               </p>
               
@@ -213,7 +213,7 @@ export async function POST(request: Request) {
               </div>
 
               <div class="footer">
-                <p>${checkout.organization.name}</p>
+                <p>${checkout.Organization.name}</p>
                 ${websiteLink}
                 <p>Este correo fue enviado porque iniciaste el proceso de inscripción.</p>
               </div>
@@ -225,7 +225,7 @@ export async function POST(request: Request) {
         try {
           const emailResult = await sendEmail(
             checkout.email,
-            `🎓 ¡Reserva tu lugar con solo $${anticipoAmountNum.toLocaleString()}! - ${checkout.vision.nombre}`,
+            `🎓 ¡Reserva tu lugar con solo $${anticipoAmountNum.toLocaleString()}! - ${checkout.Vision.nombre}`,
             emailHtml
           );
           
@@ -244,7 +244,7 @@ export async function POST(request: Request) {
           try {
             const whatsappMessage = `🎓 ¡Hola ${userName}!
 
-Notamos que no completaste tu inscripción a *${checkout.vision.nombre}*.
+Notamos que no completaste tu inscripción a *${checkout.Vision.nombre}*.
 
 💳 *¡Reserva tu lugar con solo $${anticipoAmountNum.toLocaleString()} MXN!*
 
@@ -259,7 +259,7 @@ ${ctaUrl}
 
 ⚠️ Los anticipos no son reembolsables. El pago restante debe completarse antes de la 1:00 PM del primer día de la visión.
 
-- ${checkout.organization.name}`;
+- ${checkout.Organization.name}`;
 
             const whatsappResult = await sendWhatsAppTextMessage(
               checkout.phone,
