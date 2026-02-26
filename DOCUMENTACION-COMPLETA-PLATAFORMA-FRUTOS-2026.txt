@@ -1011,6 +1011,77 @@ PATRONES IMPORTANTES APRENDIDOS
    - activeRole = rol activo seleccionado en RoleSwitcher (localStorage)
    - Sidebar debe verificar AMBOS para mostrar menús correctos
 
+4. Valores enmascarados en formularios de seguridad:
+   - El frontend puede mostrar valores ocultos con diferentes caracteres:
+     * Asteriscos: ****
+     * Puntos de contraseña: ••••
+     * Puntos medios: ····
+   - Al detectar si un valor está enmascarado, verificar TODOS estos caracteres
+   - También detectar si >50% del string es el mismo carácter repetido
+
+================================================================================
+8. CALL MANAGEMENT - SELECTOR DE VISIÓN
+================================================================================
+Archivo modificado:
+- /app/dashboard/school-admin/vision/[id]/call-management/page.tsx
+
+Cambios:
+- Agregado dropdown selector de visión en la esquina superior derecha
+- Carga visiones disponibles desde /api/coordinador/productos-activos
+- Permite cambiar entre visiones sin salir de la página
+- Todas las llamadas API usan selectedVisionId en lugar de visionId de URL
+
+================================================================================
+9. PAYMENT GATEWAY - MÚLTIPLES FIXES
+================================================================================
+Archivo modificado:
+- /app/api/school-admin/payment-gateway/route.ts
+
+Problema original:
+- Error 500 al guardar credenciales de Mercado Pago
+
+Cambios realizados:
+
+a) Roles permitidos ampliados:
+   - Antes: Solo SCHOOL_ADMIN
+   - Ahora: SCHOOL_ADMIN, ADMINISTRADOR, ADMIN
+
+b) Schema Prisma:
+   - Agregado @updatedAt al campo updatedAt de PaymentGatewayConfig
+   - También se agrega updatedAt manualmente en create/update por seguridad
+
+c) Consulta de config existente:
+   - Cambio de findUnique con índice compuesto a findFirst
+   - Más robusto para evitar errores de índice
+
+d) Detección de valores enmascarados:
+   - Función isMaskedValue() que detecta:
+     * Asteriscos (*)
+     * Puntos de contraseña (•)
+     * Puntos medios (·)
+     * Strings con >50% caracteres repetidos
+   - Evita sobreescribir secretKey con valor enmascarado
+
+e) Mejor logging de errores:
+   - Logs detallados en cada paso
+   - Stack trace en caso de error
+
+Código de detección de enmascaramiento:
+```typescript
+const isMaskedValue = (value: string | null | undefined): boolean => {
+  if (!value) return true;
+  if (value.includes('*') || value.includes('•') || value.includes('·')) return true;
+  const chars = value.split('');
+  const charCount = chars.reduce((acc, char) => {
+    acc[char] = (acc[char] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const maxCount = Math.max(...Object.values(charCount));
+  if (maxCount > value.length * 0.5 && value.length > 10) return true;
+  return false;
+};
+```
+
 ================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
