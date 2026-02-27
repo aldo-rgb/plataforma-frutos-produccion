@@ -1740,6 +1740,92 @@ PROBLEMA 2: Error al validar código CASH
 - Causa: Código accedía a `paymentCode.expiresAt` que no existe
 - Fix: Eliminar verificación de expiresAt, usar solo status
 
+PROBLEMA 3: Relaciones de Prisma con mayúsculas
+- Error: "Unknown field `organization` for include statement"
+- Causa: Prisma genera nombres de relación con mayúscula inicial
+- Fix: Usar `Organization` y `Vision` (con mayúscula) en includes
+
+================================================================================
+15. SISTEMA DE PAGOS CON TARJETA (MercadoPago/Stripe)
+================================================================================
+
+--------------------------------------------------------------------------------
+15.1 Configuración de Pasarelas
+--------------------------------------------------------------------------------
+
+Cada organización configura su propia pasarela en `PaymentGatewayConfig`:
+
+```prisma
+model PaymentGatewayConfig {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  provider       String   // "MERCADOPAGO", "STRIPE", "PAYPAL"
+  publicKey      String?
+  secretKey      String   // Access token de la pasarela
+  isActive       Boolean  @default(true)
+}
+```
+
+--------------------------------------------------------------------------------
+15.2 Función getBaseUrl()
+--------------------------------------------------------------------------------
+
+⚠️ IMPORTANTE: Las URLs de callback (back_urls) deben ser absolutas y válidas.
+
+Archivo: /app/api/checkout-advanced/create-payment/route.ts
+
+```typescript
+// Helper para obtener la URL base
+function getBaseUrl(): string {
+  // En producción usar NEXTAUTH_URL o construir desde VERCEL_URL
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  // Fallback para desarrollo
+  return 'http://localhost:3000';
+}
+```
+
+Usar `getBaseUrl()` en lugar de `process.env.NEXTAUTH_URL` directamente.
+
+--------------------------------------------------------------------------------
+15.3 MercadoPago - Crear Preferencia
+--------------------------------------------------------------------------------
+
+```typescript
+const baseUrl = getBaseUrl();
+
+const preferenceRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    items: [{ title, description, quantity: 1, currency_id: 'MXN', unit_price: amount }],
+    payer: { name: user.nombre, email: user.email },
+    back_urls: {
+      success: `${baseUrl}/api/checkout-advanced/payment-success?data=...`,
+      failure: `${baseUrl}/dashboard/checkout-advanced?payment=failed`,
+      pending: `${baseUrl}/dashboard/checkout-advanced?payment=pending`,
+    },
+    auto_return: 'approved',
+  }),
+});
+```
+
+--------------------------------------------------------------------------------
+15.4 Correcciones Realizadas (Feb 2026)
+--------------------------------------------------------------------------------
+
+PROBLEMA: Error "back_urls invalid. Wrong format"
+- Error: MercadoPago rechaza URLs inválidas
+- Causa: `NEXTAUTH_URL` estaba undefined en Vercel
+- Fix: Crear helper `getBaseUrl()` con fallback a `VERCEL_URL`
+
 ================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
