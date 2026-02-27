@@ -5376,21 +5376,23 @@ model WeeklyPayrollPeriod {
 }
 
 model coordinator_commission_config {
-  id                Int          @id @default(autoincrement())
-  visionId          Int          @unique
-  organizationId    Int
-  basicSeatedRate   Decimal      @default(300.00) @db.Decimal(10, 2)
-  advanceSeatedRate Decimal      @default(500.00) @db.Decimal(10, 2)
-  plStartRate       Decimal      @default(400.00) @db.Decimal(10, 2)
-  plGuestRate       Decimal      @default(400.00) @db.Decimal(10, 2)
-  plGradRate        Decimal      @default(400.00) @db.Decimal(10, 2)
-  isActive          Boolean      @default(true)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime
-  createdBy         Int
-  Usuario           Usuario      @relation(fields: [createdBy], references: [id])
-  Organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Vision            Vision       @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  id                 Int          @id @default(autoincrement())
+  visionId           Int          @unique
+  organizationId     Int
+  basicSeatedRate    Decimal      @default(300.00) @db.Decimal(10, 2)
+  advanceSeatedRate  Decimal      @default(500.00) @db.Decimal(10, 2)
+  advanceComboRate   Decimal      @default(700.00) @db.Decimal(10, 2)
+  plStartRate        Decimal      @default(400.00) @db.Decimal(10, 2)
+  plWeek3Rate        Decimal      @default(400.00) @db.Decimal(10, 2)
+  plGuestRate        Decimal      @default(400.00) @db.Decimal(10, 2)
+  plGradRate         Decimal      @default(400.00) @db.Decimal(10, 2)
+  isActive           Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime
+  createdBy          Int
+  Usuario            Usuario      @relation(fields: [createdBy], references: [id])
+  Organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Vision             Vision       @relation(fields: [visionId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([visionId])
@@ -5714,10 +5716,13 @@ enum CommissionStatus {
 enum CommissionTriggerEvent {
   BASIC_SEATED
   ADVANCE_SEATED
+  ADVANCE_COMBO_SEATED
   PL_START
+  PL_WEEK3_CHECKPOINT
   PL_GUEST_PAID
   PL_GRADUATION
   MANUAL_ADJUSTMENT
+  REFUND_ADJUSTMENT
 }
 
 enum CommitmentLevel {

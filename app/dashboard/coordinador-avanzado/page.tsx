@@ -15,6 +15,7 @@ import TrainingStatsWidgets from '@/components/dashboard/TrainingStatsWidgets';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
 import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
 import { ElCruceAccessWidget } from '@/components/el-cruce';
+import QuantumWalletWidget from '@/components/dashboard/coordinator/QuantumWalletWidget';
 
 interface DashboardData {
   overview: {
@@ -427,6 +428,11 @@ export default function CoordinadorAvanzadoDashboard() {
         {/* Widget de Alertas Médicas */}
         <div className="mt-8">
           <MedicalAlertsWidget />
+        </div>
+
+        {/* Quantum Wallet - Comisiones del Coordinador */}
+        <div className="mt-8">
+          <QuantumWalletWidget />
         </div>
 
         {/* Widget Monitor de Llamadas */}

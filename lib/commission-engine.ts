@@ -3,9 +3,13 @@ import { Prisma } from '@prisma/client';
 
 /**
  * Motor de Cálculo Automático de Comisiones para Coordinadores
+ * QUANTUM WALLET - Sistema de Pagos por Check-in
  * 
- * Este módulo contiene las reglas de negocio para generar comisiones automáticamente
- * cuando ocurren eventos específicos en el sistema.
+ * REGLAS DE NEGOCIO:
+ * - Las comisiones se pagan cuando el participante SE SIENTA (Check-in), NO cuando compra
+ * - Básico: $300 por sentado (check-in día 1)
+ * - Avanzado: $500 normal / $700 si compró Combo ANTES del inicio
+ * - PL: $400 arranque (semana 1) + $400 cierre (semana 3) + $400 por invitado
  */
 
 interface CommissionTriggerData {
@@ -16,6 +20,7 @@ interface CommissionTriggerData {
   enrollmentId?: number;
   coordinatorRole: 'COORDINATOR_BASIC' | 'COORDINATOR_ADVANCED' | 'COORDINATOR_PL';
   notes?: string;
+  checkInTimestamp?: Date;
 }
 
 /**
@@ -81,7 +86,7 @@ export async function triggerBasicSeatedCommission(data: CommissionTriggerData) 
     }
 
     // Verificar que no exista ya una comisión por este evento
-    const existing = await prisma.coordinatorCommission.findFirst({
+    const existing = await prisma.coordinator_commissions.findFirst({
       where: {
         coordinatorId: data.coordinatorId,
         relatedUserId: data.relatedUserId,
@@ -99,7 +104,7 @@ export async function triggerBasicSeatedCommission(data: CommissionTriggerData) 
     const config = await getCommissionConfig(data.visionId);
 
     // Crear comisión
-    const commission = await prisma.coordinatorCommission.create({
+    const commission = await prisma.coordinator_commissions.create({
       data: {
         coordinatorId: data.coordinatorId,
         coordinatorRole: data.coordinatorRole,
@@ -131,13 +136,15 @@ export async function triggerBasicSeatedCommission(data: CommissionTriggerData) 
 /**
  * REGLA 2: Alumno Cruzó a Avanzado
  * 
- * Trigger: Cuando un alumno que completó Básico se inscribe en Avanzado Y asiste
- * Comisión: $500 (por defecto) para el Coordinador Avanzado
+ * Trigger: Staff escanea QR el día 1 de Avanzado
+ * Comisión: 
+ *   - $500 si compró "Solo Avanzado"
+ *   - $700 si compró "Combo Avanzado+PL" ANTES de la fecha de inicio del evento
  * 
  * Candados:
  * - El alumno debe haber completado Básico
- * - El alumno debe tener attendanceStatus = 'ATTENDED_ADVANCED'
- * - El alumno debe tener paymentStatus = 'PAID_FULL' en Avanzado
+ * - El alumno debe tener check-in (attendanceStatus = 'ATTENDED_ADVANCED')
+ * - El alumno debe tener paymentStatus = 'PAID_FULL'
  */
 export async function triggerAdvanceSeatedCommission(data: CommissionTriggerData) {
   try {
@@ -174,12 +181,12 @@ export async function triggerAdvanceSeatedCommission(data: CommissionTriggerData
       return null;
     }
 
-    // Verificar que no exista ya una comisión
-    const existing = await prisma.coordinatorCommission.findFirst({
+    // Verificar que no exista ya una comisión (ni ADVANCE_SEATED ni ADVANCE_COMBO_SEATED)
+    const existing = await prisma.coordinator_commissions.findFirst({
       where: {
         coordinatorId: data.coordinatorId,
         relatedUserId: data.relatedUserId,
-        triggerEvent: 'ADVANCE_SEATED',
+        triggerEvent: { in: ['ADVANCE_SEATED', 'ADVANCE_COMBO_SEATED'] },
         visionId: data.visionId
       }
     });
@@ -191,27 +198,73 @@ export async function triggerAdvanceSeatedCommission(data: CommissionTriggerData
 
     const config = await getCommissionConfig(data.visionId);
 
-    const commission = await prisma.coordinatorCommission.create({
+    // Determinar si es Combo: verificar si tiene inscripción a PL
+    const plEnrollment = await prisma.visionEnrollment.findFirst({
+      where: {
+        userId: data.relatedUserId,
+        visionId: data.visionId,
+        level: 'PL'
+      }
+    });
+
+    // Obtener fecha de inicio del evento Avanzado
+    const vision = await prisma.vision.findUnique({
+      where: { id: data.visionId },
+      select: { 
+        organizationId: true,
+        SchoolProduct: {
+          where: { productType: 'ADVANCED' },
+          select: { 
+            startDate: true,
+            EventDate: { select: { eventDate: true }, take: 1 }
+          },
+          take: 1
+        }
+      }
+    });
+
+    let isCombo = false;
+    let triggerEvent: 'ADVANCE_SEATED' | 'ADVANCE_COMBO_SEATED' = 'ADVANCE_SEATED';
+
+    // Si tiene inscripción a PL, verificar si la compró ANTES del inicio del Avanzado
+    if (plEnrollment && vision?.SchoolProduct?.[0]) {
+      const advancedStartDate = vision.SchoolProduct[0].startDate || 
+                                vision.SchoolProduct[0].EventDate?.[0]?.eventDate;
+      
+      if (advancedStartDate && plEnrollment.enrolledAt < advancedStartDate) {
+        isCombo = true;
+        triggerEvent = 'ADVANCE_COMBO_SEATED';
+        console.log('🎁 Detectado COMBO: PL comprado antes del inicio de Avanzado');
+      }
+    }
+
+    const amount = isCombo ? config.advanceComboRate : config.advanceSeatedRate;
+
+    const commission = await prisma.coordinator_commissions.create({
       data: {
         coordinatorId: data.coordinatorId,
         coordinatorRole: data.coordinatorRole,
-        triggerEvent: 'ADVANCE_SEATED',
+        triggerEvent,
         relatedUserId: data.relatedUserId,
         relatedEnrollmentId: advanceEnrollment.id,
-        amount: config.advanceSeatedRate,
+        amount,
         visionId: data.visionId,
         organizationId: data.organizationId,
         status: 'PENDING_REVIEW',
         configSnapshot: {
-          rate: config.advanceSeatedRate.toString(),
-          configId: config.id
+          rate: amount.toString(),
+          configId: config.id,
+          isCombo,
+          plEnrolledAt: plEnrollment?.enrolledAt?.toISOString() || null
         },
-        notes: data.notes || 'Comisión automática por alumno en Avanzado',
+        notes: isCombo 
+          ? 'Comisión automática por alumno COMBO en Avanzado (+PL anticipado)'
+          : 'Comisión automática por alumno en Avanzado',
         updatedAt: new Date()
       }
     });
 
-    console.log('✅ Comisión ADVANCE_SEATED creada:', commission.id, '- Monto:', commission.amount);
+    console.log(`✅ Comisión ${triggerEvent} creada:`, commission.id, '- Monto:', commission.amount);
     return commission;
 
   } catch (error) {
@@ -221,14 +274,14 @@ export async function triggerAdvanceSeatedCommission(data: CommissionTriggerData
 }
 
 /**
- * REGLA 3: Alumno Inició PL
+ * REGLA 3: Alumno Inició PL (Fin de Semana 1)
  * 
- * Trigger: Cuando un alumno se inscribe en PL (su propia tribu)
+ * Trigger: Escaneo de QR en Fin de Semana 1 del PL
  * Comisión: $400 (por defecto) para el Coordinador PL
  * 
  * Candados:
  * - El alumno debe tener paymentStatus = 'PAID_FULL'
- * - El alumno no fue invitado por nadie (es inicio de su propia tribu)
+ * - Debe ser check-in de semana 1
  */
 export async function triggerPLStartCommission(data: CommissionTriggerData) {
   try {
@@ -239,17 +292,16 @@ export async function triggerPLStartCommission(data: CommissionTriggerData) {
         userId: data.relatedUserId,
         visionId: data.visionId,
         level: 'PL',
-        paymentStatus: 'PAID_FULL',
-        invitedBy: null // No fue invitado, es su propia tribu
+        paymentStatus: 'PAID_FULL'
       }
     });
 
     if (!enrollment) {
-      console.log('⚠️  Candado no cumplido: no pagó completo o fue invitado por alguien');
+      console.log('⚠️  Candado no cumplido: no pagó completo');
       return null;
     }
 
-    const existing = await prisma.coordinatorCommission.findFirst({
+    const existing = await prisma.coordinator_commissions.findFirst({
       where: {
         coordinatorId: data.coordinatorId,
         relatedUserId: data.relatedUserId,
@@ -265,7 +317,7 @@ export async function triggerPLStartCommission(data: CommissionTriggerData) {
 
     const config = await getCommissionConfig(data.visionId);
 
-    const commission = await prisma.coordinatorCommission.create({
+    const commission = await prisma.coordinator_commissions.create({
       data: {
         coordinatorId: data.coordinatorId,
         coordinatorRole: data.coordinatorRole,
@@ -280,7 +332,7 @@ export async function triggerPLStartCommission(data: CommissionTriggerData) {
           rate: config.plStartRate.toString(),
           configId: config.id
         },
-        notes: data.notes || 'Comisión automática por inicio de PL (tribu propia)',
+        notes: data.notes || 'Comisión automática por check-in Semana 1 PL',
         updatedAt: new Date()
       }
     });
@@ -290,6 +342,79 @@ export async function triggerPLStartCommission(data: CommissionTriggerData) {
 
   } catch (error) {
     console.error('❌ Error en triggerPLStartCommission:', error);
+    throw error;
+  }
+}
+
+/**
+ * REGLA 3B: Alumno Check-in Semana 3 del PL (Cierre)
+ * 
+ * Trigger: Escaneo de QR en Fin de Semana 3 del PL
+ * Comisión: $400 - Incentiva al coordinador a evitar deserción
+ * 
+ * Candados:
+ * - El alumno debe tener check-in en semana 3
+ * - El alumno NO debe ser desertor (DROPPED)
+ */
+export async function triggerPLWeek3Commission(data: CommissionTriggerData) {
+  try {
+    console.log('🎯 Trigger: PL_WEEK3_CHECKPOINT para usuario', data.relatedUserId);
+
+    const enrollment = await prisma.visionEnrollment.findFirst({
+      where: {
+        userId: data.relatedUserId,
+        visionId: data.visionId,
+        level: 'PL',
+        enrollmentStatus: { not: 'DROPPED' }
+      }
+    });
+
+    if (!enrollment) {
+      console.log('⚠️  Candado no cumplido: alumno no encontrado o es desertor');
+      return null;
+    }
+
+    const existing = await prisma.coordinator_commissions.findFirst({
+      where: {
+        coordinatorId: data.coordinatorId,
+        relatedUserId: data.relatedUserId,
+        triggerEvent: 'PL_WEEK3_CHECKPOINT',
+        visionId: data.visionId
+      }
+    });
+
+    if (existing) {
+      console.log('ℹ️  Comisión ya existe, saltando...');
+      return existing;
+    }
+
+    const config = await getCommissionConfig(data.visionId);
+
+    const commission = await prisma.coordinator_commissions.create({
+      data: {
+        coordinatorId: data.coordinatorId,
+        coordinatorRole: data.coordinatorRole,
+        triggerEvent: 'PL_WEEK3_CHECKPOINT',
+        relatedUserId: data.relatedUserId,
+        relatedEnrollmentId: enrollment.id,
+        amount: config.plWeek3Rate,
+        visionId: data.visionId,
+        organizationId: data.organizationId,
+        status: 'PENDING_REVIEW',
+        configSnapshot: {
+          rate: config.plWeek3Rate.toString(),
+          configId: config.id
+        },
+        notes: data.notes || 'Comisión automática por check-in Semana 3 PL (cierre)',
+        updatedAt: new Date()
+      }
+    });
+
+    console.log('✅ Comisión PL_WEEK3_CHECKPOINT creada:', commission.id, '- Monto:', commission.amount);
+    return commission;
+
+  } catch (error) {
+    console.error('❌ Error en triggerPLWeek3Commission:', error);
     throw error;
   }
 }
@@ -348,7 +473,7 @@ export async function triggerPLGuestPaidCommission(guestUserId: number, visionId
     const coordinatorId = inviterEnrollment.coordinatorId;
 
     // Verificar que no exista ya una comisión
-    const existing = await prisma.coordinatorCommission.findFirst({
+    const existing = await prisma.coordinator_commissions.findFirst({
       where: {
         coordinatorId,
         relatedUserId: guestUserId,
@@ -373,7 +498,7 @@ export async function triggerPLGuestPaidCommission(guestUserId: number, visionId
 
     const config = await getCommissionConfig(visionId);
 
-    const commission = await prisma.coordinatorCommission.create({
+    const commission = await prisma.coordinator_commissions.create({
       data: {
         coordinatorId,
         coordinatorRole: 'COORDINATOR_PL',
@@ -437,7 +562,7 @@ export async function triggerPLGraduationCommission(data: CommissionTriggerData)
       return null;
     }
 
-    const existing = await prisma.coordinatorCommission.findFirst({
+    const existing = await prisma.coordinator_commissions.findFirst({
       where: {
         coordinatorId: data.coordinatorId,
         relatedUserId: data.relatedUserId,
@@ -453,7 +578,7 @@ export async function triggerPLGraduationCommission(data: CommissionTriggerData)
 
     const config = await getCommissionConfig(data.visionId);
 
-    const commission = await prisma.coordinatorCommission.create({
+    const commission = await prisma.coordinator_commissions.create({
       data: {
         coordinatorId: data.coordinatorId,
         coordinatorRole: data.coordinatorRole,
@@ -493,3 +618,179 @@ export function getNextWednesday(fromDate: Date = new Date()): Date {
   date.setHours(0, 0, 0, 0);
   return date;
 }
+
+/**
+ * REGLA ESPECIAL: Ajuste por Reembolso/Contracargo
+ * 
+ * Cuando un participante solicita reembolso, se debe crear un débito
+ * que descuente la comisión previamente pagada.
+ * 
+ * Ejemplo: Si María López pidió reembolso, se descuenta -$500
+ */
+export async function triggerRefundAdjustment(
+  coordinatorId: number,
+  relatedUserId: number,
+  visionId: number,
+  originalCommissionId: number,
+  reason: string
+) {
+  try {
+    console.log('🔄 Trigger: REFUND_ADJUSTMENT para usuario', relatedUserId);
+
+    // Buscar la comisión original
+    const originalCommission = await prisma.coordinator_commissions.findUnique({
+      where: { id: originalCommissionId }
+    });
+
+    if (!originalCommission) {
+      console.log('⚠️  Comisión original no encontrada');
+      return null;
+    }
+
+    // Verificar que no exista ya un ajuste por esta comisión
+    const existing = await prisma.coordinator_commissions.findFirst({
+      where: {
+        coordinatorId,
+        relatedUserId,
+        triggerEvent: 'REFUND_ADJUSTMENT',
+        visionId,
+        configSnapshot: {
+          path: ['originalCommissionId'],
+          equals: originalCommissionId
+        }
+      }
+    });
+
+    if (existing) {
+      console.log('ℹ️  Ajuste ya existe, saltando...');
+      return existing;
+    }
+
+    // Crear el débito (monto negativo)
+    const negativeAmount = Number(originalCommission.amount) * -1;
+
+    const adjustment = await prisma.coordinator_commissions.create({
+      data: {
+        coordinatorId,
+        coordinatorRole: originalCommission.coordinatorRole,
+        triggerEvent: 'REFUND_ADJUSTMENT',
+        relatedUserId,
+        relatedEnrollmentId: originalCommission.relatedEnrollmentId,
+        amount: negativeAmount,
+        visionId,
+        organizationId: originalCommission.organizationId,
+        status: 'AUTHORIZED', // Los ajustes se autorizan automáticamente
+        configSnapshot: {
+          originalCommissionId,
+          originalAmount: originalCommission.amount.toString(),
+          originalTrigger: originalCommission.triggerEvent,
+          reason
+        },
+        notes: `Ajuste por reembolso: ${reason}`,
+        updatedAt: new Date()
+      }
+    });
+
+    // Marcar la comisión original como cancelada
+    await prisma.coordinator_commissions.update({
+      where: { id: originalCommissionId },
+      data: { 
+        status: 'CANCELLED',
+        notes: `${originalCommission.notes || ''} | Cancelada por reembolso - Ajuste ID: ${adjustment.id}`,
+        updatedAt: new Date()
+      }
+    });
+
+    console.log('✅ Ajuste REFUND_ADJUSTMENT creado:', adjustment.id, '- Monto:', adjustment.amount);
+    return adjustment;
+
+  } catch (error) {
+    console.error('❌ Error en triggerRefundAdjustment:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtener resumen de wallet de un coordinador (Quantum Wallet)
+ */
+export async function getCoordinatorWalletSummary(coordinatorId: number) {
+  try {
+    const commissions = await prisma.coordinator_commissions.findMany({
+      where: { 
+        coordinatorId,
+        status: { in: ['PENDING_REVIEW', 'AUTHORIZED', 'PAID'] }
+      },
+      include: {
+        Usuario_coordinator_commissions_relatedUserIdToUsuario: {
+          select: { nombre: true, email: true }
+        },
+        Vision: {
+          select: { name: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Calcular totales
+    const summary = {
+      totalAccumulated: 0,
+      pendingReview: 0,
+      authorized: 0,
+      paid: 0,
+      adjustments: 0
+    };
+
+    const transactions = commissions.map(c => {
+      const amount = Number(c.amount);
+      
+      if (c.triggerEvent === 'REFUND_ADJUSTMENT') {
+        summary.adjustments += amount;
+      } else if (c.status === 'PENDING_REVIEW') {
+        summary.pendingReview += amount;
+      } else if (c.status === 'AUTHORIZED') {
+        summary.authorized += amount;
+      } else if (c.status === 'PAID') {
+        summary.paid += amount;
+      }
+      
+      summary.totalAccumulated += amount;
+
+      return {
+        id: c.id,
+        date: c.createdAt,
+        event: c.triggerEvent,
+        studentName: c.Usuario_coordinator_commissions_relatedUserIdToUsuario?.nombre || 'Desconocido',
+        visionName: c.Vision?.name || 'N/A',
+        amount,
+        status: c.status,
+        notes: c.notes,
+        isAdjustment: c.triggerEvent === 'REFUND_ADJUSTMENT'
+      };
+    });
+
+    return {
+      summary,
+      transactions,
+      lastUpdated: new Date()
+    };
+
+  } catch (error) {
+    console.error('❌ Error en getCoordinatorWalletSummary:', error);
+    throw error;
+  }
+}
+
+/**
+ * Mapeo de eventos a descripciones amigables
+ */
+export const TRIGGER_EVENT_LABELS: Record<string, string> = {
+  'BASIC_SEATED': 'Check-in Básico',
+  'ADVANCE_SEATED': 'Check-in Avanzado',
+  'ADVANCE_COMBO_SEATED': 'Check-in Avanzado (Combo)',
+  'PL_START': 'Check-in PL Semana 1',
+  'PL_WEEK3_CHECKPOINT': 'Check-in PL Semana 3',
+  'PL_GUEST_PAID': 'Bono por Invitado',
+  'PL_GRADUATION': 'Graduación PL',
+  'MANUAL_ADJUSTMENT': 'Ajuste Manual',
+  'REFUND_ADJUSTMENT': 'Ajuste por Reembolso'
+};

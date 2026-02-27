@@ -16,6 +16,7 @@ import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
 import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
 import CartaPrellenadaWidget from '@/components/dashboard/CartaPrellenadaWidget';
+import QuantumWalletWidget from '@/components/dashboard/coordinator/QuantumWalletWidget';
 
 interface DashboardData {
   overview: {
@@ -184,6 +185,11 @@ export default function CoordinadorDashboard() {
         {/* Widget de Tesorería Express - PRIMERO */}
         <div className="mt-8">
           <TreasuryQuickWidget />
+        </div>
+
+        {/* Quantum Wallet - Comisiones del Coordinador */}
+        <div className="mt-8">
+          <QuantumWalletWidget />
         </div>
 
         {/* Widget de Cartas Prellenadas */}
