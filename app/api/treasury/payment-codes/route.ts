@@ -120,8 +120,10 @@ export async function POST(request: Request) {
     }
 
     // Crear el código de pago
+    const paymentCodeId = crypto.randomUUID(); // Generar ID único
     const paymentCode = await prisma.paymentCode.create({
       data: {
+        id: paymentCodeId,
         code,
         amount,
         reference: reference || null,
