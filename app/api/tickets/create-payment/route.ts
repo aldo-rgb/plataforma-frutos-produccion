@@ -75,8 +75,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Obtener configuración de pasarela de la organización
-    const gatewayConfig = await prisma.paymentGatewayConfig.findUnique({
-      where: { organizationId: ticket.organizationId },
+    const gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+      where: { organizationId: ticket.organizationId, isActive: true },
     });
 
     if (!gatewayConfig || !gatewayConfig.isActive) {

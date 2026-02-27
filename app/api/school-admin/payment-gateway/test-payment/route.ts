@@ -34,9 +34,9 @@ export async function POST() {
     }
 
     // Get payment gateway config
-    const config = await prisma.paymentGatewayConfig.findUnique({
-      where: { organizationId: user.organizationId },
-      include: { organization: { select: { name: true } } },
+    const config = await prisma.paymentGatewayConfig.findFirst({
+      where: { organizationId: user.organizationId, isActive: true },
+      include: { Organization: { select: { name: true } } },
     });
 
     logger.debug('🧪 Test payment - Config:', config?.provider, 'Active:', config?.isActive, 'HasSecret:', !!config?.secretKey);

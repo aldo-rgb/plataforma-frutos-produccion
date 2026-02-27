@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { processAmbassadorCommission } from '@/lib/ambassador-engine';
 
 /**
  * GET /api/checkout-advanced/payment-success
@@ -318,6 +319,47 @@ export async function GET(request: NextRequest) {
         }
       }
     });
+
+    // 🎁 QUANTUM AMBASSADORS: Procesar comisión por referido
+    try {
+      const participant = await prisma.usuario.findUnique({
+        where: { id: userId },
+        select: { 
+          id: true, 
+          invitedBy: true, 
+          invitedByUser: { 
+            select: { referralCode: true } 
+          }
+        }
+      });
+
+      if (participant?.invitedBy && participant.invitedByUser?.referralCode) {
+        // Determinar el tipo de producto para la comisión
+        let productType: 'BASIC' | 'COMBO' | 'ADVANCED' | 'PL' = 'ADVANCED';
+        if (isPLOnly) {
+          productType = 'PL';
+        } else if (packageType === 'COMBO') {
+          productType = 'COMBO';
+        }
+
+        const result = await processAmbassadorCommission({
+          referralCode: participant.invitedByUser.referralCode,
+          referredUserId: participant.id,
+          ticketId: `ADV-${userId}-${visionId}-${Date.now()}`, // ID único para evitar duplicados
+          productType,
+          saleAmount: amount,
+          organizationId: organizationId,
+          visionId: visionId
+        });
+        
+        if (result.success) {
+          logger.debug(`🎁 Comisión ambassador: ${result.message}`);
+        }
+      }
+    } catch (ambassadorError) {
+      logger.error('Error procesando comisión ambassador:', ambassadorError);
+      // No falla el pago si falla la comisión
+    }
 
     // Store success data in a cookie for the success page to read
     const successData = {

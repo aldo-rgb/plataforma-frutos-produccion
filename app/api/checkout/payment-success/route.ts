@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import logger from '@/lib/logger';
 import Stripe from 'stripe';
 import { sendWelcomeNotifications } from '@/lib/welcome-notification';
+import { processAmbassadorCommission, determineProductType } from '@/lib/ambassador-engine';
 
 /**
  * GET /api/checkout/payment-success
@@ -333,6 +334,36 @@ export async function GET(request: NextRequest) {
 
       return { user: newUser, basicTicket };
     });
+
+    // 🎁 QUANTUM AMBASSADORS: Procesar comisión por referido
+    try {
+      // Verificar si userData tiene referralCode del referidor
+      const referrerCode = userData.referralCode;
+      
+      if (referrerCode) {
+        // Determinar tipo de producto
+        const productType = ticketSelection === 'FULL_VISION' ? 'COMBO' : 'BASIC';
+        
+        const ambassadorResult = await processAmbassadorCommission({
+          referralCode: referrerCode,
+          referredUserId: result.user.id,
+          ticketId: result.basicTicket.id,
+          productType,
+          saleAmount: amount,
+          organizationId: organizationId,
+          visionId: visionId || undefined
+        });
+        
+        if (ambassadorResult.success) {
+          logger.debug(`🎁 Comisión ambassador: ${ambassadorResult.message}`);
+        } else {
+          logger.debug(`ℹ️ Sin comisión ambassador: ${ambassadorResult.message}`);
+        }
+      }
+    } catch (ambassadorError) {
+      logger.error('Error procesando comisión ambassador:', ambassadorError);
+      // No falla el checkout si falla la comisión
+    }
 
     // Enviar notificaciones de bienvenida (Email + WhatsApp)
     try {

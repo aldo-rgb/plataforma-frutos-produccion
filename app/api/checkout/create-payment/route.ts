@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
 
     // Obtener configuración de pasarela de pago de la organización
     logger.debug('🔍 [create-payment] Buscando gateway para orgId:', organizationId);
-    const gatewayConfig = await prisma.paymentGatewayConfig.findUnique({
-      where: { organizationId: organizationId },
+    const gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+      where: { organizationId: organizationId, isActive: true },
     });
 
     logger.debug('🔍 [create-payment] Gateway encontrado:', gatewayConfig ? {

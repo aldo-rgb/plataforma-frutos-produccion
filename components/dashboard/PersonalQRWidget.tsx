@@ -36,6 +36,7 @@ export default function PersonalQRWidget({
   const [registrationURL, setRegistrationURL] = useState<string>('');
   const [organizationId, setOrganizationId] = useState<number | null | undefined>(propOrganizationId);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
+  const [userReferralCode, setUserReferralCode] = useState<string | undefined>(referralCode);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Mostrar toast de copiado
@@ -43,6 +44,22 @@ export default function PersonalQRWidget({
     setShowCopiedToast(true);
     setTimeout(() => setShowCopiedToast(false), 2500);
   };
+
+  // Si no hay referralCode en props, obtenerlo del usuario (puede estar desactualizado en la sesión)
+  useEffect(() => {
+    if (!referralCode && userId) {
+      console.log('🔄 No hay referralCode en props, obteniendo del usuario:', userId);
+      fetch(`/api/me`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.referralCode) {
+            console.log('✅ ReferralCode obtenido del usuario:', data.referralCode);
+            setUserReferralCode(data.referralCode);
+          }
+        })
+        .catch(err => console.error('Error fetching user referralCode:', err));
+    }
+  }, [referralCode, userId]);
 
   // Si no hay organizationId en props, obtenerlo del usuario
   useEffect(() => {
@@ -301,7 +318,7 @@ export default function PersonalQRWidget({
 
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
-    ctx.fillText(referralCode || 'ESCANEA EL QR', width / 2, currentY);
+    ctx.fillText(userReferralCode || 'ESCANEA EL QR', width / 2, currentY);
     currentY += 50;
 
     // === PRECIO ===
@@ -380,8 +397,9 @@ export default function PersonalQRWidget({
     setGeneratingQR(true);
     try {
       // URL que dirige al signup con el código de referido (la org se obtiene del referral)
-      const userURL = referralCode
-        ? `${window.location.origin}/auth/signup?ref=${referralCode}`
+      // Usar userReferralCode que puede venir de props o cargarse desde la API
+      const userURL = userReferralCode
+        ? `${window.location.origin}/auth/signup?ref=${userReferralCode}`
         : `${window.location.origin}/profile/${userId}`;
       
       // Guardar la URL de registro para compartir
@@ -527,7 +545,7 @@ export default function PersonalQRWidget({
                   {userName}
                 </h3>
                 <p className="text-slate-400 text-sm">
-                  {referralCode ? `Código de referido: ${referralCode}` : 'Tu credencial personalizada'}
+                  {userReferralCode ? `Código de referido: ${userReferralCode}` : 'Tu credencial personalizada'}
                 </p>
               </div>
 

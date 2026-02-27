@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { processAmbassadorCommission } from '@/lib/ambassador-engine';
 
 // POST - Canjear código de regalo o pago en efectivo
 export async function POST(request: Request) {
@@ -200,6 +201,39 @@ export async function POST(request: Request) {
       successMessage = '💎 ¡PLATINUM TICKET canjeado! Tienes acceso a la Visión Completa';
     }
 
+    // 🎁 QUANTUM AMBASSADORS: Procesar comisión si el usuario fue referido
+    try {
+      const userWithReferrer = await prisma.usuario.findUnique({
+        where: { id: user.id },
+        select: { 
+          invitedBy: true, 
+          invitedByUser: { select: { referralCode: true } }
+        }
+      });
+
+      if (userWithReferrer?.invitedBy && userWithReferrer.invitedByUser?.referralCode) {
+        // Para gift codes, usamos el valor del código o un estimado del precio
+        const estimatedValue = giftCode.type === 'PLATINUM' ? 21000 : 2500;
+        const productType = giftCode.type === 'PLATINUM' ? 'COMBO' : 'BASIC';
+        
+        const ambassadorResult = await processAmbassadorCommission({
+          referralCode: userWithReferrer.invitedByUser.referralCode,
+          referredUserId: user.id,
+          ticketId: `GIFT-${giftCode.id}-${user.id}`,
+          productType,
+          saleAmount: estimatedValue,
+          organizationId: giftCode.organizationId,
+          visionId: parseInt(visionId)
+        });
+        
+        if (ambassadorResult.success) {
+          logger.debug(`🎁 Comisión ambassador (gift code): ${ambassadorResult.message}`);
+        }
+      }
+    } catch (ambassadorError) {
+      logger.error('Error procesando comisión ambassador en gift code:', ambassadorError);
+    }
+
     return NextResponse.json({
       success: true,
       message: successMessage,
@@ -364,6 +398,38 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
 
       return ticket;
     });
+
+    // 🎁 QUANTUM AMBASSADORS: Procesar comisión si el usuario fue referido
+    try {
+      const userWithReferrer = await prisma.usuario.findUnique({
+        where: { id: user.id },
+        select: { 
+          invitedBy: true, 
+          invitedByUser: { select: { referralCode: true } }
+        }
+      });
+
+      if (userWithReferrer?.invitedBy && userWithReferrer.invitedByUser?.referralCode && result) {
+        const productType = enrollment.level === 'ADVANCED' ? 'ADVANCED' : 
+                           enrollment.level === 'PL' ? 'PL' : 'BASIC';
+        
+        const ambassadorResult = await processAmbassadorCommission({
+          referralCode: userWithReferrer.invitedByUser.referralCode,
+          referredUserId: user.id,
+          ticketId: result.id,
+          productType,
+          saleAmount: amount,
+          organizationId: paymentCode.organizationId,
+          visionId: userVisionId
+        });
+        
+        if (ambassadorResult.success) {
+          logger.debug(`🎁 Comisión ambassador (cash payment): ${ambassadorResult.message}`);
+        }
+      }
+    } catch (ambassadorError) {
+      logger.error('Error procesando comisión ambassador en cash payment:', ambassadorError);
+    }
 
     logger.debug('[REDEEM CASH] Código canjeado y ticket generado:', result?.id);
 

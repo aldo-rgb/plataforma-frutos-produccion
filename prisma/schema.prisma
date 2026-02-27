@@ -2493,6 +2493,7 @@ model Organization {
   coordinator_commission_config                         coordinator_commission_config[]
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
+  ambassador_wallet_transactions                        ambassador_wallet_transactions[]
 
   @@index([masterOrganizationId])
   @@index([slug])
@@ -3831,6 +3832,7 @@ model Ticket {
   Usuario_Ticket_transferredToToUsuario Usuario?            @relation("Ticket_transferredToToUsuario", fields: [transferredTo], references: [id])
   Vision                                Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade)
   TicketTransaction                     TicketTransaction[]
+  ambassador_wallet_transactions        ambassador_wallet_transactions[]
 
   @@index([level])
   @@index([organizationId])
@@ -4842,6 +4844,12 @@ model Usuario {
   goal2                                                                     String?
   goal3                                                                     String?
   profileCompleted                                                          Boolean                         @default(false)
+  // Quantum Ambassadors - Sistema de comisiones por referidos
+  isGraduated                                                               Boolean                         @default(false)
+  ambassadorBalance                                                         Decimal                         @default(0) @db.Decimal(10, 2)
+  bankClabe                                                                 String?
+  bankName                                                                  String?
+  bankAccountHolder                                                         String?
   AbandonedCheckout                                                         AbandonedCheckout[]
   AccessCode_AccessCode_generatedByToUsuario                                AccessCode[]                    @relation("AccessCode_generatedByToUsuario")
   AccessCode_AccessCode_usedByToUsuario                                     AccessCode[]                    @relation("AccessCode_usedByToUsuario")
@@ -5087,6 +5095,11 @@ model Usuario {
   vision_enrollments_vision_enrollments_userIdToUsuario                     vision_enrollments[]            @relation("vision_enrollments_userIdToUsuario")
   weekly_payout_summary_weekly_payout_summary_approvedByToUsuario           weekly_payout_summary[]         @relation("weekly_payout_summary_approvedByToUsuario")
   weekly_payout_summary_weekly_payout_summary_generatedByToUsuario          weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
+  // Quantum Ambassadors relations
+  ambassador_wallet_as_ambassador                                           ambassador_wallet_transactions[] @relation("ambassador_wallet_ambassador")
+  ambassador_wallet_as_referred                                             ambassador_wallet_transactions[] @relation("ambassador_wallet_referred")
+  ambassador_withdrawals                                                    ambassador_withdrawal_requests[] @relation("ambassador_withdrawals")
+  ambassador_withdrawal_approvals                                           ambassador_withdrawal_requests[] @relation("ambassador_withdrawal_approver")
 
   @@index([communityOrganizationId])
 }
@@ -5188,6 +5201,7 @@ model Vision {
   coordinator_commissions       coordinator_commissions[]
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
+  ambassador_wallet_transactions ambassador_wallet_transactions[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -6586,4 +6600,82 @@ enum VisionLevel {
 enum WalletTxType {
   CREDIT
   DEBIT
+}
+
+// ============================================
+// QUANTUM AMBASSADORS - Sistema de Comisiones por Referidos
+// ============================================
+
+model ambassador_wallet_transactions {
+  id                Int                       @id @default(autoincrement())
+  ambassadorId      Int                       // Usuario que recibe la comisión
+  referredUserId    Int                       // Usuario que pagó usando el código
+  ticketId          String?                   // Ticket/orden relacionada (String porque Ticket.id es String)
+  productType       AmbassadorProductType     // BASIC, COMBO, ADVANCED, PL
+  saleAmount        Decimal                   @db.Decimal(10, 2) // Monto de la venta
+  commissionPercent Decimal                   @db.Decimal(5, 2)  // Porcentaje (0.20, 0.10)
+  commissionAmount  Decimal                   @db.Decimal(10, 2) // Monto de la comisión
+  status            AmbassadorTxStatus        @default(CLEARED)  // Directo a disponible (pago ya confirmado)
+  withdrawnAt       DateTime?                 // Cuando se retira a banco
+  spentAt           DateTime?                 // Cuando se usa internamente
+  notes             String?
+  organizationId    Int
+  visionId          Int?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  
+  // Relaciones
+  ambassador        Usuario                   @relation("ambassador_wallet_ambassador", fields: [ambassadorId], references: [id])
+  referredUser      Usuario                   @relation("ambassador_wallet_referred", fields: [referredUserId], references: [id])
+  Ticket            Ticket?                   @relation(fields: [ticketId], references: [id])
+  Organization      Organization              @relation(fields: [organizationId], references: [id])
+  Vision            Vision?                   @relation(fields: [visionId], references: [id])
+
+  @@index([ambassadorId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([organizationId])
+}
+
+model ambassador_withdrawal_requests {
+  id              Int                         @id @default(autoincrement())
+  ambassadorId    Int
+  amount          Decimal                     @db.Decimal(10, 2)
+  bankClabe       String
+  bankName        String?
+  accountHolder   String?
+  status          WithdrawalStatus            @default(PENDING)
+  approvedBy      Int?
+  approvedAt      DateTime?
+  rejectedReason  String?
+  transferRef     String?                     // Referencia de transferencia bancaria
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+  
+  ambassador      Usuario                     @relation("ambassador_withdrawals", fields: [ambassadorId], references: [id])
+  approver        Usuario?                    @relation("ambassador_withdrawal_approver", fields: [approvedBy], references: [id])
+
+  @@index([ambassadorId])
+  @@index([status])
+}
+
+enum AmbassadorProductType {
+  BASIC           // 20%
+  COMBO           // 20% (Jornada Completa)
+  ADVANCED        // 10%
+  PL              // 10%
+}
+
+enum AmbassadorTxStatus {
+  CLEARED         // Disponible para usar/retirar
+  WITHDRAWN       // Retirado a banco
+  SPENT           // Usado en compras internas
+  CANCELLED       // Cancelado por reembolso
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
 }

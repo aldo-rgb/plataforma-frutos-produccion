@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
+import { processAmbassadorCommission, determineProductType } from '@/lib/ambassador-engine';
 
 const MERCADO_PAGO_API = 'https://api.mercadopago.com';
 
@@ -282,6 +283,40 @@ async function generateTicketFromPayment(transaction: {
       });
 
       console.log(`✅ Nuevo ticket creado: ${newTicket.id}`);
+
+      // 🎁 QUANTUM AMBASSADORS: Procesar comisión por referido
+      try {
+        const participant = await prisma.usuario.findUnique({
+          where: { id: transaction.participantId },
+          select: { 
+            id: true, 
+            invitedBy: true, 
+            invitedByUser: { 
+              select: { referralCode: true } 
+            }
+          }
+        });
+
+        if (participant?.invitedBy && participant.invitedByUser?.referralCode) {
+          const productType = determineProductType(level, false);
+          const result = await processAmbassadorCommission({
+            referralCode: participant.invitedByUser.referralCode,
+            referredUserId: participant.id,
+            ticketId: newTicket.id,
+            productType,
+            saleAmount: amount,
+            organizationId: vision.organizationId,
+            visionId: transaction.visionId
+          });
+          
+          if (result.success) {
+            console.log(`🎁 Comisión ambassador: ${result.message}`);
+          }
+        }
+      } catch (ambassadorError) {
+        console.error('Error procesando comisión ambassador:', ambassadorError);
+        // No falla el ticket si falla la comisión
+      }
 
       // Agregar al participante a la visión si no está
       const existingParticipant = await prisma.visionParticipante.findFirst({

@@ -20,8 +20,9 @@ import MedicalFormWidget from "@/components/dashboard/MedicalFormWidget";
 import IdentityHeroSection from "@/components/dashboard/identity/IdentityHeroSection";
 import PendingTicketBanner from "@/components/dashboard/PendingTicketBanner";
 import BitacoraAlertWidget from "@/components/dashboard/BitacoraAlertWidget";
-import LegacyCaptureBlockingModal from "@/components/dashboard/LegacyCaptureBlockingModal";
-import ParticipantSurveyBanner from "@/components/surveys/ParticipantSurveyBanner";
+import LegacyCaptureBlockingModal from '@/components/dashboard/LegacyCaptureBlockingModal';
+import ParticipantSurveyBanner from '@/components/surveys/ParticipantSurveyBanner';
+import AmbassadorWalletWidget from '@/components/dashboard/AmbassadorWalletWidget';
 
 interface DashboardPageProps {
   searchParams: Promise<{ view?: string }>;
@@ -595,6 +596,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* progreso hacia siguiente nivel               */}
       {/* ============================================ */}
       <IdentityHeroSection cartaData={cartaDataForIdentity} />
+
+      {/* ============================================ */}
+      {/* AMBASSADOR WALLET: Invita y Gana            */}
+      {/* Solo se muestra si el usuario es graduado   */}
+      {/* ============================================ */}
+      {(usuario.isGraduated || usuario.graduatedAt) && (
+        <AmbassadorWalletWidget />
+      )}
 
       {/* ============================================ */}
       {/* ZONA SUPERIOR: Hero Section Condicional      */}

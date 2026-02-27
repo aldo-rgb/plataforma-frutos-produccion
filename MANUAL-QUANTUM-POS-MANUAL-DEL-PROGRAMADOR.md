@@ -2,7 +2,7 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 2.0  
+**Versión:** 2.2  
 **Fecha:** Febrero 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
@@ -22,6 +22,14 @@
 10. [APIs Financieras](#10-quantum-finance-apis)
 11. [Guía de Deploy](#11-guía-de-deploy)
 12. [Variables de Entorno](#12-variables-de-entorno)
+13. [Sistemas de Comisiones](#13-sistemas-de-comisiones)
+14. [Errores Comunes y Soluciones](#14-errores-comunes-y-soluciones)
+15. [Catálogo Completo de Modelos (212 Tablas)](#15-catálogo-completo-de-modelos-212-tablas)
+16. [Flujos de Procesos Principales](#16-flujos-de-procesos-principales)
+17. [APIs Principales](#17-apis-principales)
+18. [Librerías Core](#18-librerías-core)
+19. [Dashboards por Rol](#19-dashboards-por-rol)
+20. [Estadísticas del Sistema](#20-estadísticas-del-sistema)
 
 ---
 
@@ -601,6 +609,234 @@ NEXT_PUBLIC_GA_ID="G-..."
 
 ---
 
+# 13. SISTEMAS DE COMISIONES
+
+El sistema tiene **dos motores de comisiones** independientes que trabajan en paralelo:
+
+## 13.1 Quantum Paymaster (Comisiones de Coordinadores)
+
+Sistema de comisiones para **coordinadores** basado en check-ins de participantes.
+
+### Triggers de Comisión
+
+| Trigger | Monto | Descripción |
+|---------|-------|-------------|
+| `BASIC_SEATED` | $300 MXN | Participante sentado en Básico |
+| `ADVANCE_SEATED` | $500 MXN | Participante sentado en Avanzado |
+| `ADVANCE_COMBO_SEATED` | $700 MXN | Participante Combo sentado en Avanzado |
+| `PL_START` | Variable | Inicio de PL |
+| `PL_WEEK3_CHECKPOINT` | $400 MXN | Checkpoint semana 3 de PL |
+| `REFUND_ADJUSTMENT` | Negativo | Ajuste por reembolso |
+
+### Archivos Clave
+
+```
+/lib/commission-engine.ts          # Motor de comisiones
+/app/api/coordinator/wallet/       # API del wallet
+/components/dashboard/coordinator/QuantumWalletWidget.tsx
+/app/dashboard/school-admin/comisiones/  # Panel de administración
+```
+
+### API Endpoints
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/coordinator/wallet` | GET | Obtener resumen del wallet |
+| `/api/school-admin/comisiones/stats` | GET | Estadísticas de comisiones |
+| `/api/school-admin/comisiones/pending` | GET | Comisiones pendientes |
+| `/api/school-admin/comisiones/authorize` | POST | Autorizar comisiones |
+
+### Flujo de Check-in → Comisión
+
+```
+1. Coordinador hace check-in del participante
+2. Se detecta el nivel y tipo de ticket
+3. commission-engine.ts calcula el monto
+4. Se crea registro en CoordinatorCommission
+5. Estado inicial: PENDING_REVIEW
+6. School Admin autoriza → AUTHORIZED
+7. Tesorería paga → PAID
+```
+
+---
+
+## 13.2 Quantum Ambassadors (Comisiones por Referidos)
+
+Sistema de comisiones para **graduados** que refieren nuevos usuarios.
+
+### Porcentajes de Comisión
+
+| Producto | Porcentaje |
+|----------|------------|
+| Básico | 20% |
+| Combo (Jornada Completa) | 20% |
+| Avanzado | 10% |
+| PL | 10% |
+
+### Modelo de Datos
+
+```prisma
+model ambassador_wallet_transactions {
+  id                Int       @id @default(autoincrement())
+  ambassadorId      Int       // Graduado que refirió
+  referredUserId    Int       // Usuario que compró
+  ticketId          String?   // Ticket asociado
+  productType       String    // BASIC, COMBO, ADVANCED, PL
+  saleAmount        Decimal   // Monto de la venta
+  commissionPercent Decimal   // 0.20, 0.10
+  commissionAmount  Decimal   // Monto de la comisión
+  status            String    // CLEARED, WITHDRAWN, SPENT
+  organizationId    Int
+  visionId          Int?
+  createdAt         DateTime
+}
+
+model ambassador_withdrawal_requests {
+  id            Int       @id @default(autoincrement())
+  ambassadorId  Int
+  amount        Decimal
+  bankClabe     String
+  bankName      String?
+  accountHolder String?
+  status        String    // PENDING, APPROVED, REJECTED, COMPLETED
+  createdAt     DateTime
+  processedAt   DateTime?
+}
+```
+
+### Campos en Usuario
+
+```prisma
+model Usuario {
+  isGraduated         Boolean   @default(false)
+  ambassadorBalance   Decimal   @default(0)
+  bankClabe           String?
+  bankName            String?
+  bankAccountHolder   String?
+}
+```
+
+### Archivos Clave
+
+```
+/lib/ambassador-engine.ts                    # Motor de comisiones
+/app/api/ambassador/wallet/route.ts          # API del wallet
+/components/dashboard/AmbassadorWalletWidget.tsx      # Widget completo
+/components/dashboard/ReferralCommissionsWidget.tsx   # Widget compacto
+```
+
+### Lógica de Elegibilidad
+
+```typescript
+// Un usuario es elegible para comisión si:
+// 1. Es dueño del referralCode usado
+// 2. Está marcado como graduado (isGraduated = true)
+// 3. NO está actualmente en PL activo (si está, la comisión va al coordinador)
+```
+
+### Integración con Checkout
+
+La comisión se procesa automáticamente cuando el pago es confirmado:
+
+```typescript
+// En /api/checkout/payment-success/route.ts
+import { processAmbassadorCommission } from '@/lib/ambassador-engine';
+
+// Después de crear el usuario y tickets:
+if (userData.referralCode) {
+  await processAmbassadorCommission({
+    referralCode: userData.referralCode,
+    referredUserId: newUser.id,
+    ticketId: basicTicket.id,
+    productType: ticketSelection === 'FULL_VISION' ? 'COMBO' : 'BASIC',
+    saleAmount: amount,
+    organizationId,
+    visionId
+  });
+}
+```
+
+### Puntos de Integración
+
+| Archivo | Cuándo se procesa |
+|---------|-------------------|
+| `/api/checkout/payment-success` | Registro + pago Stripe/MP |
+| `/api/checkout-advanced/payment-success` | Upgrade a Avanzado/PL |
+| `/api/gift-codes/redeem` | Canjeo de códigos de regalo |
+| `/api/webhooks/mercadopago-point` | Pago con terminal POS |
+
+---
+
+# 14. ERRORES COMUNES Y SOLUCIONES
+
+## 14.1 PaymentGatewayConfig.findUnique Error
+
+**Error:**
+```
+Error al crear el pago: Invalid `prisma.paymentGatewayConfig.findUnique()` invocation
+Argument `where` of type PaymentGatewayConfigWhereUniqueInput needs at least one of 
+`id` or `organizationId_provider` arguments.
+```
+
+**Causa:** El modelo `PaymentGatewayConfig` tiene un índice único compuesto:
+```prisma
+@@unique([organizationId, provider])
+```
+
+**Solución:** Usar `findFirst` en lugar de `findUnique`:
+```typescript
+// ❌ INCORRECTO
+const config = await prisma.paymentGatewayConfig.findUnique({
+  where: { organizationId: orgId }
+});
+
+// ✅ CORRECTO
+const config = await prisma.paymentGatewayConfig.findFirst({
+  where: { organizationId: orgId, isActive: true }
+});
+```
+
+**Archivos afectados:**
+- `/api/checkout/create-payment/route.ts`
+- `/api/checkout-advanced/create-payment/route.ts`
+- `/api/tickets/create-payment/route.ts`
+- `/api/school-admin/payment-gateway/test-payment/route.ts`
+
+## 14.2 Prisma Client Desincronizado
+
+**Síntomas:** TypeScript no reconoce campos nuevos del schema.
+
+**Solución:**
+```bash
+rm -rf node_modules/.prisma && npx prisma generate
+```
+
+## 14.3 invitedByUser no existe en select
+
+**Error:**
+```
+Object literal may only specify known properties, but 'invitedByUser' does not exist
+```
+
+**Causa:** Se está usando `select` en lugar de `include` para relaciones.
+
+**Solución:**
+```typescript
+// ❌ INCORRECTO
+const user = await prisma.usuario.findUnique({
+  where: { id },
+  select: { invitedByUser: { select: { referralCode: true } } }
+});
+
+// ✅ CORRECTO
+const user = await prisma.usuario.findUnique({
+  where: { id },
+  include: { invitedByUser: { select: { referralCode: true } } }
+});
+```
+
+---
+
 # 📖 APÉNDICES
 
 ## A. Comandos Útiles
@@ -660,6 +896,785 @@ export async function GET() {
 
 ---
 
+## D. Registro de Cambios
+
+### 26 de Febrero 2026
+
+**Quantum Paymaster (Coordinadores)**
+- Implementado sistema completo de comisiones por check-in
+- Triggers: BASIC_SEATED ($300), ADVANCE_SEATED ($500), ADVANCE_COMBO_SEATED ($700), PL_WEEK3_CHECKPOINT ($400)
+- Widget `QuantumWalletWidget` para dashboards de coordinadores
+- API `/api/coordinator/wallet` para consultar balance
+- Panel de gestión en `/dashboard/school-admin/comisiones`
+
+**Quantum Ambassadors (Referidos)**
+- Nuevo sistema de comisiones por referidos para graduados
+- Porcentajes: 20% Básico/Combo, 10% Avanzado/PL
+- Nuevos modelos: `ambassador_wallet_transactions`, `ambassador_withdrawal_requests`
+- Nuevos campos en Usuario: `isGraduated`, `ambassadorBalance`, `bankClabe`, `bankName`, `bankAccountHolder`
+- Motor: `/lib/ambassador-engine.ts`
+- API: `/api/ambassador/wallet`
+- Widgets: `AmbassadorWalletWidget` (completo), `ReferralCommissionsWidget` (compacto para Gamechangers)
+- Integración automática en checkout, gift codes y webhooks
+
+**Correcciones**
+- Fix `PaymentGatewayConfig.findUnique` → usar `findFirst` por índice compuesto
+- Archivos corregidos: checkout/create-payment, checkout-advanced/create-payment, tickets/create-payment
+
+**Documentación**
+- Añadida sección 13: Sistemas de Comisiones
+- Añadida sección 14: Errores Comunes y Soluciones
+- Actualizado índice del manual
+
+**Scripts de Mantenimiento Ejecutados**
+- Asignación masiva de referral codes a 37 usuarios que no tenían
+- Marcado de 633 usuarios como graduados (`isGraduated = true`)
+- Regeneración de cliente Prisma tras cambios en schema
+
+---
+
+## E. Scripts de Mantenimiento
+
+### Asignar Referral Codes a Usuarios sin Código
+
+```javascript
+// Ejecutar con: node -e "..."
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+function generateReferralCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+async function main() {
+  const usuarios = await prisma.usuario.findMany({
+    where: { referralCode: null },
+    select: { id: true, nombre: true }
+  });
+  
+  for (const u of usuarios) {
+    let code = generateReferralCode();
+    // Verificar unicidad
+    let exists = await prisma.usuario.findFirst({ where: { referralCode: code } });
+    while (exists) {
+      code = generateReferralCode();
+      exists = await prisma.usuario.findFirst({ where: { referralCode: code } });
+    }
+    
+    await prisma.usuario.update({
+      where: { id: u.id },
+      data: { referralCode: code }
+    });
+    console.log('✅', u.id, '-', u.nombre, ':', code);
+  }
+}
+
+main().finally(() => prisma.$disconnect());
+```
+
+### Marcar Usuarios como Graduados
+
+```javascript
+// Marcar como graduados a usuarios con tickets BASIC pagados y check-in completado
+const result = await prisma.usuario.updateMany({
+  where: {
+    tickets: {
+      some: {
+        level: 'BASIC',
+        paymentStatus: 'PAID',
+        checkInAt: { not: null }
+      }
+    }
+  },
+  data: { isGraduated: true }
+});
+console.log('Usuarios marcados como graduados:', result.count);
+```
+
+### Regenerar Cliente Prisma
+
+```bash
+# Cuando TypeScript no reconoce campos nuevos del schema
+rm -rf node_modules/.prisma && npx prisma generate
+
+# Sincronizar schema con base de datos
+npx prisma db push
+```
+
+---
+
+# 15. CATÁLOGO COMPLETO DE MODELOS (212 TABLAS)
+
+## 15.1 Modelos Core del Sistema
+
+### Usuario (Tabla principal)
+
+```prisma
+model Usuario {
+  id                    Int       @id @default(autoincrement())
+  nombre                String
+  email                 String    @unique
+  password              String?
+  imagen                String?
+  rol                   Rol       @default(PARTICIPANTE)
+  puntosCuanticos       Int       @default(0)
+  isActive              Boolean   @default(false)
+  tier                  UserTier  @default(FREE)
+  organizationId        Int?
+  mentorId              Int?
+  coordinadorId         Int?
+  gameChangerId         Int?
+  referralCode          String?   @unique
+  isGraduated           Boolean   @default(false)
+  ambassadorBalance     Decimal   @default(0)
+  telefono              String?
+  timezone              String    @default("America/Mexico_City")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
+  
+  // Relaciones principales
+  Organization          Organization?
+  mentor                Usuario?  @relation("MentorParticipantes")
+  participantes         Usuario[] @relation("MentorParticipantes")
+  tickets               Ticket[]
+  cartaFrutos           CartaFrutos[]
+}
+```
+
+**Campos importantes:**
+- `referralCode`: Código único para referir nuevos usuarios
+- `isGraduated`: Si completó el Básico (elegible para comisiones ambassador)
+- `ambassadorBalance`: Saldo acumulado por comisiones de referidos
+- `rol`: Define permisos y dashboards disponibles
+- `organizationId`: Escuela a la que pertenece
+
+### Organization (Escuelas/Campus)
+
+```prisma
+model Organization {
+  id                    Int       @id @default(autoincrement())
+  name                  String
+  slug                  String    @unique
+  logoUrl               String?
+  brandColor            String    @default("#6366F1")
+  contactEmail          String
+  status                OrganizationStatus @default(ACTIVE)
+  schoolAdminId         Int       @unique
+  totalLicenses         Int       @default(0)
+  activeLicenses        Int       @default(0)
+  isGeofenced           Boolean   @default(false)
+  campusLatitude        Float?
+  campusLongitude       Float?
+  geofenceRadius        Int       @default(100)
+  
+  // Relaciones
+  schoolAdmin           Usuario   @relation(fields: [schoolAdminId])
+  visiones              Vision[]
+  usuarios              Usuario[]
+  tickets               Ticket[]
+  paymentConfig         PaymentGatewayConfig[]
+}
+```
+
+### Vision (Eventos/Entrenamientos)
+
+```prisma
+model Vision {
+  id                    Int       @id @default(autoincrement())
+  nombre                String
+  descripcion           String?
+  coordinadorId         Int
+  organizationId        Int?
+  isActive              Boolean   @default(true)
+  
+  // Fechas Básico
+  startDate             DateTime?
+  endDate               DateTime?
+  
+  // Fechas Avanzado
+  advancedStartDate     DateTime?
+  advancedEndDate       DateTime?
+  
+  // Fechas PL (3 fines de semana)
+  plWeekend1StartDate   DateTime?
+  plWeekend1EndDate     DateTime?
+  plWeekend2StartDate   DateTime?
+  plWeekend2EndDate     DateTime?
+  plWeekend3StartDate   DateTime?
+  plWeekend3EndDate     DateTime?
+  
+  // Configuración
+  maxParticipantes      Int?
+  licensesAllocated     Int       @default(0)
+  
+  // Relaciones
+  coordinador           Usuario   @relation(fields: [coordinadorId])
+  Organization          Organization?
+  tickets               Ticket[]
+  enrollments           vision_enrollments[]
+}
+```
+
+### Ticket (Boletos/Inscripciones)
+
+```prisma
+model Ticket {
+  id                    String    @id
+  ownerId               Int
+  organizationId        Int
+  visionId              Int
+  level                 VisionLevel
+  type                  TicketType @default(STANDARD)
+  status                TicketStatus @default(PENDING_PAYMENT)
+  paymentStatus         TicketPaymentStatus @default(UNPAID)
+  purchasePrice         Decimal?
+  amountPaid            Decimal   @default(0)
+  isTransferable        Boolean   @default(true)
+  transferredAt         DateTime?
+  transferredTo         Int?
+  giftCodeId            Int?
+  isAnticipo            Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  
+  // Relaciones
+  owner                 Usuario   @relation(fields: [ownerId])
+  Organization          Organization
+  Vision                Vision
+  GiftCode              GiftCode?
+}
+```
+
+---
+
+## 15.2 Enums del Sistema
+
+### Roles de Usuario
+
+```prisma
+enum Rol {
+  LIDER
+  PARTICIPANTE
+  MENTOR
+  COORDINADOR
+  COORDINATOR_BASIC
+  COORDINATOR_ADVANCED
+  TRAINER
+  ADMINISTRADOR
+  GAMECHANGER
+  SCHOOL_ADMIN
+}
+```
+
+### Niveles de Programa
+
+```prisma
+enum VisionLevel {
+  BASIC       // Fin de semana básico
+  ADVANCED    // Avanzado (2 días)
+  PL          // Proyecto de Liderazgo (3 fines de semana)
+}
+```
+
+### Estados de Pago de Ticket
+
+```prisma
+enum TicketPaymentStatus {
+  PAID        // Pagado completo
+  PARTIAL     // Pago parcial (anticipo)
+  GIFT        // Código de regalo
+  PENDING     // Pendiente de pago
+  UNPAID      // Sin pago
+}
+```
+
+### Tipos de Gift Code
+
+```prisma
+enum GiftCodeType {
+  GOLDEN          // 100% descuento (invitación completa)
+  PLATINUM        // VIP con beneficios especiales
+  GOLDEN_DISCOUNT // Descuento porcentual (ej: 50%, 95%)
+}
+```
+
+### Tiers de Usuario
+
+```prisma
+enum UserTier {
+  FREE
+  PREMIUM
+  VIP
+}
+```
+
+### Estados de Organización
+
+```prisma
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+```
+
+---
+
+## 15.3 Modelos de Comisiones
+
+### Comisiones de Coordinadores
+
+```prisma
+model coordinator_commissions {
+  id                Int       @id @default(autoincrement())
+  coordinatorId     Int
+  relatedUserId     Int
+  visionId          Int
+  organizationId    Int
+  enrollmentId      Int?
+  triggerEvent      CommissionTriggerEvent
+  amount            Decimal   @db.Decimal(10, 2)
+  status            CoordinatorCommissionStatus @default(PENDING_REVIEW)
+  notes             String?
+  authorizedBy      Int?
+  authorizedAt      DateTime?
+  paidAt            DateTime?
+  createdAt         DateTime  @default(now())
+  
+  // Eventos trigger
+  // BASIC_SEATED: $300
+  // ADVANCE_SEATED: $500
+  // ADVANCE_COMBO_SEATED: $700
+  // PL_START: $400
+  // PL_WEEK3_CHECKPOINT: $400
+  // REFUND_ADJUSTMENT: negativo
+}
+
+model coordinator_commission_config {
+  id                    Int       @id @default(autoincrement())
+  visionId              Int       @unique
+  organizationId        Int
+  basicSeatedAmount     Decimal   @default(300)
+  advanceSeatedAmount   Decimal   @default(500)
+  advanceComboAmount    Decimal   @default(700)
+  plStartAmount         Decimal   @default(400)
+  plWeek3Amount         Decimal   @default(400)
+  plGuestBonus          Decimal   @default(400)
+  isActive              Boolean   @default(true)
+  createdBy             Int
+  createdAt             DateTime  @default(now())
+}
+```
+
+### Comisiones de Embajadores (Referidos)
+
+```prisma
+model ambassador_wallet_transactions {
+  id                Int       @id @default(autoincrement())
+  ambassadorId      Int       // Usuario graduado que refirió
+  referredUserId    Int       // Usuario que pagó
+  ticketId          String?
+  productType       AmbassadorProductType
+  saleAmount        Decimal   // Monto de la venta
+  commissionPercent Decimal   // 0.20, 0.10
+  commissionAmount  Decimal   // Monto ganado
+  status            AmbassadorTxStatus @default(CLEARED)
+  organizationId    Int
+  visionId          Int?
+  createdAt         DateTime  @default(now())
+}
+
+enum AmbassadorProductType {
+  BASIC       // 20%
+  COMBO       // 20%
+  ADVANCED    // 10%
+  PL          // 10%
+}
+```
+
+---
+
+## 15.4 Modelos de Gift Codes
+
+```prisma
+model GiftCode {
+  id                  Int           @id @default(autoincrement())
+  code                String        @unique
+  type                GiftCodeType
+  organizationId      Int
+  visionId            Int?
+  status              GiftCodeStatus @default(ACTIVE)
+  value               Decimal?      // Valor fijo (para PLATINUM)
+  discountPercentage  Int?          // Para GOLDEN_DISCOUNT
+  createdBy           Int
+  usedBy              Int?
+  usedAt              DateTime?
+  expiresAt           DateTime?
+  notes               String?
+  createdAt           DateTime      @default(now())
+  
+  // Relaciones
+  Organization        Organization
+  Vision              Vision?
+  creator             Usuario
+  usedByUser          Usuario?
+  tickets             Ticket[]
+}
+
+enum GiftCodeStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  CANCELLED
+}
+```
+
+---
+
+## 15.5 Modelos de Pagos
+
+### Payment Gateway Config
+
+```prisma
+model PaymentGatewayConfig {
+  id              Int           @id @default(autoincrement())
+  organizationId  Int
+  provider        PaymentGateway
+  publicKey       String?
+  secretKey       String
+  webhookSecret   String?
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  
+  Organization    Organization
+  
+  @@unique([organizationId, provider])  // IMPORTANTE: índice compuesto
+}
+
+enum PaymentGateway {
+  STRIPE
+  MERCADOPAGO
+  PAYPAL
+}
+```
+
+**⚠️ Importante:** Usar `findFirst` en lugar de `findUnique` por el índice compuesto.
+
+### Payment (Transacciones)
+
+```prisma
+model Payment {
+  id              Int           @id @default(autoincrement())
+  userId          Int
+  organizationId  Int?
+  amount          Float
+  currency        String        @default("MXN")
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  transactionId   String?
+  description     String?
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+```
+
+---
+
+## 15.6 Modelos de Carta F.R.U.T.O.S.
+
+```prisma
+model CartaFrutos {
+  id              Int           @id @default(autoincrement())
+  usuarioId       Int
+  visionId        Int?
+  estado          EstadoCarta   @default(BORRADOR)
+  fechaCreacion   DateTime      @default(now())
+  fechaEnvio      DateTime?
+  fechaAprobacion DateTime?
+  rejectionReason String?
+  
+  // Relaciones
+  usuario         Usuario
+  metas           Meta[]
+  acciones        Accion[]
+  evidencias      Evidencia[]
+}
+
+model Meta {
+  id              Int           @id @default(autoincrement())
+  cartaId         Int
+  areaVida        String        // SALUD, FINANZAS, RELACIONES, etc.
+  descripcion     String
+  fechaLimite     DateTime?
+  completada      Boolean       @default(false)
+  
+  carta           CartaFrutos
+  acciones        Accion[]
+}
+
+model Accion {
+  id              Int           @id @default(autoincrement())
+  metaId          Int
+  descripcion     String
+  fechaLimite     DateTime?
+  completada      Boolean       @default(false)
+  
+  meta            Meta
+  evidencias      Evidencia[]
+}
+```
+
+---
+
+## 15.7 Modelos de Mentorías
+
+```prisma
+model PerfilMentor {
+  id                Int           @id @default(autoincrement())
+  usuarioId         Int           @unique
+  especialidades    String[]
+  disponibilidad    Json?
+  maxParticipantes  Int           @default(5)
+  estilo            MentorStyle   @default(BALANCED)
+  isActive          Boolean       @default(true)
+  
+  usuario           Usuario
+  mentoriasActivas  SolicitudMentoria[]
+}
+
+model SolicitudMentoria {
+  id              Int           @id @default(autoincrement())
+  participanteId  Int
+  mentorId        Int?
+  estado          EstadoSolicitudMentoria @default(PENDIENTE)
+  tipoServicio    TipoServicioMentoria
+  notas           String?
+  createdAt       DateTime      @default(now())
+  
+  participante    Usuario
+  mentor          PerfilMentor?
+}
+```
+
+---
+
+# 16. FLUJOS DE PROCESOS PRINCIPALES
+
+## 16.1 Flujo de Registro y Pago
+
+```
+1. Usuario llega a /auth/signup?ref=CODIGO
+2. Completa formulario con datos personales
+3. Selecciona visión y tipo de boleto (BASIC, COMBO)
+4. Sistema crea Usuario y Ticket (paymentStatus: UNPAID)
+5. Redirige a pasarela de pago (Stripe/MercadoPago)
+6. Webhook confirma pago:
+   - Actualiza Ticket.paymentStatus = PAID
+   - Si hay referralCode:
+     a. Busca ambassador (dueño del código)
+     b. Verifica si es graduado y no está en PL
+     c. Crea ambassador_wallet_transaction (20% o 10%)
+     d. Actualiza ambassadorBalance del usuario
+7. Envía email de confirmación
+```
+
+## 16.2 Flujo de Check-in y Comisiones Coordinador
+
+```
+1. Staff escanea QR del participante
+2. Sistema verifica:
+   - Ticket válido y pagado
+   - No ha hecho check-in antes
+3. Marca asistencia (checkInAt = now())
+4. Trigger de comisión:
+   - BASIC_SEATED: $300 para Coordinador Básico
+   - ADVANCE_SEATED: $500 para Coordinador Avanzado
+   - ADVANCE_COMBO_SEATED: $700 si compró Combo
+5. Crea coordinator_commission (status: PENDING_REVIEW)
+6. School Admin autoriza → AUTHORIZED
+7. Tesorería paga → PAID
+```
+
+## 16.3 Flujo de Gift Codes
+
+```
+1. School Admin crea código:
+   - GOLDEN: 100% gratis
+   - GOLDEN_DISCOUNT: X% descuento
+   - PLATINUM: VIP
+2. Usuario recibe código por email/WhatsApp
+3. Usuario va a /dashboard/canjear
+4. Ingresa código
+5. Sistema verifica:
+   - Código existe y está ACTIVE
+   - No ha expirado
+   - Pertenece a su organización
+6. Si GOLDEN: Crea ticket PAID automáticamente
+7. Si GOLDEN_DISCOUNT: Aplica descuento y va a pago
+8. Marca código como USED
+```
+
+## 16.4 Flujo de Transferencia de Ticket
+
+```
+1. Usuario con ticket va a /dashboard/my-tickets
+2. Click en "Transferir"
+3. Ingresa email del destinatario
+4. Sistema verifica:
+   - Ticket es transferible (isTransferable: true)
+   - No ha sido transferido antes
+   - Está dentro del tiempo límite
+5. Crea/encuentra usuario destinatario
+6. Actualiza ticket:
+   - transferredTo = nuevo usuario
+   - transferredAt = now()
+   - isTransferable = false
+7. Notifica a ambos usuarios
+```
+
+---
+
+# 17. APIS PRINCIPALES
+
+## 17.1 APIs de Checkout
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/checkout/create-payment` | POST | Crear intento de pago |
+| `/api/checkout/payment-success` | POST | Confirmar pago exitoso |
+| `/api/checkout-advanced/create-payment` | POST | Pago para Avanzado/PL |
+| `/api/webhooks/stripe` | POST | Webhook de Stripe |
+| `/api/webhooks/mercadopago` | POST | Webhook de MercadoPago |
+
+## 17.2 APIs de Usuario
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/user/profile` | GET/PUT | Perfil del usuario |
+| `/api/me` | GET | Datos del usuario actual |
+| `/api/usuarios` | GET | Lista de usuarios |
+| `/api/usuarios/[id]` | GET/PUT | Usuario específico |
+
+## 17.3 APIs de School Admin
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/school-admin/visiones` | GET/POST | Gestión de visiones |
+| `/api/school-admin/gift-codes` | GET/POST | Gestión de códigos |
+| `/api/school-admin/usuarios` | GET | Usuarios de la escuela |
+| `/api/school-admin/comisiones` | GET | Dashboard comisiones |
+| `/api/school-admin/payment-gateway` | GET/POST | Config pagos |
+
+## 17.4 APIs de Comisiones
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/coordinator/wallet` | GET | Wallet del coordinador |
+| `/api/ambassador/wallet` | GET | Wallet del embajador |
+| `/api/school-admin/comisiones/authorize` | POST | Autorizar comisión |
+| `/api/school-admin/comisiones/pending` | GET | Comisiones pendientes |
+
+---
+
+# 18. LIBRERÍAS CORE
+
+## 18.1 /lib/prisma.ts
+Cliente singleton de Prisma para evitar múltiples conexiones en desarrollo.
+
+## 18.2 /lib/auth.ts
+Configuración de NextAuth con credenciales y magic links.
+
+## 18.3 /lib/commission-engine.ts
+Motor de cálculo de comisiones para coordinadores. Funciones principales:
+- `triggerBasicSeatedCommission()`
+- `triggerAdvanceSeatedCommission()`
+- `triggerPLStartCommission()`
+- `calculateRefundAdjustment()`
+
+## 18.4 /lib/ambassador-engine.ts
+Motor de comisiones por referidos. Funciones principales:
+- `processAmbassadorCommission()`
+- `getAmbassadorWalletSummary()`
+- `findEligibleAmbassador()`
+- `isUserInActivePL()`
+
+## 18.5 /lib/payment-gateway.ts
+Obtiene credenciales de pasarela de pago por organización.
+- `getPaymentGateway(organizationId, provider?)`
+
+## 18.6 /lib/taskGenerator.ts
+Genera tareas diarias para participantes basadas en su carta.
+
+## 18.7 /lib/referralCode.ts
+Genera códigos de referido únicos de 8 caracteres.
+
+---
+
+# 19. DASHBOARDS POR ROL
+
+## 19.1 PARTICIPANTE
+- `/dashboard` - Panel principal
+- `/dashboard/carta` - Mi carta F.R.U.T.O.S.
+- `/dashboard/tareas` - Tareas diarias
+- `/dashboard/my-tickets` - Mis boletos
+- `/dashboard/perfil-completo` - Completar perfil
+
+## 19.2 MENTOR
+- `/dashboard/mentor` - Panel de mentor
+- `/dashboard/mentor/participantes` - Lista de asignados
+- `/dashboard/mentor/llamadas` - Registro de llamadas
+
+## 19.3 GAMECHANGER
+- `/dashboard/gamechanger` - Panel GC
+- `/dashboard/gamechanger/mis-participantes`
+- Widget de comisiones por referidos
+
+## 19.4 COORDINADOR
+- `/dashboard/coordinador` - Panel coordinador
+- `/dashboard/coordinador/vision` - Gestión de visión
+- `/dashboard/coordinador/participantes`
+- Widget de Wallet de Comisiones
+
+## 19.5 SCHOOL_ADMIN
+- `/dashboard/school-admin` - Panel administrativo
+- `/dashboard/school-admin/visiones` - Gestión de visiones
+- `/dashboard/school-admin/gift-codes` - Códigos de regalo
+- `/dashboard/school-admin/usuarios` - Usuarios
+- `/dashboard/school-admin/comisiones` - Gestión de comisiones
+- `/dashboard/school-admin/pagos` - Configuración de pagos
+
+## 19.6 TRAINER
+- `/dashboard/trainer` - Panel de trainer
+- `/dashboard/trainer/misiones` - Misiones de entrenamiento
+
+---
+
+# 20. ESTADÍSTICAS DEL SISTEMA
+
+```
+Total de Modelos: 212
+Total de Enums: 143
+Total de APIs: ~150 carpetas
+Total de Dashboards: ~80 páginas
+Líneas de Schema: ~6,700
+Usuarios Totales: 1,072
+Organizaciones: Múltiples
+```
+
+---
+
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 2.0 - Febrero 2026*  
+*Versión 2.2 - Febrero 2026*  
 *Última actualización: 26/02/2026*

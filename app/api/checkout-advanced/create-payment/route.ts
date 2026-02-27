@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Obtener configuración de pasarela de pago de la organización
-    const gatewayConfig = await prisma.paymentGatewayConfig.findUnique({
-      where: { organizationId: organizationId },
+    const gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+      where: { organizationId: organizationId, isActive: true },
     });
 
     if (!gatewayConfig || !gatewayConfig.isActive) {
