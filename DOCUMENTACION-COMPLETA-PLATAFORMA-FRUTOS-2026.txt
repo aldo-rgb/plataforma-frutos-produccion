@@ -1377,6 +1377,89 @@ const realInvitees = await prisma.usuario.count({
 USUARIOS AFECTADOS Y CORREGIDOS:
 - Dora Maria Flores Alcala: 4/4 → 2/4 (2 invitados reales)
 
+--------------------------------------------------------------------------------
+12.3 FIX: Sidebar mostraba menú de Coordinador a Participantes
+--------------------------------------------------------------------------------
+
+PROBLEMA:
+Usuarios con rol PARTICIPANTE veían el menú de "COORDINADOR BÁSICO" en el 
+sidebar porque el `activeRole` guardado en localStorage no se validaba 
+contra los permisos reales del usuario.
+
+CAUSA:
+- El sidebar leía `activeRole` de localStorage sin verificar si el usuario
+  tenía los flags `esCoordinadorBasico`, `esCoordinadorAvanzado`, etc.
+- Si un coordinador usaba el mismo navegador y luego entraba un participante,
+  el localStorage conservaba el rol anterior.
+
+SOLUCIÓN EN SIDEBAR:
+```typescript
+// Nueva función canUseRole para validar permisos
+const canUseRole = (role: string): boolean => {
+  if (role === 'COORDINATOR_BASIC') return !!(usuario.esCoordinadorBasico || usuario.esCoordinador);
+  if (role === 'COORDINATOR_ADVANCED') return !!(usuario.esCoordinadorAvanzado || usuario.esCoordinador);
+  if (role === 'TRAINER') return !!(usuario.esEntrenador);
+  if (role === 'MENTOR') return !!(usuario.esMentor);
+  if (role === 'LIDER') return !!(usuario.esLider);
+  return role === usuario.rol;
+};
+
+// Al cargar activeRole de localStorage, validar
+const savedRole = localStorage.getItem('activeRole');
+if (savedRole && canUseRole(savedRole)) {
+  setActiveRole(savedRole);
+} else {
+  setActiveRole(usuario.rol); // Resetear al rol base
+  localStorage.setItem('activeRole', usuario.rol);
+}
+```
+
+CAMBIOS EN INTERFAZ:
+- Agregados `esCoordinadorBasico` y `esCoordinadorAvanzado` a SidebarProps
+- Panel de Coordinador Básico: ahora requiere `usuario.esCoordinadorBasico || usuario.esCoordinador`
+- Panel de Coordinador Avanzado: ahora requiere `usuario.esCoordinadorAvanzado || usuario.esCoordinador`
+
+--------------------------------------------------------------------------------
+12.4 SECURITY: Bloqueo de APIs de Coordinador
+--------------------------------------------------------------------------------
+
+PROBLEMA:
+Los usuarios PARTICIPANTE podían acceder directamente a las URLs de llamadas
+y tesorería porque los APIs no validaban los flags de coordinador.
+
+ARCHIVOS CORREGIDOS:
+
+1. /app/api/treasury/coordinator/route.ts
+```typescript
+// ANTES: Solo validaba rol
+if (!user || !ALLOWED_ROLES.includes(user.rol)) { ... }
+
+// DESPUÉS: Valida rol Y flags
+const hasCoordinatorAccess = 
+  user.rol === 'COORDINADOR' || 
+  user.rol === 'SCHOOL_ADMIN' ||
+  user.rol === 'ADMIN' ||
+  user.esCoordinador ||
+  user.esCoordinadorBasico ||
+  user.esCoordinadorAvanzado ||
+  user.esEntrenador;
+
+if (!hasCoordinatorAccess) {
+  logger.warn(`⛔ Usuario ${user.id} intentó acceder a tesorería sin permisos`);
+  return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 });
+}
+```
+
+2. /app/api/school-admin/visiones/[id]/call-tracking/route.ts
+   - Misma validación de flags
+
+3. /app/api/coordinador/productos-activos/route.ts
+   - Misma validación de flags
+
+RESULTADO:
+Los usuarios sin permisos de coordinador reciben error 403 al intentar
+acceder a estas secciones, incluso si conocen la URL directa.
+
 ================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
