@@ -1650,6 +1650,97 @@ ARCHIVOS MODIFICADOS:
   - "Ya pagaste (Avanzado)" muestra prices.ADVANCED dinámico
 
 ================================================================================
+14. SISTEMA DE CÓDIGOS DE PAGO (PaymentCode)
+================================================================================
+
+--------------------------------------------------------------------------------
+14.1 Modelo PaymentCode
+--------------------------------------------------------------------------------
+
+```prisma
+model PaymentCode {
+  id                 String            @id  // ⚠️ Requiere UUID manual
+  code               String            @unique
+  amount             Decimal           @db.Decimal(10, 2)
+  reference          String?
+  status             PaymentCodeStatus @default(ACTIVE)
+  organizationId     Int
+  visionId           Int?
+  createdById        Int
+  redeemedById       Int?
+  batchId            String?
+  createdAt          DateTime          @default(now())
+  redeemedAt         DateTime?
+  cancelledAt        DateTime?
+  cancellationReason String?
+  // ... relaciones
+}
+
+enum PaymentCodeStatus {
+  ACTIVE
+  REDEEMED
+  CANCELLED
+  EXPIRED
+}
+```
+
+⚠️ IMPORTANTE: El campo `id` NO tiene @default(uuid()), requiere generación manual.
+
+--------------------------------------------------------------------------------
+14.2 Creación de PaymentCode
+--------------------------------------------------------------------------------
+
+Archivo: /app/api/treasury/payment-codes/route.ts
+
+```typescript
+// CORRECTO - incluir id manual:
+const paymentCode = await prisma.paymentCode.create({
+  data: {
+    id: crypto.randomUUID(),  // ⚠️ OBLIGATORIO
+    code: generatedCode,
+    amount: amount,
+    organizationId: user.organizationId,
+    visionId: visionId,
+    createdById: user.id,
+    // ...
+  },
+});
+```
+
+--------------------------------------------------------------------------------
+14.3 Validación de PaymentCode (gift-codes/validate)
+--------------------------------------------------------------------------------
+
+Archivo: /app/api/gift-codes/validate/route.ts
+
+Los códigos CASH-* se detectan por prefijo y se validan contra PaymentCode:
+
+```typescript
+// Códigos que empiezan con CASH- son PaymentCode
+if (code.startsWith('CASH-')) {
+  return validatePaymentCode(code, organizationId);
+}
+```
+
+⚠️ IMPORTANTE: El modelo PaymentCode NO tiene campo `expiresAt`.
+   La expiración se maneja únicamente por el campo `status = EXPIRED`.
+   NO intentar acceder a `paymentCode.expiresAt` - causará error.
+
+--------------------------------------------------------------------------------
+14.4 Correcciones Realizadas (Feb 2026)
+--------------------------------------------------------------------------------
+
+PROBLEMA 1: Error al crear PaymentCode
+- Error: "Argument `id` is missing"
+- Causa: PaymentCode.id no tiene @default(uuid())
+- Fix: Agregar `id: crypto.randomUUID()` en create()
+
+PROBLEMA 2: Error al validar código CASH
+- Error: "Error al validar código" (500)
+- Causa: Código accedía a `paymentCode.expiresAt` que no existe
+- Fix: Eliminar verificación de expiresAt, usar solo status
+
+================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
 
