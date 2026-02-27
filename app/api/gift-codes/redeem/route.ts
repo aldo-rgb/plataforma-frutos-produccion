@@ -118,6 +118,7 @@ export async function POST(request: Request) {
       for (const level of ticketLevels) {
         const ticket = await tx.ticket.create({
           data: {
+            id: crypto.randomUUID(),
             ownerId: user.id,
             organizationId: giftCode.organizationId,
             visionId: parseInt(visionId),
@@ -344,6 +345,7 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
         
         ticket = await tx.ticket.create({
           data: {
+            id: crypto.randomUUID(),
             ownerId: user.id,
             organizationId: paymentCode.organizationId,
             visionId: userVisionId,
