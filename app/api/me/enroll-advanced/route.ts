@@ -35,8 +35,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if this is a PL-only purchase
-    const isPLOnlyPurchase = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO';
+    // Check if this is a PL-only purchase (user already has ADVANCED, only buying PL)
+    const isPLOnlyPurchase = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO' || packageType === 'PL_APARTADO' || packageType === 'PL_COMPLETO';
 
     // Check if already enrolled in ADVANCED for this vision
     let existingAdvancedEnrollment = await prisma.vision_enrollments.findFirst({
@@ -173,7 +173,10 @@ export async function POST(request: Request) {
     }
 
     // Determine if this is a PL-only purchase (user already has ADVANCED)
-    const isPLOnly = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO';
+    // PL_BASE, PL_CON_CREDITO: Compra PL individual
+    // PL_APARTADO: Apartar lugar en PL ($1,000-1,500)
+    // PL_COMPLETO: Completar el combo pagando la diferencia
+    const isPLOnly = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO' || packageType === 'PL_APARTADO' || packageType === 'PL_COMPLETO';
 
     // Create enrollment and tickets in a transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -207,18 +210,27 @@ export async function POST(request: Request) {
           },
         });
 
+        // Determine enrollment and payment status based on package type
+        // PL_APARTADO: User pays partial now, rest later (PENDING)
+        // PL_COMPLETO, PL_BASE, PL_CON_CREDITO: Fully paid (ACTIVE/PAID)
+        const isApartado = packageType === 'PL_APARTADO';
+        const plEnrollmentStatus = isApartado ? 'PENDING' : 'ACTIVE';
+        const plPaymentStatus = isApartado ? 'PARTIAL' : 'PAID';
+        const plTicketStatus = isApartado ? 'PENDING_PAYMENT' : 'ACTIVE';
+        const plTicketType = isApartado ? 'APARTADO' : 'STANDARD';
+
         if (existingPendingPL) {
           // Update the existing pending PL enrollment
           plEnrollment = await tx.vision_enrollments.update({
             where: { id: existingPendingPL.id },
             data: {
-              enrollmentStatus: 'ACTIVE',
-              paymentStatus: 'PAID',
+              enrollmentStatus: plEnrollmentStatus,
+              paymentStatus: plPaymentStatus,
               enrolledAt: new Date(),
               updatedAt: new Date(),
             },
           });
-          logger.debug(`✅ Actualizando enrollment PL pendiente (ID: ${existingPendingPL.id}) a PAID`);
+          logger.debug(`✅ Actualizando enrollment PL pendiente (ID: ${existingPendingPL.id}) a ${plPaymentStatus}`);
         } else {
           // Create new PL enrollment in the same vision as ADVANCED
           plEnrollment = await tx.vision_enrollments.create({
@@ -227,12 +239,22 @@ export async function POST(request: Request) {
               visionId: effectiveVisionId,
               coordinatorId: existingAdvanced.coordinatorId,
               level: 'PL',
-              enrollmentStatus: 'ACTIVE',
-              paymentStatus: 'PAID',
+              enrollmentStatus: plEnrollmentStatus,
+              paymentStatus: plPaymentStatus,
               enrolledAt: new Date(),
               updatedAt: new Date(),
             },
           });
+        }
+
+        // Calculate cost based on package type
+        let plCost = prices?.PL_BASE || prices?.COMBO_BASE || amountPaid;
+        if (packageType === 'PL_COMPLETO') {
+          // Completar combo: precio COMBO_BASE - lo que ya pagó en ADVANCED
+          plCost = prices?.COMBO_BASE || 12500;
+        } else if (packageType === 'PL_APARTADO') {
+          // Apartado: precio promo PL
+          plCost = prices?.PL || 6000;
         }
 
         // Create PL ticket in the same vision as ADVANCED
@@ -243,10 +265,10 @@ export async function POST(request: Request) {
             organizationId: organizationId,
             visionId: effectiveVisionId,
             level: 'PL',
-            type: 'STANDARD',
-            status: 'ACTIVE',
-            paymentStatus: 'PAID',
-            costAtPurchase: prices?.PL_BASE || amountPaid,
+            type: plTicketType,
+            status: plTicketStatus,
+            paymentStatus: plPaymentStatus,
+            costAtPurchase: plCost,
             amountPaid: amountPaid,
             isTransferable: false,
             validUntil: vision.plWeekend3EndDate || null,
@@ -438,6 +460,10 @@ export async function POST(request: Request) {
       message = '¡Tu lugar en Liderato ha sido apartado! Recuerda pagar antes del inicio del Avanzado.';
     } else if (packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO') {
       message = '¡Inscripción exitosa al Liderato (PL)!';
+    } else if (packageType === 'PL_COMPLETO') {
+      message = '¡Inscripción exitosa! Has completado tu Combo Avanzado + Liderato.';
+    } else if (packageType === 'PL_APARTADO') {
+      message = '¡Tu lugar en Liderato ha sido apartado! Recuerda completar el pago antes del inicio.';
     }
 
     // For PL-only, return the PL enrollment info
