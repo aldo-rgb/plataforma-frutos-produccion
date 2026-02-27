@@ -46,7 +46,7 @@ export async function GET() {
         ownerId: user.id,
       },
       include: {
-        vision: {
+        Vision: {
           select: {
             id: true,
             nombre: true,
@@ -58,7 +58,7 @@ export async function GET() {
             plWeekend3EndDate: true,
           },
         },
-        organization: {
+        Organization: {
           select: {
             name: true,
             logoUrl: true,
@@ -105,22 +105,22 @@ export async function GET() {
           purchasePrice: ticket.purchasePrice ? parseFloat(ticket.purchasePrice.toString()) : null,
           createdAt: ticket.createdAt.toISOString(),
           vision: {
-            id: ticket.vision.id,
-            nombre: ticket.vision.nombre,
+            id: ticket.Vision.id,
+            nombre: ticket.Vision.nombre,
             // Fechas de BASIC
-            startDate: ticket.vision.startDate?.toISOString() || '',
-            endDate: ticket.vision.endDate?.toISOString() || null,
+            startDate: ticket.Vision.startDate?.toISOString() || '',
+            endDate: ticket.Vision.endDate?.toISOString() || null,
             // Fechas de ADVANCED
-            advancedStartDate: ticket.vision.advancedStartDate?.toISOString() || null,
-            advancedEndDate: ticket.vision.advancedEndDate?.toISOString() || null,
+            advancedStartDate: ticket.Vision.advancedStartDate?.toISOString() || null,
+            advancedEndDate: ticket.Vision.advancedEndDate?.toISOString() || null,
             // Fechas de PL (Liderato)
-            plStartDate: ticket.vision.plWeekend1StartDate?.toISOString() || null,
-            plEndDate: ticket.vision.plWeekend3EndDate?.toISOString() || null,
+            plStartDate: ticket.Vision.plWeekend1StartDate?.toISOString() || null,
+            plEndDate: ticket.Vision.plWeekend3EndDate?.toISOString() || null,
           },
           organization: {
-            name: ticket.organization.name,
-            logoUrl: ticket.organization.logoUrl,
-            transfersEnabled: ticket.organization.transfersEnabled,
+            name: ticket.Organization.name,
+            logoUrl: ticket.Organization.logoUrl,
+            transfersEnabled: ticket.Organization.transfersEnabled,
           },
           product: product ? {
             id: product.id,
