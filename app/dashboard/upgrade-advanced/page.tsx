@@ -220,8 +220,8 @@ export default function UpgradeAdvancedPage() {
         return Math.max(0, (prices.PL || 0) - (prices.ADVANCED || 0));
       case 'PL_COMPLETO':
         // Usuario ya pagó Avanzado, paga para completar el combo
-        // Paga ahora = precio COMBO - precio promo Avanzado
-        return Math.max(0, (prices.COMBO || 0) - (prices.ADVANCED || 0));
+        // Paga ahora = precio COMBO_BASE - precio promo Avanzado
+        return Math.max(0, (prices.COMBO_BASE || 0) - (prices.ADVANCED || 0));
       default:
         return 0;
     }
@@ -234,9 +234,9 @@ export default function UpgradeAdvancedPage() {
       return prices.PL; // Debe pagar el promo de PL antes del inicio de avanzado
     }
     if (selectedPackage === 'PL_APARTADO') {
-      // Restante = precio COMBO - precio promo Avanzado - lo que paga ahora de apartado
+      // Restante = precio COMBO_BASE - precio promo Avanzado - lo que paga ahora de apartado
       const apartadoPago = Math.max(0, (prices.PL || 0) - (prices.ADVANCED || 0));
-      return Math.max(0, (prices.COMBO || 0) - (prices.ADVANCED || 0) - apartadoPago);
+      return Math.max(0, (prices.COMBO_BASE || 0) - (prices.ADVANCED || 0) - apartadoPago);
     }
     return 0;
   };
@@ -464,14 +464,14 @@ export default function UpgradeAdvancedPage() {
                     </div>
                     <div className="flex justify-between text-sm mt-1">
                       <span className="text-slate-400">Restante (antes del PL):</span>
-                      <span className="text-yellow-400 font-semibold">${formatPrice(Math.max(0, prices.COMBO - prices.PL))}</span>
+                      <span className="text-yellow-400 font-semibold">${formatPrice(Math.max(0, prices.COMBO_BASE - prices.PL))}</span>
                     </div>
                   </div>
                 </div>
               )}
               {prices && (
                 <p className="text-xs text-slate-500 mt-2 text-center">
-                  Combo total: ${formatPrice(prices.COMBO)} = ${formatPrice(prices.PL)} apartado + ${formatPrice(Math.max(0, prices.COMBO - prices.PL))} restante
+                  Combo total: ${formatPrice(prices.COMBO_BASE)} = ${formatPrice(prices.PL)} apartado + ${formatPrice(Math.max(0, prices.COMBO_BASE - prices.PL))} restante
                 </p>
               )}
             </motion.div>
@@ -518,12 +518,12 @@ export default function UpgradeAdvancedPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400 text-sm">Paga ahora y completa:</span>
-                    <span className="text-emerald-400 font-black text-2xl">${formatPrice(Math.max(0, prices.COMBO - prices.ADVANCED))}</span>
+                    <span className="text-emerald-400 font-black text-2xl">${formatPrice(Math.max(0, prices.COMBO_BASE - prices.ADVANCED))}</span>
                   </div>
                   <div className="border-t border-slate-700 pt-2 mt-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-white font-semibold">COMBO Total:</span>
-                      <span className="text-yellow-400 font-bold">${formatPrice(prices.COMBO)} ✓</span>
+                      <span className="text-yellow-400 font-bold">${formatPrice(prices.COMBO_BASE)} ✓</span>
                     </div>
                   </div>
                 </div>
