@@ -191,10 +191,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     logger.error('❌ Error al crear pago:', error);
+    logger.error('❌ Error stack:', error.stack);
+    logger.error('❌ Error name:', error.name);
     return NextResponse.json(
       {
         error: 'Error al crear el pago',
         details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
       { status: 500 }
     );
@@ -249,8 +252,9 @@ async function createMercadoPagoPreference(
 
   if (!preferenceRes.ok) {
     const errorData = await preferenceRes.json();
-    logger.error('Error de Mercado Pago:', errorData);
-    throw new Error('Error al crear preferencia en Mercado Pago');
+    logger.error('Error de Mercado Pago:', JSON.stringify(errorData, null, 2));
+    logger.error('MP Status:', preferenceRes.status);
+    throw new Error(`Error de Mercado Pago: ${JSON.stringify(errorData)}`);
   }
 
   const preferenceData = await preferenceRes.json();
