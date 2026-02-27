@@ -62,6 +62,7 @@ interface NextPLVision {
 interface PriceConfig {
   ADVANCED: number;      // Precio promo avanzado
   ADVANCED_BASE: number; // Precio base avanzado
+  ADVANCED_PAID: number; // Lo que realmente pagó por ADVANCED
   PL: number;            // Precio promo PL
   PL_BASE: number;       // Precio base PL
   COMBO: number;         // Precio promo combo
@@ -181,7 +182,9 @@ export default function UpgradeAdvancedPage() {
       } else if (data.panorama === 'BASICO_COMPLETADO') {
         setSelectedPackage('COMBO_BASE'); // Recomendado
       } else if (data.panorama === 'AVANZADO_EN_CURSO') {
-        setSelectedPackage(data.hasApartadoCredit ? 'PL_CON_CREDITO' : 'PL_BASE');
+        // Para AVANZADO_EN_CURSO, usar PL_COMPLETO como default (es la opción recomendada)
+        // PL_CON_CREDITO solo si tiene crédito de apartado
+        setSelectedPackage(data.hasApartadoCredit ? 'PL_CON_CREDITO' : 'PL_COMPLETO');
       }
     } catch (err) {
       console.error('Error fetching upgrade info:', err);
@@ -255,6 +258,15 @@ export default function UpgradeAdvancedPage() {
 
     setSubmitting(true);
     
+    // DEBUG: Log values before creating upgradeData
+    const calculatedPrice = getPackagePrice();
+    console.log('🔍 DEBUG handleConfirm:', {
+      selectedPackage,
+      calculatedPrice,
+      prices,
+      panorama,
+    });
+    
     // Store upgrade data in sessionStorage for checkout
     const upgradeData = {
       type: 'UPGRADE_ADVANCED',
@@ -268,7 +280,7 @@ export default function UpgradeAdvancedPage() {
       targetVisionId: selectedVision?.id || nextPLVision?.id,
       targetVisionName: selectedVision?.nombre || nextPLVision?.name,
       startDate: selectedVision?.startDate || nextPLVision?.startDate,
-      price: getPackagePrice(),
+      price: calculatedPrice,
       packageType: selectedPackage,
       pendingDebt: getPendingDebt(),
       prices: prices,

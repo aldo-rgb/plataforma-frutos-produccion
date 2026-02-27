@@ -88,7 +88,7 @@ const transformationLevels = [
   },
   {
     level: 'PROGRAMA DE LIDERATO',
-    duration: '3 fines de semana + 10 semanas',
+    duration: '10 semanas - 3 fines de semana',
     icon: '👑',
     gradient: 'from-violet-500 to-purple-600',
     bgGradient: 'from-violet-500/20 to-purple-600/20',

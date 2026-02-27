@@ -271,6 +271,14 @@ export async function GET() {
       priceMap[p.levelType] = p.promoPrice ?? p.basePrice;
       basePriceMap[p.levelType] = p.basePrice;
     });
+    
+    // DEBUG: Log price maps
+    console.log('🔍 DEBUG upgrade-advanced-info prices:', {
+      orgId,
+      defaultPricesCount: defaultPrices.length,
+      priceMap,
+      basePriceMap,
+    });
 
     // Precios individuales
     const advancedPromoPrice = priceMap['ADVANCED'] || 7500;  // Precio promo del avanzado
@@ -318,8 +326,39 @@ export async function GET() {
       },
     });
     
+    // OPCIÓN 3: Ticket ADVANCED donde pagó más del costo (exceso va como crédito)
+    // Esto cubre casos donde el usuario pagó por combo pero se registró como ADVANCED
+    const advancedTicketWithOverpayment = await prisma.ticket.findFirst({
+      where: {
+        ownerId: userId,
+        level: 'ADVANCED',
+        status: 'ACTIVE',
+        paymentStatus: 'PAID',
+      },
+      select: {
+        id: true,
+        costAtPurchase: true,
+        amountPaid: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    
+    // Calcular si hay sobrepago en el ticket ADVANCED
+    let overpaymentCredit = 0;
+    if (advancedTicketWithOverpayment) {
+      const cost = Number(advancedTicketWithOverpayment.costAtPurchase || 0);
+      const paid = Number(advancedTicketWithOverpayment.amountPaid || 0);
+      if (paid > cost && cost > 0) {
+        overpaymentCredit = paid - cost;
+      }
+    }
+    
     // Determinar si tiene crédito y cuánto
-    const hasApartadoCredit = !!apartadoTicketAdvanced || (!!apartadoTicketPL && Number(apartadoTicketPL.amountPaid || 0) > 0);
+    const hasApartadoCredit = !!apartadoTicketAdvanced || 
+      (!!apartadoTicketPL && Number(apartadoTicketPL.amountPaid || 0) > 0) ||
+      overpaymentCredit > 0;
     
     // Calcular el saldo a favor
     let apartadoSaldo = 0;
@@ -329,6 +368,9 @@ export async function GET() {
     } else if (apartadoTicketPL && Number(apartadoTicketPL.amountPaid || 0) > 0) {
       // Si tiene ticket de PL con pago parcial, el saldo es lo que ya pagó
       apartadoSaldo = Number(apartadoTicketPL.amountPaid);
+    } else if (overpaymentCredit > 0) {
+      // Si pagó de más en ADVANCED, usar ese exceso como crédito
+      apartadoSaldo = overpaymentCredit;
     }
     
     // Precio de PL para mostrar:
@@ -369,6 +411,31 @@ export async function GET() {
       promoDeadline.setHours(23, 0, 0, 0); // 11 PM
       promoDeadlineDate = promoDeadline.toISOString();
     }
+    
+    // Calcular cuánto ha pagado el usuario realmente por ADVANCED
+    // Esto se usa para mostrar "Ya pagaste: $X"
+    let advancedAmountPaid = advancedPromoPrice; // Default al precio promo
+    if (advancedTicketWithOverpayment) {
+      advancedAmountPaid = Number(advancedTicketWithOverpayment.amountPaid || 0);
+    }
+    
+    // DEBUG: Log final prices being returned
+    const finalPrices = {
+      ADVANCED: advancedPromoPrice,        
+      ADVANCED_BASE: advancedBasePrice,    
+      ADVANCED_PAID: advancedAmountPaid,   
+      PL: plDisplayPromoPrice,             
+      PL_BASE: plBasePrice,                  
+      COMBO: comboPrice,                   
+      COMBO_BASE: comboBasePrice,          
+      APARTADO_SALDO: apartadoSaldo,       
+    };
+    console.log('🔍 DEBUG final prices:', {
+      panorama,
+      finalPrices,
+      comboPromoConfigured,
+      comboBaseConfigured,
+    });
 
     return NextResponse.json({
       success: true,
@@ -383,15 +450,7 @@ export async function GET() {
       } : null,
       promoDeadline: promoDeadlineDate,
       hasApartadoCredit,
-      prices: {
-        ADVANCED: advancedPromoPrice,        // Precio promo avanzado solo
-        ADVANCED_BASE: advancedBasePrice,    // Precio base avanzado
-        PL: plDisplayPromoPrice,             // Precio promo PL (combo si tiene crédito, individual si no)
-        PL_BASE: plBasePrice,                // Precio base PL  
-        COMBO: comboPrice,                   // Precio del combo promo
-        COMBO_BASE: comboBasePrice,          // Precio base combo (para tachar)
-        APARTADO_SALDO: apartadoSaldo,       // Crédito a favor si pagó apartado
-      },
+      prices: finalPrices,
     });
   } catch (error) {
     logger.error('Error fetching upgrade info:', error);

@@ -10,13 +10,20 @@ export const revalidate = 0;
 
 // Helper para obtener la URL base
 function getBaseUrl(): string {
-  // En producción usar NEXTAUTH_URL o construir desde VERCEL_URL
+  // URL de producción hardcodeada para evitar problemas
+  const PRODUCTION_URL = 'https://www.impactocuantico.net';
+  
+  // En producción, siempre usar la URL de producción
+  if (process.env.NODE_ENV === 'production') {
+    return PRODUCTION_URL;
+  }
+  
+  // En desarrollo, usar NEXTAUTH_URL si está configurada
   if (process.env.NEXTAUTH_URL) {
-    return process.env.NEXTAUTH_URL;
+    // Asegurarse de que no tenga trailing slash
+    return process.env.NEXTAUTH_URL.replace(/\/$/, '');
   }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
+  
   // Fallback para desarrollo
   return 'http://localhost:3000';
 }
@@ -47,10 +54,21 @@ export async function POST(request: NextRequest) {
       prices,
       appliedCodes = [],
     } = body;
+    
+    // DEBUG: Log received data
+    logger.debug('📥 create-payment received:', {
+      visionId,
+      organizationId,
+      packageType,
+      amount,
+      pendingDebt,
+      appliedCodesCount: appliedCodes?.length,
+    });
 
     if (!visionId || !organizationId || !packageType || !amount) {
+      logger.error('❌ Datos incompletos:', { visionId, organizationId, packageType, amount });
       return NextResponse.json(
-        { error: 'Datos incompletos' },
+        { success: false, error: 'Datos incompletos', details: `visionId=${visionId}, organizationId=${organizationId}, packageType=${packageType}, amount=${amount}` },
         { status: 400 }
       );
     }
@@ -204,10 +222,12 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     logger.error('❌ Error al crear pago:', error);
+    logger.error('❌ Error message:', error.message);
     logger.error('❌ Error stack:', error.stack);
     logger.error('❌ Error name:', error.name);
     return NextResponse.json(
       {
+        success: false,
         error: 'Error al crear el pago',
         details: error.message,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
@@ -231,6 +251,19 @@ async function createMercadoPagoPreference(
   const baseUrl = getBaseUrl();
   logger.debug(`📍 Base URL para back_urls: ${baseUrl}`);
   
+  // Crear un ID único para esta transacción
+  const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  
+  // Guardar los datos de la orden en metadata (MercadoPago los devuelve en el webhook)
+  // También usar external_reference para identificar la transacción
+  const externalReference = JSON.stringify({
+    transactionId,
+    userId: orderData.userId,
+    visionId: orderData.visionId,
+    packageType: orderData.packageType,
+    amount: orderData.amount,
+  });
+  
   const preferenceRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
     method: 'POST',
     headers: {
@@ -252,16 +285,12 @@ async function createMercadoPagoPreference(
         email: user.email || '',
       },
       back_urls: {
-        success: `${baseUrl}/api/checkout-advanced/payment-success?data=${encodeURIComponent(JSON.stringify(orderData))}`,
+        success: `${baseUrl}/api/checkout-advanced/payment-success`,
         failure: `${baseUrl}/dashboard/checkout-advanced?payment=failed`,
         pending: `${baseUrl}/dashboard/checkout-advanced?payment=pending`,
       },
       auto_return: 'approved',
-      external_reference: JSON.stringify({
-        userId: orderData.userId,
-        visionId: orderData.visionId,
-        packageType: orderData.packageType,
-      }),
+      external_reference: externalReference,
       metadata: orderData,
     }),
   });
@@ -316,13 +345,16 @@ async function createStripeCheckout(
     ],
     mode: 'payment',
     customer_email: user.email,
-    success_url: `${baseUrl}/api/checkout-advanced/payment-success?data=${encodeURIComponent(JSON.stringify(orderData))}&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${baseUrl}/api/checkout-advanced/payment-success?provider=stripe&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/dashboard/checkout-advanced?payment=cancelled`,
     metadata: {
       userId: orderData.userId.toString(),
       visionId: orderData.visionId.toString(),
       packageType: orderData.packageType,
       organizationId: orderData.organizationId.toString(),
+      amount: orderData.amount.toString(),
+      pendingDebt: (orderData.pendingDebt || 0).toString(),
+      orderDataJson: JSON.stringify(orderData),
     },
   });
 

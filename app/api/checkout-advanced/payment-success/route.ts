@@ -12,41 +12,119 @@ import { processAmbassadorCommission } from '@/lib/ambassador-engine';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const dataParam = searchParams.get('data');
     const paymentId = searchParams.get('payment_id');
     const status = searchParams.get('status');
     const collectionStatus = searchParams.get('collection_status');
     const externalReference = searchParams.get('external_reference');
+    const preferenceId = searchParams.get('preference_id');
+    const provider = searchParams.get('provider');
+    const stripeSessionId = searchParams.get('session_id');
 
     logger.debug('📨 Payment success callback received');
     logger.debug('   Payment ID:', paymentId);
     logger.debug('   Status:', status);
     logger.debug('   Collection Status:', collectionStatus);
     logger.debug('   External Reference:', externalReference);
-    logger.debug('   Data param:', dataParam ? 'present' : 'missing');
+    logger.debug('   Preference ID:', preferenceId);
+    logger.debug('   Provider:', provider);
+    logger.debug('   Stripe Session ID:', stripeSessionId);
 
-    // Parse order data from URL parameter
+    // Parse order data from external_reference (que contiene los datos de la orden)
     let orderData: any = null;
+    let isPaymentApproved = false;
     
-    if (dataParam) {
+    // Manejar Stripe
+    if (provider === 'stripe' && stripeSessionId) {
       try {
-        orderData = JSON.parse(decodeURIComponent(dataParam));
+        const gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+          where: { provider: 'STRIPE', isActive: true },
+          select: { secretKey: true },
+        });
+        
+        if (gatewayConfig?.secretKey) {
+          const Stripe = require('stripe');
+          const stripe = new Stripe(gatewayConfig.secretKey, { apiVersion: '2023-10-16' });
+          
+          const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
+          logger.debug('   Stripe session status:', session.payment_status);
+          
+          if (session.payment_status === 'paid') {
+            isPaymentApproved = true;
+            
+            // Obtener datos de metadata
+            if (session.metadata?.orderDataJson) {
+              try {
+                orderData = JSON.parse(session.metadata.orderDataJson);
+              } catch (e) {
+                // Fallback a campos individuales
+                orderData = {
+                  userId: parseInt(session.metadata.userId),
+                  visionId: parseInt(session.metadata.visionId),
+                  organizationId: parseInt(session.metadata.organizationId),
+                  packageType: session.metadata.packageType,
+                  amount: parseFloat(session.metadata.amount),
+                  pendingDebt: parseFloat(session.metadata.pendingDebt || '0'),
+                };
+              }
+            }
+          }
+        }
       } catch (e) {
-        logger.error('Error parsing data param:', e);
+        logger.error('Error fetching Stripe session:', e);
       }
     }
-
-    // Fallback: parse from external_reference
+    
+    // Manejar MercadoPago
     if (!orderData && externalReference) {
       try {
         orderData = JSON.parse(externalReference);
+        logger.debug('   Parsed external_reference:', orderData);
       } catch (e) {
         logger.error('Error parsing external_reference:', e);
       }
     }
 
+    // Si tenemos payment_id, obtener más detalles del pago desde MercadoPago
+    if (paymentId && !orderData) {
+      try {
+        // Obtener la configuración de MercadoPago para buscar el access token
+        const gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+          where: { provider: 'MERCADOPAGO', isActive: true },
+          select: { secretKey: true },
+        });
+        
+        if (gatewayConfig?.secretKey) {
+          const paymentRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+            headers: {
+              Authorization: `Bearer ${gatewayConfig.secretKey}`,
+            },
+          });
+          
+          if (paymentRes.ok) {
+            const paymentData = await paymentRes.json();
+            logger.debug('   Payment data from MP:', JSON.stringify(paymentData.metadata || {}, null, 2));
+            
+            // Los datos están en metadata
+            if (paymentData.metadata) {
+              orderData = paymentData.metadata;
+            }
+            // O intentar parsear de external_reference del payment
+            if (!orderData && paymentData.external_reference) {
+              try {
+                orderData = JSON.parse(paymentData.external_reference);
+              } catch (e) {
+                // ignore
+              }
+            }
+          }
+        }
+      } catch (e) {
+        logger.error('Error fetching payment from MP:', e);
+      }
+    }
+
     if (!orderData || !orderData.userId || !orderData.visionId || !orderData.packageType) {
-      logger.error('Missing order data');
+      logger.error('Missing order data:', orderData);
       return NextResponse.redirect(
         new URL('/dashboard/checkout-advanced?payment=error&reason=datos-incompletos', request.url)
       );
@@ -64,11 +142,18 @@ export async function GET(request: NextRequest) {
     } = orderData;
 
     // Verify payment status (approved)
-    if (status !== 'approved' && collectionStatus !== 'approved') {
-      logger.debug('Payment not approved:', status, collectionStatus);
+    // Para MercadoPago: status === 'approved' o collectionStatus === 'approved'
+    // Para Stripe: isPaymentApproved ya fue calculado arriba
+    if (!isPaymentApproved && status !== 'approved' && collectionStatus !== 'approved') {
+      logger.debug('Payment not approved:', { isPaymentApproved, status, collectionStatus });
       return NextResponse.redirect(
-        new URL(`/dashboard/checkout-advanced?payment=failed&status=${status || collectionStatus}`, request.url)
+        new URL(`/dashboard/checkout-advanced?payment=failed&status=${status || collectionStatus || 'not_approved'}`, request.url)
       );
+    }
+    
+    // Marcar como aprobado si viene de MercadoPago
+    if (status === 'approved' || collectionStatus === 'approved') {
+      isPaymentApproved = true;
     }
 
     logger.debug(`✅ Pago aprobado para usuario ${userId}`);

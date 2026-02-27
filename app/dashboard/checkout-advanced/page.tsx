@@ -110,6 +110,15 @@ export default function CheckoutAdvancedPage() {
 
     try {
       const data = JSON.parse(storedData);
+      
+      // DEBUG: Log received data
+      console.log('🔍 DEBUG checkout-advanced received:', {
+        price: data.price,
+        packageType: data.packageType,
+        panorama: data.panorama,
+        prices: data.prices,
+      });
+      
       if (data.type !== 'UPGRADE_ADVANCED') {
         router.push('/dashboard/upgrade-advanced');
         return;
@@ -258,24 +267,29 @@ export default function CheckoutAdvancedPage() {
     try {
       // If paying with card (STRIPE/MercadoPago), redirect to payment gateway
       if (paymentMethod === 'STRIPE' && remaining > 0) {
+        // Log the request data
+        const requestData = {
+          visionId: upgradeData.targetVisionId,
+          organizationId: upgradeData.targetOrganizationId,
+          packageType: upgradeData.packageType || 'ADVANCED_ONLY',
+          amount: remaining,
+          pendingDebt: upgradeData.pendingDebt || 0,
+          prices: upgradeData.prices,
+          appliedCodes: appliedPayments.filter(p => p.type === 'GIFT_CODE').map(p => p.code),
+        };
+        console.log('🔍 DEBUG create-payment request:', requestData);
+        
         const paymentRes = await fetch('/api/checkout-advanced/create-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            visionId: upgradeData.targetVisionId,
-            organizationId: upgradeData.targetOrganizationId,
-            packageType: upgradeData.packageType || 'ADVANCED_ONLY',
-            amount: remaining,
-            pendingDebt: upgradeData.pendingDebt || 0,
-            prices: upgradeData.prices,
-            appliedCodes: appliedPayments.filter(p => p.type === 'GIFT_CODE').map(p => p.code),
-          }),
+          body: JSON.stringify(requestData),
         });
 
         const paymentData = await paymentRes.json();
+        console.log('🔍 DEBUG create-payment response:', paymentData);
 
         if (!paymentData.success || !paymentData.paymentUrl) {
-          throw new Error(paymentData.error || 'Error al crear el pago');
+          throw new Error(paymentData.error || paymentData.details || 'Error al crear el pago');
         }
 
         // Redirect to Mercado Pago
