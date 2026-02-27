@@ -468,7 +468,7 @@ export default function CheckoutAdvancedPage() {
                 )}
 
                 {/* Mostrar desglose de lo ya pagado si es PL_APARTADO o PL_COMPLETO */}
-                {(upgradeData.packageType === 'PL_APARTADO' || upgradeData.packageType === 'PL_COMPLETO') && (
+                {(upgradeData.packageType === 'PL_APARTADO' || upgradeData.packageType === 'PL_COMPLETO') && upgradeData.prices && (
                   <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
                     <div className="flex items-center justify-between">
                       <div>
@@ -476,7 +476,7 @@ export default function CheckoutAdvancedPage() {
                         <p className="text-xs text-slate-400">Inversión previa acreditada</p>
                       </div>
                       <span className="text-xl font-bold text-emerald-400">
-                        $7,500 MXN
+                        ${upgradeData.prices.ADVANCED?.toLocaleString() || 0} MXN
                       </span>
                     </div>
                   </div>
