@@ -138,13 +138,13 @@ async function validatePaymentCode(code: string, organizationId?: string) {
   const paymentCode = await prisma.paymentCode.findUnique({
     where: { code },
     include: {
-      organization: {
+      Organization: {
         select: {
           id: true,
           name: true,
         },
       },
-      vision: {
+      Vision: {
         select: {
           id: true,
           nombre: true,

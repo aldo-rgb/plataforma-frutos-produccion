@@ -8,6 +8,19 @@ import logger from '@/lib/logger';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Helper para obtener la URL base
+function getBaseUrl(): string {
+  // En producción usar NEXTAUTH_URL o construir desde VERCEL_URL
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  // Fallback para desarrollo
+  return 'http://localhost:3000';
+}
+
 /**
  * POST /api/checkout-advanced/create-payment
  * 
@@ -215,6 +228,9 @@ async function createMercadoPagoPreference(
   productDescription: string,
   amount: number
 ): Promise<string> {
+  const baseUrl = getBaseUrl();
+  logger.debug(`📍 Base URL para back_urls: ${baseUrl}`);
+  
   const preferenceRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
     method: 'POST',
     headers: {
@@ -236,9 +252,9 @@ async function createMercadoPagoPreference(
         email: user.email || '',
       },
       back_urls: {
-        success: `${process.env.NEXTAUTH_URL}/api/checkout-advanced/payment-success?data=${encodeURIComponent(JSON.stringify(orderData))}`,
-        failure: `${process.env.NEXTAUTH_URL}/dashboard/checkout-advanced?payment=failed`,
-        pending: `${process.env.NEXTAUTH_URL}/dashboard/checkout-advanced?payment=pending`,
+        success: `${baseUrl}/api/checkout-advanced/payment-success?data=${encodeURIComponent(JSON.stringify(orderData))}`,
+        failure: `${baseUrl}/dashboard/checkout-advanced?payment=failed`,
+        pending: `${baseUrl}/dashboard/checkout-advanced?payment=pending`,
       },
       auto_return: 'approved',
       external_reference: JSON.stringify({
@@ -277,6 +293,8 @@ async function createStripeCheckout(
   productDescription: string,
   amount: number
 ): Promise<string> {
+  const baseUrl = getBaseUrl();
+  
   // Importar Stripe dinámicamente
   const Stripe = require('stripe');
   const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' });
@@ -298,8 +316,8 @@ async function createStripeCheckout(
     ],
     mode: 'payment',
     customer_email: user.email,
-    success_url: `${process.env.NEXTAUTH_URL}/api/checkout-advanced/payment-success?data=${encodeURIComponent(JSON.stringify(orderData))}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.NEXTAUTH_URL}/dashboard/checkout-advanced?payment=cancelled`,
+    success_url: `${baseUrl}/api/checkout-advanced/payment-success?data=${encodeURIComponent(JSON.stringify(orderData))}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/dashboard/checkout-advanced?payment=cancelled`,
     metadata: {
       userId: orderData.userId.toString(),
       visionId: orderData.visionId.toString(),
