@@ -250,6 +250,7 @@ export async function POST(request: Request) {
             amountPaid: amountPaid,
             isTransferable: false,
             validUntil: vision.plWeekend3EndDate || null,
+            updatedAt: new Date(),
           },
         });
       } else {
@@ -282,6 +283,7 @@ export async function POST(request: Request) {
             amountPaid: amountPaid,
             isTransferable: false,
             validUntil: vision.advancedEndDate || null,
+            updatedAt: new Date(),
           },
         });
 
@@ -377,6 +379,7 @@ export async function POST(request: Request) {
               // For PROMO_RESERVABLE: validUntil = deposit deadline (11 PM last day of basic)
               // After deposit, it will be updated to promo payment deadline
               validUntil: packageType === 'ADVANCED_PROMO' ? depositDeadline : promoDeadline,
+              updatedAt: new Date(),
             },
           });
         }

@@ -131,6 +131,7 @@ export async function POST(request: Request) {
             giftCodeId: giftCode.id,
             isTransferable: true,
             validUntil: vision.endDate || null,
+            updatedAt: new Date(),
           },
         });
 
@@ -357,6 +358,7 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
             amountPaid: amount,
             isTransferable: true,
             validUntil: enrollment.Vision?.endDate || null,
+            updatedAt: new Date(),
           }
         });
 
