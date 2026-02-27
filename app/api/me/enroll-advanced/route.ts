@@ -238,6 +238,7 @@ export async function POST(request: Request) {
         // Create PL ticket in the same vision as ADVANCED
         plTicket = await tx.ticket.create({
           data: {
+            id: crypto.randomUUID(),
             ownerId: userId,
             organizationId: organizationId,
             visionId: effectiveVisionId,
@@ -269,6 +270,7 @@ export async function POST(request: Request) {
         // Create ADVANCED ticket
         advancedTicket = await tx.ticket.create({
           data: {
+            id: crypto.randomUUID(),
             ownerId: userId,
             organizationId: organizationId,
             visionId: visionId,
@@ -361,6 +363,7 @@ export async function POST(request: Request) {
           // Create PL ticket
           plTicket = await tx.ticket.create({
             data: {
+              id: crypto.randomUUID(),
               ownerId: userId,
               organizationId: organizationId,
               visionId: visionId,
