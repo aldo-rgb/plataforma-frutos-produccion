@@ -1826,6 +1826,124 @@ PROBLEMA: Error "back_urls invalid. Wrong format"
 - Causa: `NEXTAUTH_URL` estaba undefined en Vercel
 - Fix: Crear helper `getBaseUrl()` con fallback a `VERCEL_URL`
 
+PROBLEMA 2: URL de success demasiado larga
+- Error: MercadoPago rechaza URLs con más de 500 caracteres
+- Causa: Se pasaba orderData completo serializado en URL
+- Fix: 
+  1. Guardar datos en `external_reference` y `metadata` de MercadoPago
+  2. URL de success simplificada sin data param
+  3. payment-success obtiene datos desde MP API o external_reference
+
+```typescript
+// ANTES (causaba error):
+back_urls: {
+  success: `${baseUrl}/api/checkout-advanced/payment-success?data=${encodeURIComponent(JSON.stringify(orderData))}`,
+}
+
+// DESPUÉS (correcto):
+back_urls: {
+  success: `${baseUrl}/api/checkout-advanced/payment-success`,
+  failure: `${baseUrl}/dashboard/checkout-advanced?payment=failed`,
+  pending: `${baseUrl}/dashboard/checkout-advanced?payment=pending`,
+},
+external_reference: JSON.stringify({ transactionId, userId, visionId, packageType, amount }),
+metadata: orderData,
+```
+
+================================================================================
+16. API DE INSCRIPCIÓN A AVANZADO/PL (/api/me/enroll-advanced)
+================================================================================
+
+--------------------------------------------------------------------------------
+16.1 Tipos de Paquete (packageType)
+--------------------------------------------------------------------------------
+
+Para usuarios en BÁSICO (comprando Avanzado):
+- ADVANCED_ONLY: Solo nivel Avanzado
+- ADVANCED_PROMO: Avanzado con opción de promo PL
+- COMBO: Combo Avanzado + PL completo
+- APARTADO: Apartar combo (pago parcial)
+
+Para usuarios en AVANZADO (comprando solo PL):
+- PL_BASE: Compra PL individual
+- PL_CON_CREDITO: PL con crédito de apartado previo
+- PL_APARTADO: Apartar lugar en PL (pago parcial, estado PENDING)
+- PL_COMPLETO: Completar combo (pago total, estado ACTIVE)
+
+--------------------------------------------------------------------------------
+16.2 Detección de Compra Solo-PL
+--------------------------------------------------------------------------------
+
+La API debe detectar correctamente cuando un usuario que YA TIENE Avanzado
+quiere comprar solo PL:
+
+```typescript
+// Variable isPLOnlyPurchase - detecta si es compra solo de PL
+const isPLOnlyPurchase = 
+  packageType === 'PL_BASE' || 
+  packageType === 'PL_CON_CREDITO' || 
+  packageType === 'PL_APARTADO' || 
+  packageType === 'PL_COMPLETO';
+```
+
+⚠️ IMPORTANTE: Si no se incluyen PL_APARTADO y PL_COMPLETO, la API:
+- Detecta erróneamente que el usuario quiere ADVANCED
+- Devuelve error "Ya estás inscrito en este entrenamiento Avanzado"
+
+--------------------------------------------------------------------------------
+16.3 Lógica de Creación de Enrollment/Ticket para Solo-PL
+--------------------------------------------------------------------------------
+
+Cuando isPLOnly = true:
+
+1. NO crea enrollment/ticket de ADVANCED (ya existe)
+2. SÍ crea enrollment de PL con estado según packageType:
+   - PL_COMPLETO: enrollmentStatus='ACTIVE', paymentStatus='PAID'
+   - PL_APARTADO: enrollmentStatus='PENDING', paymentStatus='PARTIAL'
+
+3. SÍ crea ticket de PL con tipo según packageType:
+   - PL_COMPLETO: type='STANDARD', status='ACTIVE'
+   - PL_APARTADO: type='APARTADO', status='PENDING_PAYMENT'
+
+```typescript
+const isApartado = packageType === 'PL_APARTADO';
+const plEnrollmentStatus = isApartado ? 'PENDING' : 'ACTIVE';
+const plPaymentStatus = isApartado ? 'PARTIAL' : 'PAID';
+const plTicketStatus = isApartado ? 'PENDING_PAYMENT' : 'ACTIVE';
+const plTicketType = isApartado ? 'APARTADO' : 'STANDARD';
+```
+
+--------------------------------------------------------------------------------
+16.4 Correcciones Realizadas (Feb 2026)
+--------------------------------------------------------------------------------
+
+PROBLEMA: "Ya estás inscrito en este entrenamiento Avanzado" al pagar PL
+
+CAUSA: La variable `isPLOnlyPurchase` no incluía PL_APARTADO ni PL_COMPLETO
+
+ANTES (incorrecto):
+```typescript
+const isPLOnlyPurchase = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO';
+```
+
+DESPUÉS (correcto):
+```typescript
+const isPLOnlyPurchase = 
+  packageType === 'PL_BASE' || 
+  packageType === 'PL_CON_CREDITO' || 
+  packageType === 'PL_APARTADO' || 
+  packageType === 'PL_COMPLETO';
+```
+
+TAMBIÉN: La variable `isPLOnly` (usada dentro de la transacción) tenía el mismo problema.
+
+ARCHIVOS MODIFICADOS:
+- /app/api/me/enroll-advanced/route.ts
+  - Línea ~39: isPLOnlyPurchase ahora incluye 4 tipos
+  - Línea ~178: isPLOnly ahora incluye 4 tipos
+  - Lógica de enrollment/ticket actualizada para PL_APARTADO
+  - Mensajes de éxito para PL_COMPLETO y PL_APARTADO
+
 ================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
