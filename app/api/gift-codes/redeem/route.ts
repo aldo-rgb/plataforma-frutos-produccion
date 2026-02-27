@@ -257,8 +257,8 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
     const paymentCode = await prisma.paymentCode.findUnique({
       where: { code },
       include: {
-        organization: true,
-        vision: true,
+        Organization: true,
+        Vision: true,
       },
     });
 
