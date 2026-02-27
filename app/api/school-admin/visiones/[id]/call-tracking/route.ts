@@ -11,8 +11,40 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    // Verificar permisos del usuario
+    const currentUser = await prisma.usuario.findUnique({
+      where: { email: session.user.email },
+      select: {
+        id: true,
+        rol: true,
+        esCoordinador: true,
+        esCoordinadorBasico: true,
+        esCoordinadorAvanzado: true,
+        esEntrenador: true
+      }
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    // Validar que el usuario tenga permisos de coordinador
+    const hasCoordinatorAccess = 
+      currentUser.rol === 'COORDINADOR' || 
+      currentUser.rol === 'SCHOOL_ADMIN' ||
+      currentUser.rol === 'ADMIN' ||
+      currentUser.esCoordinador ||
+      currentUser.esCoordinadorBasico ||
+      currentUser.esCoordinadorAvanzado ||
+      currentUser.esEntrenador;
+
+    if (!hasCoordinatorAccess) {
+      logger.warn(`⛔ Usuario ${currentUser.id} (rol: ${currentUser.rol}) intentó acceder a call-tracking sin permisos`);
+      return NextResponse.json({ error: 'No tienes permisos para acceder a esta sección' }, { status: 403 });
     }
 
     const resolvedParams = await params;

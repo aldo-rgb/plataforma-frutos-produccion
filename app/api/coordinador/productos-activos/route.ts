@@ -18,6 +18,10 @@ export async function GET() {
         id: true, 
         rol: true,
         organizationId: true,
+        esCoordinador: true,
+        esCoordinadorBasico: true,
+        esCoordinadorAvanzado: true,
+        esEntrenador: true,
         Organization_Usuario_organizationIdToOrganization: {
           select: {
             id: true,
@@ -27,18 +31,27 @@ export async function GET() {
       }
     });
 
-    // Roles permitidos para ver productos activos
-    const allowedRoles = [
-      'COORDINATOR_BASIC',
-      'COORDINATOR_ADVANCED', 
-      'COORDINADOR',
-      'TRAINER',
-      'SCHOOL_ADMIN',
-      'ADMINISTRADOR'
-    ];
+    if (!usuario) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
 
-    if (!usuario || !allowedRoles.includes(usuario.rol)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    // Validar que el usuario tenga permisos de coordinador (por rol O por flags)
+    const hasCoordinatorAccess = 
+      usuario.rol === 'COORDINADOR' || 
+      usuario.rol === 'COORDINATOR_BASIC' ||
+      usuario.rol === 'COORDINATOR_ADVANCED' ||
+      usuario.rol === 'TRAINER' ||
+      usuario.rol === 'SCHOOL_ADMIN' ||
+      usuario.rol === 'ADMINISTRADOR' ||
+      usuario.rol === 'ADMIN' ||
+      usuario.esCoordinador ||
+      usuario.esCoordinadorBasico ||
+      usuario.esCoordinadorAvanzado ||
+      usuario.esEntrenador;
+
+    if (!hasCoordinatorAccess) {
+      logger.warn(`⛔ Usuario ${usuario.id} (rol: ${usuario.rol}) intentó acceder a productos-activos sin permisos`);
+      return NextResponse.json({ error: 'No tienes permisos para acceder a esta sección' }, { status: 403 });
     }
 
     if (!usuario.organizationId) {

@@ -4,8 +4,6 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 
-const ALLOWED_ROLES = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
-
 /**
  * GET /api/treasury/coordinator
  * Obtiene el resumen de tesorería del coordinador actual
@@ -20,11 +18,34 @@ export async function GET() {
 
     const user = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true, organizationId: true }
+      select: { 
+        id: true, 
+        rol: true, 
+        organizationId: true,
+        esCoordinador: true,
+        esCoordinadorBasico: true,
+        esCoordinadorAvanzado: true,
+        esEntrenador: true
+      }
     });
 
-    if (!user || !ALLOWED_ROLES.includes(user.rol)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    // Validar que el usuario tenga permisos de coordinador
+    const hasCoordinatorAccess = 
+      user.rol === 'COORDINADOR' || 
+      user.rol === 'SCHOOL_ADMIN' ||
+      user.rol === 'ADMIN' ||
+      user.esCoordinador ||
+      user.esCoordinadorBasico ||
+      user.esCoordinadorAvanzado ||
+      user.esEntrenador;
+
+    if (!hasCoordinatorAccess) {
+      logger.warn(`⛔ Usuario ${user.id} (rol: ${user.rol}) intentó acceder a tesorería sin permisos`);
+      return NextResponse.json({ error: 'No tienes permisos para acceder a esta sección' }, { status: 403 });
     }
 
     // Obtener códigos generados por este coordinador (solo los que NO han sido procesados en un corte)
