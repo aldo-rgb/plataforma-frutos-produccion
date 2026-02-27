@@ -11,7 +11,7 @@ interface EnrollmentData {
   organizationName: string;
   startDate: string;
   visionName: string;
-  packageType?: 'ADVANCED_ONLY' | 'COMBO' | 'APARTADO';
+  packageType?: 'ADVANCED_ONLY' | 'COMBO' | 'APARTADO' | 'PL_APARTADO' | 'PL_COMPLETO' | 'PL_BASE' | 'PL_CON_CREDITO';
   pendingDebt?: number;
   plPrice?: number;
 }
@@ -31,6 +31,8 @@ export default function UpgradeSuccessPage() {
 
   const isApartado = enrollmentData?.packageType === 'APARTADO';
   const isCombo = enrollmentData?.packageType === 'COMBO';
+  const isPLOnly = ['PL_APARTADO', 'PL_COMPLETO', 'PL_BASE', 'PL_CON_CREDITO'].includes(enrollmentData?.packageType || '');
+  const isPLApartado = enrollmentData?.packageType === 'PL_APARTADO';
 
   // Formatear fecha
   const formatDate = (dateStr: string) => {
@@ -83,22 +85,26 @@ export default function UpgradeSuccessPage() {
             transition={{ delay: 0.3 }}
           >
             <h1 className="text-3xl font-bold text-white mb-2">
-              {isApartado 
+              {isApartado || isPLApartado
                 ? '¡Lugar Apartado!' 
-                : isCombo 
+                : isCombo || isPLOnly
                   ? '¡Inscripción Completa!'
                   : '¡Inscripción Exitosa!'}
             </h1>
             <div className="flex items-center justify-center gap-2 mb-6">
-              <Sparkles className={`w-5 h-5 ${isApartado ? 'text-cyan-400' : 'text-amber-400'}`} />
-              <span className={`font-semibold text-lg ${isApartado ? 'text-cyan-400' : 'text-amber-400'}`}>
+              <Sparkles className={`w-5 h-5 ${isApartado || isPLApartado ? 'text-cyan-400' : isPLOnly ? 'text-purple-400' : 'text-amber-400'}`} />
+              <span className={`font-semibold text-lg ${isApartado || isPLApartado ? 'text-cyan-400' : isPLOnly ? 'text-purple-400' : 'text-amber-400'}`}>
                 {isApartado 
                   ? 'AVANZADO + LIDERATO (APARTADO)'
-                  : isCombo
-                    ? 'COMBO AVANZADO + LIDERATO'
-                    : 'NIVEL AVANZADO'}
+                  : isPLApartado
+                    ? 'LIDERATO (APARTADO)'
+                    : isCombo
+                      ? 'COMBO AVANZADO + LIDERATO'
+                      : isPLOnly
+                        ? 'NIVEL LIDERATO (PL)'
+                        : 'NIVEL AVANZADO'}
               </span>
-              <Sparkles className={`w-5 h-5 ${isApartado ? 'text-cyan-400' : 'text-amber-400'}`} />
+              <Sparkles className={`w-5 h-5 ${isApartado || isPLApartado ? 'text-cyan-400' : isPLOnly ? 'text-purple-400' : 'text-amber-400'}`} />
             </div>
           </motion.div>
 
@@ -111,9 +117,13 @@ export default function UpgradeSuccessPage() {
           >
             {isApartado 
               ? 'Tu lugar en Liderato ha sido apartado exitosamente. Tienes acceso al Avanzado.'
-              : isCombo
-                ? 'Has sido inscrito exitosamente al Combo Avanzado + Liderato. ¡Visión completa!'
-                : 'Has sido inscrito exitosamente al entrenamiento Avanzado. Tu viaje hacia el siguiente nivel comienza ahora.'}
+              : isPLApartado
+                ? 'Tu lugar en Liderato ha sido apartado exitosamente.'
+                : isCombo
+                  ? 'Has sido inscrito exitosamente al Combo Avanzado + Liderato. ¡Visión completa!'
+                  : isPLOnly
+                    ? 'Has sido inscrito exitosamente al Liderato (Tu VIDA). ¡Felicidades por completar tu visión!'
+                    : 'Has sido inscrito exitosamente al entrenamiento Avanzado. Tu viaje hacia el siguiente nivel comienza ahora.'}
           </motion.p>
 
           {/* Warning for APARTADO - Pending Payment */}
@@ -181,16 +191,18 @@ export default function UpgradeSuccessPage() {
                   <div>
                     <p className="text-xs text-gray-500">Tickets asignados</p>
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full">
-                        Avanzado ✓
-                      </span>
-                      {(isCombo || isApartado) && (
+                      {!isPLOnly && (
+                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full">
+                          Avanzado ✓
+                        </span>
+                      )}
+                      {(isCombo || isApartado || isPLOnly) && (
                         <span className={`px-2 py-0.5 text-xs rounded-full ${
-                          isApartado 
+                          isApartado || isPLApartado
                             ? 'bg-orange-500/20 text-orange-400'
-                            : 'bg-emerald-500/20 text-emerald-400'
+                            : 'bg-purple-500/20 text-purple-400'
                         }`}>
-                          Liderato {isApartado ? '⏳' : '✓'}
+                          Liderato {isApartado || isPLApartado ? '⏳' : '✓'}
                         </span>
                       )}
                     </div>
