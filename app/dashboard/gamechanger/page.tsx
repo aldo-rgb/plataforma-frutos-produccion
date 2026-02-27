@@ -7,8 +7,7 @@ import ProgramStatusWidget from "@/components/dashboard/ProgramStatusWidget";
 import AlertaReagendamiento from "@/components/dashboard/AlertaReagendamiento";
 import NotificationBanner from "@/components/dashboard/NotificationBanner";
 import CartaWizardWidget from "@/components/dashboard/CartaWizardWidget";
-import ZonaEjecucionDiaria from "@/components/dashboard/ZonaEjecucionDiaria";
-import GlobalProgressHero from "@/components/dashboard/GlobalProgressHero";
+import SaltosCuanticosWidget from "@/components/dashboard/SaltosCuanticosWidget";
 import IntensiveProgramCard from "@/components/dashboard/IntensiveProgramCard";
 import IntensiveProgramInvite from "@/components/dashboard/IntensiveProgramInvite";
 import OrganizationChangeModal from "@/components/OrganizationChangeModal";
@@ -307,18 +306,6 @@ export default async function GameChangerDashboardPage() {
         organizationId={usuario.organizationId}
       />
 
-      {/* ZONA SUPERIOR: Hero Section */}
-      {isAuthorized && (
-        <GlobalProgressHero 
-          percent={progressPercent}
-          label="Estado total de avance de tus metas"
-          totalMetas={totalAreas}
-          completedMetas={areasCompletadas}
-          areas={areasActivas.map(area => area.label)}
-          areaProgress={areaProgress}
-        />
-      )}
-
       {/* ZONA MEDIA: KPIs + Programa Intensivo */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <QuantumPointsWidget puntosCuanticos={usuario.puntosCuanticos} />
@@ -347,8 +334,8 @@ export default async function GameChangerDashboardPage() {
       {/* SQUAD MANAGER */}
       <SquadManagerWidget />
 
-      {/* ZONA DE EJECUCIÓN DIARIA */}
-      <ZonaEjecucionDiaria />
+      {/* SALTOS CUÁNTICOS - Objetivos por Área */}
+      <SaltosCuanticosWidget />
 
       {/* PROGRAMA INTENSIVO BANNER (Solo Onboarding) */}
       {!isAuthorized && <ProgramStatusWidget />}

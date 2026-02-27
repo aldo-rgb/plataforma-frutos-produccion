@@ -51,7 +51,7 @@ export async function GET(req: Request) {
         email: true,
         createdAt: true,
         wizardCompleted: true,
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           include: {
             Vision: {
               select: {
@@ -108,7 +108,7 @@ export async function GET(req: Request) {
     // Mapear datos para el frontend
     const cartasTracking = usuarios.map(user => {
       const carta = user.CartaFrutos[0];
-      const vision = user.ParticipanteEnVisiones?.[0]?.Vision;
+      const vision = user.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0]?.Vision;
       const license = user.LicenseAssignment?.[0];
 
       // Calcular estadísticas de revisión si la carta existe

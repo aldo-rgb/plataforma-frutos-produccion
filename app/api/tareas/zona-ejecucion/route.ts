@@ -101,7 +101,9 @@ export async function GET(req: Request) {
       'espiritualidad': '🙏',
       'ocio': '🎮',
       'pazMental': '🧘',
-      'talentos': '🎯'
+      'talentos': '🎯',
+      'servicioTrans': '🦋',
+      'servicioComun': '🤝'
     };
 
     const AREA_NAMES: Record<string, string> = {
@@ -113,7 +115,9 @@ export async function GET(req: Request) {
       'espiritualidad': 'Paz Mental',
       'ocio': 'Ocio',
       'pazMental': 'Paz Mental',
-      'talentos': 'Talentos'
+      'talentos': 'Talentos',
+      'servicioTrans': 'Servicio Transformacional',
+      'servicioComun': 'Servicio Comunitario'
     };
 
     // ========== 1. TAREAS DE CARTA (HOY) ==========

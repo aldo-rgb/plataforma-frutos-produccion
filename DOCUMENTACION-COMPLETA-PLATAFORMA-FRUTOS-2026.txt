@@ -1117,6 +1117,267 @@ LECCIÓN IMPORTANTE:
 - Las migraciones manuales deben documentarse en prisma/migrations/
 
 ================================================================================
+11. REORGANIZACIÓN DE WIDGETS DEL DASHBOARD PARTICIPANTE (27 FEB 2026)
+================================================================================
+
+Resumen de cambios realizados:
+Se reorganizaron los widgets del dashboard del participante para mejorar la UX
+y dar más visibilidad a las tareas pendientes y el progreso por áreas.
+
+--------------------------------------------------------------------------------
+11.1 WIDGETS CREADOS/MODIFICADOS
+--------------------------------------------------------------------------------
+
+a) ZonaEjecucionMiniWidget (NUEVO)
+   - Ubicación: /components/dashboard/identity/widgets/ZonaEjecucionMiniWidget.tsx
+   - Propósito: Widget compacto que muestra contador de tareas de HOY y RETRASADAS
+   - Características:
+     * Animaciones con framer-motion
+     * Diseño de urgencia con gradiente naranja/rojo cuando hay retrasadas
+     * Icono de llama pulsante para tareas urgentes
+     * Efecto shimmer cuando hay tareas pendientes
+     * Trofeo dorado cuando todo está completado
+   - Click: Navega a /dashboard/hoy
+
+b) SaltosCuanticosWidget (NUEVO)
+   - Ubicación: /components/dashboard/SaltosCuanticosWidget.tsx
+   - Propósito: Widget grande mostrando las 8 áreas de vida con progreso
+   - Características:
+     * Grid de 4 columnas (desktop) / 2 columnas (mobile)
+     * Muestra declaración, tareas completadas/total, barra de progreso
+     * Cada área es clickeable → navega a /dashboard/hoy?area={areaKey}
+     * Header con link a /dashboard/progreso-frutos
+     * Cita motivacional al final
+   - Las 8 áreas:
+     * finanzas, relaciones, talentos, pazMental
+     * ocio, salud, servicioTrans, servicioComun
+
+c) ZonaEjecucionDiaria (SIMPLIFICADO)
+   - Ubicación: /components/dashboard/ZonaEjecucionDiaria.tsx
+   - Reducido de ~850 líneas a ~130 líneas
+   - Solo muestra contadores de HOY/RETRASADAS
+   - Click navega a /dashboard/hoy
+
+d) GlobalProgressHero (ELIMINADO)
+   - Se eliminó el widget de la parte superior del dashboard
+   - Ya no se usa en ninguna página
+
+--------------------------------------------------------------------------------
+11.2 API CREADO
+--------------------------------------------------------------------------------
+
+/api/carta/progress-areas (NUEVO)
+- Ubicación: /app/api/carta/progress-areas/route.ts
+- Retorna progreso de cada área de la Carta F.R.U.T.O.S.
+- Response:
+  {
+    success: true,
+    data: {
+      areas: [{
+        key: 'finanzas',
+        label: 'Finanzas', 
+        declaration: 'Mi declaración...',
+        tasksCompleted: 5,
+        tasksTotal: 10,
+        percent: 50
+      }, ...],
+      totalPercent: 25,
+      hasCompletedCarta: true
+    }
+  }
+
+--------------------------------------------------------------------------------
+11.3 SISTEMA DE FILTRO POR ÁREA EN /dashboard/hoy
+--------------------------------------------------------------------------------
+
+Se implementó filtrado de tareas por área usando URL params:
+
+URL: /dashboard/hoy?area={areaKey}
+
+Áreas soportadas (areaKey):
+- finanzas, relaciones, talentos, pazMental
+- ocio, salud, servicioTrans, servicioComun
+
+Implementación en page.tsx:
+```typescript
+// Imports necesarios
+import { useSearchParams } from 'next/navigation';
+
+// Estado del filtro
+const searchParams = useSearchParams();
+const areaParam = searchParams.get('area');
+const [areaFilter, setAreaFilter] = useState<string | null>(areaParam);
+
+// Mapeo de área key a valores posibles en el campo area de las tareas
+const areaKeyToAreaValues: Record<string, string[]> = {
+  'finanzas': ['Finanzas', 'finanzas', '💰 Finanzas'],
+  'relaciones': ['Relaciones', 'relaciones', '❤️ Relaciones'],
+  'talentos': ['Talentos', 'talentos', '🎯 Talentos'],
+  'pazMental': ['Paz Mental', 'pazMental', 'paz_mental', '🧘 Paz Mental'],
+  'ocio': ['Ocio', 'ocio', '🎮 Ocio'],
+  'salud': ['Salud', 'salud', '💪 Salud'],
+  'servicioTrans': ['Servicio Transformacional', 'servicioTrans', ...],
+  'servicioComun': ['Servicio Comunitario', 'servicioComun', ...],
+};
+
+// Función de filtrado
+const filterTasksByArea = (taskList: Task[]) => {
+  if (!areaFilter) return taskList;
+  const validAreas = areaKeyToAreaValues[areaFilter] || [areaFilter];
+  return taskList.filter(task => 
+    validAreas.some(areaValue => 
+      task.area?.toLowerCase().includes(areaValue.toLowerCase())
+    )
+  );
+};
+
+// Aplicar a las tareas
+const filteredTasks = filterTasksByArea(tasks);
+const filteredTareasRetrasadas = filterTasksByArea(tareasRetrasadas);
+```
+
+Banner visual del filtro activo:
+- Muestra el icono y nombre del área filtrada
+- Botón X para limpiar el filtro
+- Mensaje personalizado si no hay tareas en el área
+
+--------------------------------------------------------------------------------
+11.4 CAMBIOS EN PÁGINAS
+--------------------------------------------------------------------------------
+
+/app/dashboard/page.tsx:
+- Removido: import GlobalProgressHero
+- Removido: <GlobalProgressHero />
+- Cambiado: ZonaEjecucionDiaria → SaltosCuanticosWidget (full width)
+
+/app/dashboard/gamechanger/page.tsx:
+- Mismos cambios que dashboard principal
+
+/components/dashboard/identity/IdentityHeroSection.tsx:
+- Removido: import PromiseWidget
+- Agregado: import ZonaEjecucionMiniWidget
+- Cambiado: <PromiseWidget /> → <ZonaEjecucionMiniWidget />
+- ZonaEjecucionMiniWidget ahora ocupa el lugar del grid pequeño
+
+/app/dashboard/progreso-frutos/page.tsx:
+- Áreas clickeables → navegan a /dashboard/hoy?area={areaKey}
+
+--------------------------------------------------------------------------------
+11.5 ACTUALIZACIÓN AL API zona-ejecucion
+--------------------------------------------------------------------------------
+
+Ubicación: /app/api/tareas/zona-ejecucion/route.ts
+
+Se agregaron las áreas faltantes al mapeo:
+```typescript
+const AREA_ICONS: Record<string, string> = {
+  'finanzas': '💰',
+  'relaciones': '❤️',
+  'salud': '💪',
+  'tiempo': '⏰',
+  'ocupacion': '💼',
+  'espiritualidad': '🙏',
+  'ocio': '🎮',
+  'pazMental': '🧘',
+  'talentos': '🎯',
+  'servicioTrans': '🦋',    // NUEVO
+  'servicioComun': '🤝'      // NUEVO
+};
+
+const AREA_NAMES: Record<string, string> = {
+  'finanzas': 'Finanzas',
+  'relaciones': 'Relaciones',
+  'salud': 'Salud',
+  'tiempo': 'Ocio',
+  'ocupacion': 'Talentos',
+  'espiritualidad': 'Paz Mental',
+  'ocio': 'Ocio',
+  'pazMental': 'Paz Mental',
+  'talentos': 'Talentos',
+  'servicioTrans': 'Servicio Transformacional',    // NUEVO
+  'servicioComun': 'Servicio Comunitario'          // NUEVO
+};
+```
+
+================================================================================
+12. CORRECCIONES FEBRERO 2026
+================================================================================
+
+Fecha: 27 de febrero de 2026
+
+--------------------------------------------------------------------------------
+12.1 FIX: Relación ParticipanteEnVisiones → VisionParticipante
+--------------------------------------------------------------------------------
+
+PROBLEMA:
+Múltiples endpoints usaban el nombre de relación incorrecto `ParticipanteEnVisiones`
+que no existe en el schema de Prisma. El nombre correcto es:
+`VisionParticipante_VisionParticipante_participanteIdToUsuario`
+
+ARCHIVOS CORREGIDOS:
+1. /app/api/ranking/widget/route.ts
+2. /app/api/ranking/permissions/route.ts
+3. /app/api/quantum/test-extract/route.ts
+4. /app/api/mentor/disponibles-disciplina/route.ts
+5. /app/api/mentor/mentorados/route.ts
+6. /app/api/usuarios/route.ts
+7. /app/api/admin/submissions/pending/route.ts
+8. /app/api/student/booking/route.ts
+9. /app/api/school-admin/cartas-tracking/[userId]/route.ts
+10. /app/api/school-admin/cartas-tracking/route.ts
+11. /app/api/director/usuarios/route.ts
+
+SINTAXIS CORRECTA:
+```typescript
+// INCORRECTO ❌
+ParticipanteEnVisiones: {
+  where: { Vision: { isActive: true } },
+  include: { Vision: true }
+}
+
+// CORRECTO ✅
+VisionParticipante_VisionParticipante_participanteIdToUsuario: {
+  where: { Vision: { isActive: true } },
+  include: { Vision: true }
+}
+```
+
+--------------------------------------------------------------------------------
+12.2 FIX: Tareas servicioTrans sincronizadas incorrectamente
+--------------------------------------------------------------------------------
+
+PROBLEMA:
+El sync de tareas de enrolamiento marcaba TODAS las tareas como completadas
+sin verificar el número real de invitados. Ejemplo: Usuario con 2 invitados
+mostraba 4/4 tareas completadas al 100%.
+
+CAUSA:
+El script de sync completaba todas las TaskInstance de servicioTrans sin
+contar cuántos invitados reales tenía cada usuario.
+
+SOLUCIÓN:
+Script de corrección que:
+1. Cuenta invitados reales por usuario (SELECT COUNT WHERE invitedBy = userId)
+2. Resetea todas las tareas de servicioTrans a PENDING
+3. Marca como COMPLETED solo el número de tareas igual a invitados reales
+
+LÓGICA CORRECTA:
+```javascript
+// Contar invitados reales
+const realInvitees = await prisma.usuario.count({
+  where: { invitedBy: user.id }
+});
+
+// Si tiene 4 tareas pero solo 2 invitados:
+// - 2 primeras tareas → COMPLETED
+// - 2 últimas tareas → PENDING
+// Resultado: 2/4 tareas (50%)
+```
+
+USUARIOS AFECTADOS Y CORREGIDOS:
+- Dora Maria Flores Alcala: 4/4 → 2/4 (2 invitados reales)
+
+================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
 

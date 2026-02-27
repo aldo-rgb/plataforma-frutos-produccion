@@ -195,12 +195,12 @@ export default async function ProgresoFrutosPage() {
               <p className="text-sm text-slate-500">Completado en todas las áreas</p>
             </div>
 
-            {/* Áreas Maestradas */}
+            {/* Áreas Completadas */}
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full mb-4 border-4 border-green-500/30">
                 <span className="text-4xl font-black text-white">{areasCompletadas}</span>
               </div>
-              <h3 className="text-lg font-bold text-slate-300 mb-1">Áreas Maestradas</h3>
+              <h3 className="text-lg font-bold text-slate-300 mb-1">Áreas Completadas</h3>
               <p className="text-sm text-slate-500">De {areasActivas.length} áreas totales</p>
             </div>
 
@@ -248,7 +248,7 @@ export default async function ProgresoFrutosPage() {
 
               return (
                 <Link
-                  href="/dashboard/hoy"
+                  href={`/dashboard/hoy?area=${area.key}`}
                   key={area.key}
                   className={`group relative bg-gradient-to-br from-slate-900 to-slate-800 border rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] cursor-pointer block ${
                     isCompleted 

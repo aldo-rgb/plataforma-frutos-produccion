@@ -8,7 +8,7 @@ import EvolutionBar from './EvolutionBar';
 import UpgradeToAdvancedWidget from './widgets/UpgradeToAdvancedWidget';
 import BuddySystemWidget from './widgets/BuddySystemWidget';
 import TribeManagementWidget from './widgets/TribeManagementWidget';
-import PromiseWidget from './widgets/PromiseWidget';
+import ZonaEjecucionMiniWidget from './widgets/ZonaEjecucionMiniWidget';
 import JoinVisionWidget from './widgets/JoinVisionWidget';
 import GCCallWidget from './widgets/GCCallWidget';
 import PersonalQRWidget from '../PersonalQRWidget';
@@ -162,20 +162,16 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
           </>
         )}
 
-        {/* ADVANCED: Mostrar BuddySystemWidget + PromiseWidget + GCCallWidget */}
+        {/* ADVANCED: Mostrar BuddySystemWidget + ZonaEjecucionMini + GCCallWidget */}
         {level === 'ADVANCED' && (
           <>
             <BuddySystemWidget />
-            <PromiseWidget 
-              hasCompletedCarta={cartaData?.hasCompletedCarta}
-              promises={cartaData?.promises}
-              progress={cartaData?.progress}
-            />
+            <ZonaEjecucionMiniWidget />
             <GCCallWidget />
           </>
         )}
 
-        {/* PL: Mostrar TribeManagementWidget + PromiseWidget + BuddySystemWidget (al final) */}
+        {/* PL: Mostrar TribeManagementWidget + ZonaEjecucionMini + BuddySystemWidget (al final) */}
         {level === 'PL' && (
           <>
             <TribeManagementWidget 
@@ -185,23 +181,15 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
               tribeName={data?.tribeName || data?.visionInfo?.nombre}
               tribeMission={data?.tribeMission}
             />
-            <PromiseWidget 
-              hasCompletedCarta={cartaData?.hasCompletedCarta}
-              promises={cartaData?.promises}
-              progress={cartaData?.progress}
-            />
+            <ZonaEjecucionMiniWidget />
             <BuddySystemWidget />
           </>
         )}
 
-        {/* LOBO_SOLITARIO: Mostrar JoinVisionWidget + PromiseWidget */}
+        {/* LOBO_SOLITARIO: Mostrar ZonaEjecucionMini + JoinVisionWidget */}
         {isLoboSolitario && (
           <>
-            <PromiseWidget 
-              hasCompletedCarta={cartaData?.hasCompletedCarta}
-              promises={cartaData?.promises}
-              progress={cartaData?.progress}
-            />
+            <ZonaEjecucionMiniWidget />
             <JoinVisionWidget onJoinClick={handleUpgradeClick} />
           </>
         )}

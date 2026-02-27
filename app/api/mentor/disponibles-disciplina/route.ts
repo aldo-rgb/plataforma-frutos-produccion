@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
       include: {
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           select: {
             visionId: true
           }
@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
     };
 
     // FILTRO CRÍTICO: Solo mentores asignados a la visión del participante
-    if (usuario.ParticipanteEnVisiones.length > 0) {
-      const visionId = usuario.ParticipanteEnVisiones[0].visionId;
+    if (usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario.length > 0) {
+      const visionId = usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario[0].visionId;
       
       whereClause.MentorEnVisiones = {
         some: {

@@ -50,7 +50,7 @@ export async function GET(
         email: true,
         organizationId: true,
         createdAt: true,
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           include: {
             Vision: {
               select: {
@@ -162,7 +162,7 @@ export async function GET(
         nombre: usuario.nombre,
         email: usuario.email,
         fechaRegistro: usuario.createdAt,
-        vision: usuario.ParticipanteEnVisiones?.[0]?.Vision || null
+        vision: usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0]?.Vision || null
       },
       carta: {
         id: carta.id,

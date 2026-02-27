@@ -62,14 +62,14 @@ export async function POST(request: Request) {
       const participante = await prisma.usuario.findUnique({
         where: { id: Number(studentId) },
         include: {
-          ParticipanteEnVisiones: {
+          VisionParticipante_VisionParticipante_participanteIdToUsuario: {
             select: { visionId: true }
           }
         }
       });
 
-      if (participante && participante.ParticipanteEnVisiones.length > 0) {
-        const visionId = participante.ParticipanteEnVisiones[0].visionId;
+      if (participante && participante.VisionParticipante_VisionParticipante_participanteIdToUsuario.length > 0) {
+        const visionId = participante.VisionParticipante_VisionParticipante_participanteIdToUsuario[0].visionId;
         
         // Verificar que el mentor está asignado a esta visión
         const mentorAsignado = await prisma.visionMentor.findUnique({

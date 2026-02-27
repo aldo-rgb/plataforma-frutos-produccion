@@ -91,6 +91,9 @@ export default function PersonalQRWidget({
           console.log('📦 Respuesta de organización:', data);
           
           // La API devuelve childOrganizations con los datos
+          let foundLogo: string | null = null;
+          let foundName: string | null = null;
+          
           if (data.childOrganizations && data.childOrganizations.length > 0) {
             // Buscar la organización actual en childOrganizations
             const currentOrg = data.childOrganizations.find((org: any) => org.id === organizationId) 
@@ -98,20 +101,24 @@ export default function PersonalQRWidget({
             
             console.log('🏢 Organización encontrada:', currentOrg);
             
+            // PRIORIDAD: Logo de la organización actual
             if (currentOrg?.logoUrl) {
-              console.log('✅ Logo encontrado:', currentOrg.logoUrl);
-              setOrgLogo(currentOrg.logoUrl);
+              console.log('✅ Logo de organización actual encontrado:', currentOrg.logoUrl);
+              foundLogo = currentOrg.logoUrl;
             }
             if (currentOrg?.name) {
-              setOrgName(currentOrg.name);
+              foundName = currentOrg.name;
             }
           }
           
-          // También verificar masterOrganization para el logo
-          if (!orgLogo && data.masterOrganization?.logoUrl) {
-            console.log('✅ Logo de master encontrado:', data.masterOrganization.logoUrl);
-            setOrgLogo(data.masterOrganization.logoUrl);
+          // Solo usar masterOrganization si NO hay logo de la organización actual
+          if (!foundLogo && data.masterOrganization?.logoUrl) {
+            console.log('⚠️ Usando logo de master como fallback:', data.masterOrganization.logoUrl);
+            foundLogo = data.masterOrganization.logoUrl;
           }
+          
+          if (foundLogo) setOrgLogo(foundLogo);
+          if (foundName) setOrgName(foundName);
           
           setLogoLoaded(true);
         })
@@ -210,8 +217,9 @@ export default function PersonalQRWidget({
           logoImage.src = orgLogo;
         });
         
-        const maxLogoWidth = 400;
-        const maxLogoHeight = 120;
+        // Logo grande y prominente
+        const maxLogoWidth = 700;
+        const maxLogoHeight = 250;
         let logoWidth = logoImage.width;
         let logoHeight = logoImage.height;
         
@@ -232,26 +240,6 @@ export default function PersonalQRWidget({
         currentY += 20;
       }
     }
-
-    // === BADGE "INSCRIPCIONES ABIERTAS" ===
-    const badgeWidth = 380;
-    const badgeHeight = 50;
-    const badgeX = (width - badgeWidth) / 2;
-    
-    // Fondo del badge con gradiente rojo/naranja
-    const badgeGradient = ctx.createLinearGradient(badgeX, currentY, badgeX + badgeWidth, currentY);
-    badgeGradient.addColorStop(0, '#dc2626');
-    badgeGradient.addColorStop(1, '#ea580c');
-    ctx.fillStyle = badgeGradient;
-    ctx.beginPath();
-    ctx.roundRect(badgeX, currentY, badgeWidth, badgeHeight, 25);
-    ctx.fill();
-    
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px system-ui, -apple-system, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('🔥 INSCRIPCIONES ABIERTAS 🔥', width / 2, currentY + 33);
-    currentY += badgeHeight + 25;
 
     // === TÍTULO PRINCIPAL ===
     ctx.fillStyle = '#fbbf24';

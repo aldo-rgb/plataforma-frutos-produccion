@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { format, addDays, subDays, isToday, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SmartTask from '@/components/dashboard/SmartTask';
@@ -115,11 +116,15 @@ interface PersonalTask {
 }
 
 export default function TodayPage() {
+  const searchParams = useSearchParams();
+  const areaParam = searchParams.get('area');
+  
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]); // Tareas de HOY
   const [tareasRetrasadas, setTareasRetrasadas] = useState<Task[]>([]); // Tareas de días anteriores
   const [personalTasks, setPersonalTasks] = useState<PersonalTask[]>([]); // Tareas personales
   const [upcomingCalls, setUpcomingCalls] = useState<UpcomingCall[]>([]);
+  const [areaFilter, setAreaFilter] = useState<string | null>(areaParam);
   const [stats, setStats] = useState<Stats>({
     total: 0,
     completed: 0,
@@ -612,6 +617,53 @@ export default function TodayPage() {
     );
   };
 
+  // Mapeo de áreas para el filtro
+  const AREA_OPTIONS = [
+    { key: 'finanzas', label: 'Finanzas', icon: '💰', color: 'bg-green-500' },
+    { key: 'relaciones', label: 'Relaciones', icon: '❤️', color: 'bg-pink-500' },
+    { key: 'talentos', label: 'Talentos', icon: '🎯', color: 'bg-yellow-500' },
+    { key: 'pazMental', label: 'Paz Mental', icon: '🧘', color: 'bg-purple-500' },
+    { key: 'ocio', label: 'Ocio', icon: '🎮', color: 'bg-orange-500' },
+    { key: 'salud', label: 'Salud', icon: '💪', color: 'bg-blue-500' },
+    { key: 'servicioTrans', label: 'Transformacional', icon: '🦋', color: 'bg-violet-500' },
+    { key: 'servicioComun', label: 'Comunitaria', icon: '🤝', color: 'bg-teal-500' },
+  ];
+
+  // Mapeo de area key a posibles valores en el campo area de las tareas
+  const areaKeyToAreaValues: Record<string, string[]> = {
+    'finanzas': ['Finanzas', 'finanzas', '💰 Finanzas'],
+    'relaciones': ['Relaciones', 'relaciones', '❤️ Relaciones'],
+    'talentos': ['Talentos', 'talentos', '🎯 Talentos'],
+    'pazMental': ['Paz Mental', 'pazMental', 'paz_mental', '🧘 Paz Mental'],
+    'ocio': ['Ocio', 'ocio', '🎮 Ocio'],
+    'salud': ['Salud', 'salud', '💪 Salud'],
+    'servicioTrans': ['Servicio Transformacional', 'servicioTrans', 'servicio_trans', '🦋 Transformacional'],
+    'servicioComun': ['Servicio Comunitario', 'servicioComun', 'servicio_comun', '🤝 Comunitaria'],
+  };
+
+  // Filtrar tareas por área
+  const filterTasksByArea = (taskList: Task[]) => {
+    if (!areaFilter) return taskList;
+    const validAreas = areaKeyToAreaValues[areaFilter] || [areaFilter];
+    return taskList.filter(task => {
+      // Comparar el área de la tarea con las posibles variantes
+      return validAreas.some(areaValue => 
+        task.area?.toLowerCase().includes(areaValue.toLowerCase())
+      );
+    });
+  };
+
+  // Aplicar filtro a las tareas
+  const filteredTasks = filterTasksByArea(tasks);
+  const filteredTareasRetrasadas = filterTasksByArea(tareasRetrasadas);
+
+  // Función para limpiar el filtro
+  const clearAreaFilter = () => {
+    setAreaFilter(null);
+    // Actualizar URL sin el parámetro
+    window.history.replaceState({}, '', '/dashboard/hoy');
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0b0f] text-white">
       
@@ -644,6 +696,34 @@ export default function TodayPage() {
       <div className="max-w-4xl mx-auto px-6 pb-2">
         <ParticipantSurveyBanner />
       </div>
+
+      {/* AREA FILTER - Filtro por Área */}
+      {areaFilter && (
+        <div className="max-w-4xl mx-auto px-6 pb-4">
+          <div className="bg-gradient-to-r from-cyan-900/30 to-purple-900/30 border border-cyan-500/30 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">
+                  {AREA_OPTIONS.find(a => a.key === areaFilter)?.icon || '📌'}
+                </span>
+                <div>
+                  <p className="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Filtrando por área</p>
+                  <p className="text-white font-bold">
+                    {AREA_OPTIONS.find(a => a.key === areaFilter)?.label || areaFilter}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={clearAreaFilter}
+                className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 hover:text-white transition-colors"
+              >
+                <X size={16} />
+                Ver todas
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* UPCOMING CALLS - Llamadas Agendadas con Countdown */}
       {upcomingCalls.length > 0 && (
@@ -703,22 +783,34 @@ export default function TodayPage() {
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
           </div>
-        ) : tasks.length === 0 && personalTasks.length === 0 ? (
+        ) : filteredTasks.length === 0 && personalTasks.length === 0 && filteredTareasRetrasadas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Sparkles size={48} className="text-gray-700 mb-4" />
             <h3 className="text-xl font-bold text-gray-400 mb-2">
-              {isToday(selectedDate) ? '¡Sin tareas por hoy!' : 'Sin tareas para este día'}
+              {areaFilter 
+                ? `¡Sin tareas de ${AREA_OPTIONS.find(a => a.key === areaFilter)?.label || areaFilter}!`
+                : isToday(selectedDate) ? '¡Sin tareas por hoy!' : 'Sin tareas para este día'}
             </h3>
             <p className="text-sm text-gray-600 max-w-sm">
-              {isToday(selectedDate) 
-                ? 'Disfruta tu día libre o crea nuevas metas en tu Carta FRUTOS.' 
-                : 'No hay tareas programadas para esta fecha.'}
+              {areaFilter 
+                ? 'No hay tareas pendientes en esta área.'
+                : isToday(selectedDate) 
+                  ? 'Disfruta tu día libre o crea nuevas metas en tu Carta FRUTOS.' 
+                  : 'No hay tareas programadas para esta fecha.'}
             </p>
+            {areaFilter && (
+              <button
+                onClick={clearAreaFilter}
+                className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-colors"
+              >
+                Ver todas las tareas
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
             {/* Tareas Personales - Siempre mostrar primero, pendientes arriba, completadas abajo */}
-            {personalTasks.length > 0 && (
+            {personalTasks.length > 0 && !areaFilter && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-purple-400 font-bold mb-3">
                   <div className="w-2 h-2 rounded-full bg-purple-500"></div>
@@ -744,13 +836,13 @@ export default function TodayPage() {
             )}
 
             {/* Personaje Asignado */}
-            {tasks.some(t => t.tipo === 'PERSONAJE') && (
+            {filteredTasks.some(t => t.tipo === 'PERSONAJE') && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-violet-400 font-bold mt-6 mb-3">
                   <User size={14} />
                   Personaje Asignado
                 </div>
-                {tasks
+                {filteredTasks
                   .filter(t => t.tipo === 'PERSONAJE')
                   .map(task => (
                     <ArchetypeTaskCard 
@@ -770,13 +862,13 @@ export default function TodayPage() {
             )}
 
             {/* Salto Cuántico (Metamorfosis) */}
-            {tasks.some(t => t.tipo === 'SALTO_CUANTICO') && (
+            {filteredTasks.some(t => t.tipo === 'SALTO_CUANTICO') && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-cyan-400 font-bold mt-6 mb-3">
                   <Zap size={14} />
                   Salto Cuántico
                 </div>
-                {tasks
+                {filteredTasks
                   .filter(t => t.tipo === 'SALTO_CUANTICO')
                   .map(task => (
                     <MetamorfosisTaskCard 
@@ -796,13 +888,13 @@ export default function TodayPage() {
             )}
 
             {/* Misiones Especiales (Extraordinarias y Eventos) */}
-            {tasks.some(t => t.tipo === 'EXTRAORDINARIA' || t.tipo === 'EVENTO') && (
+            {filteredTasks.some(t => t.tipo === 'EXTRAORDINARIA' || t.tipo === 'EVENTO') && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-purple-400 font-bold mt-6 mb-3">
                   <Zap size={14} />
                   Misiones Especiales
                 </div>
-                {tasks
+                {filteredTasks
                   .filter(t => t.tipo === 'EXTRAORDINARIA' || t.tipo === 'EVENTO')
                   .map(task => (
                     <SpecialMissionTask 
@@ -815,13 +907,13 @@ export default function TodayPage() {
             )}
 
             {/* Misiones del Entrenador */}
-            {tasks.some(t => t.tipo === 'TRAINER_MISSION') && (
+            {filteredTasks.some(t => t.tipo === 'TRAINER_MISSION') && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-emerald-400 font-bold mt-6 mb-3">
                   <Target size={14} />
                   Misiones del Entrenador
                 </div>
-                {tasks
+                {filteredTasks
                   .filter(t => t.tipo === 'TRAINER_MISSION')
                   .map(task => (
                     <TrainerMissionCard 
@@ -837,13 +929,13 @@ export default function TodayPage() {
             )}
 
             {/* Separar tareas retrasadas - SOLO MOSTRAR LAS DE DÍAS ANTERIORES */}
-            {tareasRetrasadas.length > 0 && (
+            {filteredTareasRetrasadas.length > 0 && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-red-400 font-bold mt-6 mb-3">
                   <TrendingUp size={14} className="rotate-180" />
                   Tareas Retrasadas (Días Anteriores)
                 </div>
-                {tareasRetrasadas
+                {filteredTareasRetrasadas
                   .filter(t => t.status === 'PENDING')
                   .map(task => (
                     <SmartTask 
@@ -857,12 +949,12 @@ export default function TodayPage() {
             )}
 
             {/* Tareas pendientes normales - SOLO SIN EVIDENCIA */}
-            {tasks.some(t => t.tipo === 'CARTA' && t.status === 'PENDING' && t.evidenceStatus !== 'PENDING') && (
+            {filteredTasks.some(t => t.tipo === 'CARTA' && t.status === 'PENDING' && t.evidenceStatus !== 'PENDING') && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gray-500 font-bold mt-6 mb-3">
                   Pendientes de Hoy
                 </div>
-                {tasks
+                {filteredTasks
                   .filter(t => t.tipo === 'CARTA' && t.status === 'PENDING' && t.evidenceStatus !== 'PENDING')
                   .map(task => (
                     <SmartTask 
@@ -876,13 +968,13 @@ export default function TodayPage() {
             )}
 
             {/* Tareas en revisión (con evidencia pendiente) */}
-            {tasks.some(t => t.tipo === 'CARTA' && t.evidenceStatus === 'PENDING') && (
+            {filteredTasks.some(t => t.tipo === 'CARTA' && t.evidenceStatus === 'PENDING') && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-blue-400 font-bold mt-6 mb-3">
                   <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
                   En Revisión por Mentor
                 </div>
-                {tasks
+                {filteredTasks
                   .filter(t => t.tipo === 'CARTA' && t.evidenceStatus === 'PENDING')
                   .map(task => (
                     <SmartTask 
@@ -896,13 +988,13 @@ export default function TodayPage() {
             )}
 
             {/* Tareas completadas */}
-            {tasks.some(t => t.status === 'COMPLETED') && (
+            {filteredTasks.some(t => t.status === 'COMPLETED') && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-green-500/50 font-bold mt-8 mb-3">
                   <Check size={14} />
                   Completadas
                 </div>
-                {tasks
+                {filteredTasks
                   .filter(t => t.status === 'COMPLETED')
                   .map(task => (
                     <SmartTask 

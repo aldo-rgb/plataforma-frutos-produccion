@@ -21,7 +21,7 @@ export async function GET() {
     const currentUser = await prisma.usuario.findUnique({
       where: { id: userId },
       include: {
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           where: {
             Vision: {
               isActive: true
@@ -48,7 +48,7 @@ export async function GET() {
     }
 
     // Verificar si es Lobo Solitario (sin visión pero con paquete completado)
-    const activeVision = currentUser.ParticipanteEnVisiones[0]?.Vision;
+    const activeVision = currentUser.VisionParticipante_VisionParticipante_participanteIdToUsuario[0]?.Vision;
     const hasLoboPackage = currentUser.MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario.some(
       (order: any) => order.metadata?.tipoCliente === 'LOBO_SOLITARIO'
     );
@@ -123,7 +123,7 @@ export async function GET() {
     // Obtener todos los usuarios de la misma visión, ordenados por puntos
     const usersInVision = await prisma.usuario.findMany({
       where: {
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           some: {
             visionId: activeVision.id,
             Vision: {

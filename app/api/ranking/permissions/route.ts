@@ -23,7 +23,7 @@ export async function GET() {
       where: { id: userId },
       include: {
         Organization: true,
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           where: {
             Vision: {
               isActive: true
@@ -74,15 +74,15 @@ export async function GET() {
       }
       
       // Solo puede ver sus propias visiones
-      permissions.availableVisions = usuario.ParticipanteEnVisiones.map(vp => ({
+      permissions.availableVisions = usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario.map(vp => ({
         id: vp.Vision.id,
         nombre: vp.Vision.nombre,
         descripcion: vp.Vision.descripcion
       }));
       
       // Guardar la visión del usuario (si tiene una activa)
-      if (usuario.ParticipanteEnVisiones.length > 0) {
-        permissions.userVisionId = usuario.ParticipanteEnVisiones[0].Vision.id;
+      if (usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario.length > 0) {
+        permissions.userVisionId = usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario[0].Vision.id;
       }
     }
     
@@ -186,7 +186,7 @@ export async function GET() {
         include: {
           Usuario_ProgramEnrollment_userIdToUsuario: {
             include: {
-              ParticipanteEnVisiones: {
+              VisionParticipante_VisionParticipante_participanteIdToUsuario: {
                 where: {
                   Vision: {
                     isActive: true
@@ -206,7 +206,7 @@ export async function GET() {
       const visionesMap = new Map<number, any>();
       
       enrollmentsAsMentor.forEach(enrollment => {
-        enrollment.Usuario_ProgramEnrollment_userIdToUsuario.ParticipanteEnVisiones.forEach(vp => {
+        enrollment.Usuario_ProgramEnrollment_userIdToUsuario.VisionParticipante_VisionParticipante_participanteIdToUsuario.forEach(vp => {
           if (!visionesSet.has(vp.Vision.id)) {
             visionesSet.add(vp.Vision.id);
             visionesMap.set(vp.Vision.id, {

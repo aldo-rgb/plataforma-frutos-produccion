@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       whereClause = {
         OR: [
           {
-            ParticipanteEnVisiones: {
+            VisionParticipante_VisionParticipante_participanteIdToUsuario: {
               some: {
                 visionId: { in: visionIds }
               }

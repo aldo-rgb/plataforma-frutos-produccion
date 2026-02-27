@@ -52,7 +52,7 @@ export async function GET() {
                 logoUrl: true
               }
             },
-            ParticipanteEnVisiones: {
+            VisionParticipante_VisionParticipante_participanteIdToUsuario: {
               where: {
                 Vision: {
                   isActive: true
@@ -75,7 +75,7 @@ export async function GET() {
     // Formatear los datos
     const mentorados = enrollments.map(enrollment => {
       const participant = enrollment.Usuario_ProgramEnrollment_userIdToUsuario;
-      const visionActiva = participant.ParticipanteEnVisiones[0]?.Vision;
+      const visionActiva = participant.VisionParticipante_VisionParticipante_participanteIdToUsuario[0]?.Vision;
       
       return {
         id: participant.id,

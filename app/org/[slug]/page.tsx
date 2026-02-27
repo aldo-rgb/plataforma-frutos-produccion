@@ -360,7 +360,7 @@ function HeroPathSection() {
     },
     {
       level: 'AVANZADO',
-      duration: '3 días + 4 semanas',
+      duration: '4 días',
       icon: '🔥',
       gradient: 'from-orange-500 to-red-500',
       bgGradient: 'from-orange-500/20 to-red-500/20',
@@ -376,7 +376,7 @@ function HeroPathSection() {
     },
     {
       level: 'PROGRAMA DE LIDERAZGO',
-      duration: '3 fines de semana + 10 semanas',
+      duration: '10 semanas - 3 fines de semana',
       icon: '👑',
       gradient: 'from-violet-500 to-purple-600',
       bgGradient: 'from-violet-500/20 to-purple-600/20',

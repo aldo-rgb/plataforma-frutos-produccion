@@ -72,7 +72,7 @@ const transformationLevels = [
   },
   {
     level: 'AVANZADO',
-    duration: '3 días + 4 semanas',
+    duration: '4 días',
     icon: '🔥',
     gradient: 'from-orange-500 to-red-500',
     bgGradient: 'from-orange-500/20 to-red-500/20',

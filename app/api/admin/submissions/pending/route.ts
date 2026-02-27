@@ -70,7 +70,7 @@ export async function GET() {
       
       whereUsuarios.OR = [
         {
-          ParticipanteEnVisiones: {
+          VisionParticipante_VisionParticipante_participanteIdToUsuario: {
             some: {
               visionId: { in: visionIds }
             }

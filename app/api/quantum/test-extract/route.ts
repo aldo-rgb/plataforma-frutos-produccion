@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const usuario = await prisma.usuario.findUnique({
       where: { id: userId },
       select: {
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           include: {
             Vision: {
               select: {
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       }
     });
 
-    const visionConfig = usuario?.ParticipanteEnVisiones?.[0]?.Vision;
+    const visionConfig = usuario?.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0]?.Vision;
 
     // Si no hay visión, usar configuración por defecto (todas menos servicios)
     const areasHabilitadas = visionConfig ? {

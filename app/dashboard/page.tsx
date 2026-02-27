@@ -8,8 +8,7 @@ import AlertaReagendamiento from "@/components/dashboard/AlertaReagendamiento";
 import NotificationBanner from "@/components/dashboard/NotificationBanner";
 import TribeNotificationsWidget from "@/components/dashboard/TribeNotificationsWidget";
 import CartaWizardWidget from "@/components/dashboard/CartaWizardWidget";
-import ZonaEjecucionDiaria from "@/components/dashboard/ZonaEjecucionDiaria";
-import GlobalProgressHero from "@/components/dashboard/GlobalProgressHero";
+import SaltosCuanticosWidget from "@/components/dashboard/SaltosCuanticosWidget";
 import IntensiveProgramCard from "@/components/dashboard/IntensiveProgramCard";
 import IntensiveProgramInvite from "@/components/dashboard/IntensiveProgramInvite";
 import OrganizationChangeModal from "@/components/OrganizationChangeModal";
@@ -606,28 +605,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       )}
 
       {/* ============================================ */}
-      {/* ZONA SUPERIOR: Hero Section Condicional      */}
+      {/* SALTOS CUÁNTICOS - Objetivos por Área        */}
       {/* ============================================ */}
-      {isAuthorized && (
-        // MODO EJECUCIÓN: Barra de Progreso Maestra
-        <GlobalProgressHero 
-          percent={progressPercent}
-          label="Estado total de avance de tus metas"
-          totalMetas={totalAreas}
-          completedMetas={areasCompletadas}
-          areas={areasActivas.map(area => area.label)}
-          areaProgress={areaProgress}
-          cycleStartDate={cycleStartDateForWidget}
-          cycleEndDate={cycleEndDateForWidget}
-          totalWeeks={totalWeeksForWidget}
-          totalCalls={totalCallsForWidget}
-        />
-      )}
-
-      {/* ============================================ */}
-      {/* ZONA DE EJECUCIÓN DIARIA (Arriba de KPIs)   */}
-      {/* ============================================ */}
-      <ZonaEjecucionDiaria />
+      <SaltosCuanticosWidget />
 
       {/* ============================================ */}
       {/* ZONA MEDIA: KPIs + Programa Intensivo        */}

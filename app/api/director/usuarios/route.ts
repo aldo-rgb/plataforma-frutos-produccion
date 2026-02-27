@@ -35,7 +35,7 @@ export async function GET() {
         }
       },
       include: {
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           include: {
             Vision: {
               select: {
@@ -69,7 +69,7 @@ export async function GET() {
         id: u.id,
         nombre: u.nombre,
         email: u.email,
-        vision: u.ParticipanteEnVisiones[0]?.Vision?.nombre || 
+        vision: u.VisionParticipante_VisionParticipante_participanteIdToUsuario[0]?.Vision?.nombre || 
                 u.GameChangerEnVisiones[0]?.Vision?.nombre || 
                 'Sin visión'
       }))

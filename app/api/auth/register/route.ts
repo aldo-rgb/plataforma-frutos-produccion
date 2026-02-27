@@ -5,6 +5,7 @@ import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 import logger from '@/lib/logger';
 import { registerSchema, validateData, getValidationErrorMessage } from '@/lib/validations';
 import { sendWelcomeNotifications, DEFAULT_PASSWORD } from '@/lib/welcome-notification';
+import { triggerEnrollmentTaskOnRegistration } from '@/lib/enrollment-task-trigger';
 
 export async function POST(request: Request) {
   try {
@@ -338,6 +339,23 @@ export async function POST(request: Request) {
     } catch (notifError) {
       logger.error('Error enviando notificaciones de bienvenida:', notifError);
       // No fallar el registro si fallan las notificaciones
+    }
+
+    // TRIGGER: Completar tarea de enrolamiento del invitador (servicioTrans)
+    if (invitedById) {
+      try {
+        const triggerResult = await triggerEnrollmentTaskOnRegistration(
+          newUser.id,
+          invitedById,
+          nombre
+        );
+        if (triggerResult.taskCompleted) {
+          logger.debug(`🎯 Tarea de enrolamiento completada: ${triggerResult.message}`);
+        }
+      } catch (triggerError) {
+        logger.error('Error en trigger de enrolamiento:', triggerError);
+        // No fallar el registro si falla el trigger
+      }
     }
 
     return NextResponse.json({
