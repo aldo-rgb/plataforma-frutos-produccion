@@ -25,6 +25,8 @@ interface SidebarProps {
     esMentor?: boolean; // Indica si el usuario puede ser mentor
     esEntrenador?: boolean;
     esCoordinador?: boolean;
+    esCoordinadorBasico?: boolean; // Flag para coordinador básico
+    esCoordinadorAvanzado?: boolean; // Flag para coordinador avanzado
     esLider?: boolean;
     organization?: {
       id: number;
@@ -65,24 +67,41 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
     }
   };
 
+  // Función para validar si el usuario puede usar un rol específico
+  const canUseRole = (role: string): boolean => {
+    if (role === 'COORDINATOR_BASIC') return !!(usuario.esCoordinadorBasico || usuario.esCoordinador);
+    if (role === 'COORDINATOR_ADVANCED') return !!(usuario.esCoordinadorAvanzado || usuario.esCoordinador);
+    if (role === 'TRAINER') return !!(usuario.esEntrenador);
+    if (role === 'MENTOR') return !!(usuario.esMentor);
+    if (role === 'LIDER') return !!(usuario.esLider);
+    // El rol base del usuario siempre es válido
+    return role === usuario.rol;
+  };
+
   // Leer activeRole de localStorage y escuchar cambios
   useEffect(() => {
     // Leer valor inicial
     const savedRole = localStorage.getItem('activeRole');
-    if (savedRole) {
+    if (savedRole && canUseRole(savedRole)) {
       setActiveRole(savedRole);
+    } else {
+      // Si el rol guardado no es válido, usar el rol base del usuario
+      setActiveRole(usuario.rol);
+      localStorage.setItem('activeRole', usuario.rol);
     }
 
     // Escuchar cambios en localStorage (cuando el RoleSwitcher cambia el rol desde otra pestaña)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'activeRole' && e.newValue) {
+      if (e.key === 'activeRole' && e.newValue && canUseRole(e.newValue)) {
         setActiveRole(e.newValue);
       }
     };
 
     // Escuchar evento personalizado (cuando el RoleSwitcher cambia el rol en la misma pestaña)
     const handleRoleChange = (e: CustomEvent<{ role: string }>) => {
-      setActiveRole(e.detail.role);
+      if (canUseRole(e.detail.role)) {
+        setActiveRole(e.detail.role);
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -92,7 +111,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('roleChange', handleRoleChange as EventListener);
     };
-  }, []);
+  }, [usuario.rol, usuario.esCoordinadorBasico, usuario.esCoordinadorAvanzado, usuario.esEntrenador, usuario.esMentor, usuario.esLider]);
 
   // Verificar si trainer tiene avanzado vigente
   useEffect(() => {
@@ -699,8 +718,8 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           </div>
         )}
 
-        {/* Panel de Coordinador Básico - Solo cuando activeRole es COORDINATOR_BASIC */}
-        {(activeRole === 'COORDINATOR_BASIC' || pathname.startsWith('/dashboard/coordinador-basico')) && (
+        {/* Panel de Coordinador Básico - Solo cuando activeRole es COORDINATOR_BASIC Y el usuario tiene el flag */}
+        {(activeRole === 'COORDINATOR_BASIC' || pathname.startsWith('/dashboard/coordinador-basico')) && (usuario.esCoordinadorBasico || usuario.esCoordinador) && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-teal-400 uppercase mb-2">📋 Coordinador Básico</p>
 
@@ -732,8 +751,8 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           </div>
         )}
 
-        {/* Panel de Coordinador Avanzado - Solo cuando activeRole es COORDINATOR_ADVANCED */}
-        {(activeRole === 'COORDINATOR_ADVANCED' || pathname.startsWith('/dashboard/coordinador-avanzado')) && (
+        {/* Panel de Coordinador Avanzado - Solo cuando activeRole es COORDINATOR_ADVANCED Y el usuario tiene el flag */}
+        {(activeRole === 'COORDINATOR_ADVANCED' || pathname.startsWith('/dashboard/coordinador-avanzado')) && (usuario.esCoordinadorAvanzado || usuario.esCoordinador) && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-rose-400 uppercase mb-2">🎯 Coordinador Avanzado</p>
             
