@@ -143,7 +143,7 @@ export default function QuantumWalletWidget() {
       <div className="bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl p-6 border border-purple-500/30">
         <div className="flex items-center gap-2 text-purple-300">
           <Wallet className="w-5 h-5" />
-          <h3 className="font-bold">Quantum Wallet</h3>
+          <h3 className="font-bold">Wallet de Comisiones</h3>
         </div>
         <p className="text-gray-400 mt-2 text-sm">{error || 'No hay datos disponibles'}</p>
       </div>
@@ -160,7 +160,7 @@ export default function QuantumWalletWidget() {
               <Wallet className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h3 className="font-bold text-white">Quantum Wallet</h3>
+              <h3 className="font-bold text-white">Wallet de Comisiones</h3>
               <p className="text-xs text-purple-300/70">Comisiones por Check-in</p>
             </div>
           </div>
