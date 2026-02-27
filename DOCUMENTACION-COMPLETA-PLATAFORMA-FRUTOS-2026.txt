@@ -1461,9 +1461,199 @@ Los usuarios sin permisos de coordinador reciben error 403 al intentar
 acceder a estas secciones, incluso si conocen la URL directa.
 
 ================================================================================
+13. SISTEMA DE PRECIOS Y UPGRADES
+================================================================================
+
+13.1 Configuración de Precios por Organización
+--------------------------------------------------------------------------------
+
+Cada organización tiene sus propios precios configurados en la tabla `DefaultPrice`:
+
+| levelType     | Descripción                            |
+|---------------|----------------------------------------|
+| BASIC         | Precio del nivel Básico                |
+| ADVANCED      | Precio del nivel Avanzado              |
+| PL            | Precio de Tu VIDA (Programa Liderato)  |
+| COMBO_ADV_PL  | Combo Avanzado + PL                    |
+| COMBO_FULL    | Combo completo (Básico+Avanzado+PL)    |
+
+Cada precio tiene:
+- `basePrice`: Precio base/sin promoción
+- `promoPrice`: Precio promocional (opcional)
+- `promoDeadline`: Fecha límite de promoción (opcional)
+
+EJEMPLO DE PRECIOS OAXACA:
+```
+BASIC:        basePrice=$6,500,  promoPrice=$4,500
+ADVANCED:     basePrice=$7,500,  promoPrice=$5,500
+PL:           basePrice=$11,000, promoPrice=$6,000
+COMBO_ADV_PL: basePrice=$12,500, promoPrice=$6,500
+COMBO_FULL:   basePrice=$25,000
+```
+
+--------------------------------------------------------------------------------
+13.2 Upgrade de Básico a Avanzado (/dashboard/upgrade-advanced)
+--------------------------------------------------------------------------------
+
+El sistema detecta el "panorama" del usuario:
+
+PANORAMA 1: BASICO_EN_CURSO
+- Usuario está cursando activamente el Básico
+- Tiene acceso a PRECIOS PROMOCIONALES
+- Opciones disponibles:
+
+  A) Solo Avanzado (ADVANCED_PROMO)
+     - Precio: prices.ADVANCED (promo)
+     - Precio tachado: prices.ADVANCED_BASE
+
+  B) Combo Avanzado + PL (COMBO_BASE) ⭐ MEJOR VALOR
+     - Precio: prices.COMBO_BASE
+     - Ahorro: (ADVANCED_BASE + PL_BASE) - COMBO_BASE
+
+  C) Apartado
+     - Hoy paga: prices.COMBO (combo promo)
+     - Después paga: prices.PL (PL promo)
+     - Obtiene precio de combo base asegurado
+
+PANORAMA 2: BASICO_COMPLETADO
+- Usuario terminó el Básico (trainingStatus = COMPLETED)
+- Solo acceso a PRECIOS BASE
+- Opciones disponibles:
+
+  A) Solo Avanzado (ADVANCED_BASE)
+     - Precio: prices.ADVANCED_BASE
+
+  B) Combo Avanzado + PL (COMBO_BASE) ⭐ RECOMENDADO
+     - Precio: prices.COMBO_BASE
+     - Ahorro: (ADVANCED_BASE + PL_BASE) - COMBO_BASE
+
+--------------------------------------------------------------------------------
+13.3 Upgrade de Avanzado a PL (/dashboard/upgrade-advanced)
+--------------------------------------------------------------------------------
+
+PANORAMA 3: AVANZADO_EN_CURSO
+- Usuario está cursando el Avanzado
+- YA PAGÓ el nivel Avanzado (precio promo = prices.ADVANCED)
+- Quiere inscribirse a PL
+
+FÓRMULAS DE CÁLCULO (DINÁMICAS por organización):
+
+  A) Opción 1: Apartar Lugar (PL_APARTADO)
+     - Ya pagaste (Avanzado): prices.ADVANCED
+     - Paga ahora: prices.PL - prices.ADVANCED
+     - Total apartado: prices.PL
+     - Restante (antes del PL): prices.COMBO - prices.PL
+
+  B) Opción 2: Completar COMBO (PL_COMPLETO) ⭐ RECOMENDADO
+     - Ya pagaste (Avanzado): prices.ADVANCED
+     - Paga ahora y completa: prices.COMBO - prices.ADVANCED
+     - COMBO Total: prices.COMBO
+
+EJEMPLO CON PRECIOS DE OAXACA:
+```
+ADVANCED promo = $5,500
+PL promo = $6,000
+COMBO promo = $6,500
+
+Opción 1 - Apartar:
+  Ya pagaste: $5,500
+  Paga ahora: $6,000 - $5,500 = $500
+  Total apartado: $6,000
+  Restante: $6,500 - $6,000 = $500
+
+Opción 2 - Completar COMBO:
+  Ya pagaste: $5,500
+  Paga ahora: $6,500 - $5,500 = $1,000
+  COMBO Total: $6,500
+```
+
+--------------------------------------------------------------------------------
+13.4 API de Información de Upgrade (/api/me/upgrade-advanced-info)
+--------------------------------------------------------------------------------
+
+Esta API calcula todo y devuelve:
+
+```typescript
+{
+  success: true,
+  panorama: 'BASICO_EN_CURSO' | 'BASICO_COMPLETADO' | 'AVANZADO_EN_CURSO' | 'YA_INSCRITO_PL',
+  currentVision: { id, nombre, organizationId, organizationName, ... },
+  availableOrganizations: [...],
+  nextPLVision: { id, name, startDate, endDate },
+  promoDeadline: string | null,
+  hasApartadoCredit: boolean,
+  prices: {
+    ADVANCED: number,      // Precio promo avanzado
+    ADVANCED_BASE: number, // Precio base avanzado
+    PL: number,            // Precio promo PL
+    PL_BASE: number,       // Precio base PL
+    COMBO: number,         // Precio promo combo
+    COMBO_BASE: number,    // Precio base combo
+    APARTADO_SALDO: number // Crédito si tiene apartado previo
+  }
+}
+```
+
+--------------------------------------------------------------------------------
+13.5 Flujo de Checkout (/dashboard/checkout-advanced)
+--------------------------------------------------------------------------------
+
+1. La página upgrade-advanced guarda en sessionStorage:
+```javascript
+{
+  type: 'UPGRADE_ADVANCED',
+  price: getPackagePrice(),        // Precio calculado
+  packageType: selectedPackage,    // Tipo de paquete
+  pendingDebt: getPendingDebt(),   // Deuda si es apartado
+  prices: prices,                  // Todos los precios
+  ...otros datos
+}
+```
+
+2. Checkout lee de sessionStorage y muestra:
+   - Precio a pagar (totalPrice)
+   - Desglose si aplica (ya pagaste Avanzado, etc.)
+   - Métodos de pago: Código de Referencia o Tarjeta
+
+3. El checkout usa `upgradeData.price` directamente, no recalcula.
+
+--------------------------------------------------------------------------------
+13.6 Correcciones Realizadas (Feb 2026)
+--------------------------------------------------------------------------------
+
+PROBLEMA: Precios hardcodeados para AVANZADO_EN_CURSO
+
+ANTES (constantes fijas):
+```javascript
+const ADVANCED_PAID_AMOUNT = 7500;  // Lo que ya pagaron
+const COMBO_TOTAL = 14500;          // Combo total
+const COMPLETE_COMBO_PAYMENT = 7000; // Para completar
+```
+
+Esto no funcionaba para organizaciones con precios diferentes (ej: Oaxaca).
+
+DESPUÉS (precios dinámicos):
+```javascript
+// PL_APARTADO: Paga ahora = PL promo - Avanzado promo
+return Math.max(0, (prices.PL || 0) - (prices.ADVANCED || 0));
+
+// PL_COMPLETO: Paga ahora = COMBO - Avanzado promo
+return Math.max(0, (prices.COMBO || 0) - (prices.ADVANCED || 0));
+```
+
+ARCHIVOS MODIFICADOS:
+- /app/dashboard/upgrade-advanced/page.tsx
+  - Eliminadas constantes hardcodeadas
+  - getPackagePrice() usa precios dinámicos
+  - UI muestra precios de la organización
+- /app/dashboard/checkout-advanced/page.tsx
+  - "Ya pagaste (Avanzado)" muestra prices.ADVANCED dinámico
+
+================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
 
 Esta documentación debe permitirte continuar exactamente donde quedamos, con 
 todo el contexto de lo que se ha hecho, los problemas resueltos, y los que 
 quedan pendientes.
+
