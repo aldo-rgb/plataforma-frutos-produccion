@@ -150,7 +150,44 @@ export default function CheckoutAdvancedPage() {
       const data = await res.json();
 
       if (data.success) {
-        setValidatedCode(data.giftCode);
+        // Auto-apply the validated code
+        const validCode = data.giftCode;
+        
+        // Check if code is already applied
+        if (appliedPayments.some(p => p.code === validCode.code)) {
+          setCodeError('Este código ya fue aplicado');
+          setValidatingCode(false);
+          return;
+        }
+
+        // Calculate how much this code covers
+        let codeValue = validCode.value;
+        
+        // If it's a discount code, calculate percentage of remaining
+        if (validCode.type === 'GOLDEN_DISCOUNT' && validCode.discountPercentage) {
+          codeValue = (remaining * validCode.discountPercentage) / 100;
+        }
+
+        const amountToApply = Math.min(codeValue, remaining);
+
+        if (amountToApply <= 0) {
+          setCodeError('El monto ya está cubierto');
+          setValidatingCode(false);
+          return;
+        }
+
+        const newPayment: AppliedPayment = {
+          id: `gc-${Date.now()}`,
+          type: 'GIFT_CODE',
+          code: validCode.code,
+          codeType: validCode.type,
+          amount: amountToApply,
+          description: `Código ${validCode.type} - $${amountToApply.toLocaleString()}`,
+        };
+
+        setAppliedPayments(prev => [...prev, newPayment]);
+        setValidatedCode(null);
+        setGiftCode('');
       } else {
         setCodeError(data.error || 'Código inválido');
       }
