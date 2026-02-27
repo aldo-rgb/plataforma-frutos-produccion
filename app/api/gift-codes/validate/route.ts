@@ -190,18 +190,7 @@ async function validatePaymentCode(code: string, organizationId?: string) {
     );
   }
 
-  // Verificar expiración
-  if (paymentCode.expiresAt && new Date() > paymentCode.expiresAt) {
-    await prisma.paymentCode.update({
-      where: { id: paymentCode.id },
-      data: { status: 'EXPIRED' },
-    });
-
-    return NextResponse.json(
-      { success: false, error: 'Este código ha expirado' },
-      { status: 400 }
-    );
-  }
+  // Nota: PaymentCode no tiene campo expiresAt, la expiración se maneja por status
 
   // Código válido - devolver como tipo CASH_PAYMENT
   const amount = Number(paymentCode.amount);
