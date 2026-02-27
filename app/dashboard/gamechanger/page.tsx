@@ -21,6 +21,7 @@ import VisionHistoryWidget from "@/components/widgets/VisionHistoryWidget";
 import GCPendingSurveyBanner from "@/components/dashboard/GCPendingSurveyBanner";
 import GCLegacyRewardBanner from "@/components/dashboard/GCLegacyRewardBanner";
 import ReferralCommissionsWidget from "@/components/dashboard/ReferralCommissionsWidget";
+import GCTribeWidget from "@/components/dashboard/GCTribeWidget";
 
 export default async function GameChangerDashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -286,6 +287,15 @@ export default async function GameChangerDashboardPage() {
       <CartaWizardWidget 
         hasCompletedCarta={hasCompletedCarta}
         cartaStatus={carta?.estado as any}
+      />
+
+      {/* WIDGET DE TRIBU - Enrollados/Graduados + Invitar */}
+      <GCTribeWidget
+        userName={usuario.nombre}
+        userId={usuario.id}
+        userEmail={usuario.email}
+        referralCode={usuario.referralCode || undefined}
+        organizationId={usuario.organizationId}
       />
 
       {/* QR PERSONAL */}

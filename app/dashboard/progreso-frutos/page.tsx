@@ -86,47 +86,53 @@ export default async function ProgresoFrutosPage() {
     );
   }
 
+  // Mapeo de key a categoría en la base de datos
+  const keyToCategoriaMap: Record<string, string> = {
+    'finanzas': 'finanzas',
+    'relaciones': 'relaciones',
+    'talentos': 'talentos',
+    'salud': 'salud',
+    'pazMental': 'pazMental',
+    'ocio': 'ocio',
+    'servicioTrans': 'servicioTrans',
+    'servicioComun': 'servicioComun',
+  };
+
   // Calcular progreso por área
   const areaProgress: AreaProgress[] = await Promise.all(
     areasActivas.map(async (area) => {
       const declaracionField = `${area.key}Declaracion` as keyof typeof carta;
       const hasDeclaration = !!carta[declaracionField];
 
-      // Obtener TODAS las metas de esta carta primero (sin filtrar por categoría)
-      const todasLasMetas = await prisma.meta.findMany({
+      // Obtener metas de esta área específica usando el key correcto
+      const categoriaDB = keyToCategoriaMap[area.key] || area.key;
+      
+      const metas = await prisma.meta.findMany({
         where: {
           cartaId: carta.id,
+          categoria: categoriaDB,
         },
         include: {
-          Accion: true,
-          EvidenciaAccion: true,
+          Accion: {
+            include: {
+              TaskInstance: {
+                where: { usuarioId: usuario.id }
+              }
+            }
+          },
         },
       });
 
-      // Filtrar metas que coincidan con esta área (buscar por categoría o por la key del área)
-      const metas = todasLasMetas.filter(meta => 
-        meta.categoria === area.label || 
-        meta.categoria?.toLowerCase().includes(area.key.toLowerCase()) ||
-        area.label.toLowerCase().includes(meta.categoria?.toLowerCase() || '')
-      );
-
-      // Calcular tareas completadas basadas en evidencias
+      // Calcular tareas completadas basadas en TaskInstances
       let tareasCompletadas = 0;
       let tareasTotal = 0;
 
       metas.forEach(meta => {
-        // Contar acciones como tareas
-        tareasTotal += meta.Accion.length;
-        
-        // Contar evidencias aprobadas para esta meta
-        const evidenciasAprobadas = meta.EvidenciaAccion.filter(
-          e => e.status === 'APROBADA'
-        ).length;
-        
-        // Si hay evidencias aprobadas, contar las acciones como completadas
-        if (evidenciasAprobadas > 0 && meta.Accion.length > 0) {
-          tareasCompletadas += meta.Accion.length;
-        }
+        meta.Accion.forEach(accion => {
+          const instances = accion.TaskInstance || [];
+          tareasTotal += instances.length;
+          tareasCompletadas += instances.filter(t => t.status === 'COMPLETED').length;
+        });
       });
 
       const percent = tareasTotal > 0 ? Math.round((tareasCompletadas / tareasTotal) * 100) : 0;

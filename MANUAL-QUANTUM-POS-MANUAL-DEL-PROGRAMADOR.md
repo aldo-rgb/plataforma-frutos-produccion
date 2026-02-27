@@ -2,7 +2,7 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 2.3  
+**Versión:** 2.4  
 **Fecha:** Febrero 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
@@ -1711,6 +1711,78 @@ useEffect(() => {
 
 **Nota técnica:** Esta solución evita que el usuario tenga que cerrar y volver a abrir sesión. El componente detecta automáticamente cuando falta el código y lo obtiene de `/api/me`.
 
+## v2.4 - 27/02/2026
+### Feature: GCTribeWidget - Widget de Tribu para Game Changers
+
+**Descripción:** Widget que muestra estadísticas de la tribu del Game Changer (enrollados, graduados) con botón para invitar.
+
+**Archivos creados:**
+- `components/dashboard/GCTribeWidget.tsx` - Widget client con modal de QR
+- `app/api/gamechanger/tribe-stats/route.ts` - API para obtener stats de tribu
+
+**Funcionalidad:**
+- Muestra nombre de la visión activa
+- Muestra misión de la tribu (si existe)
+- Contador de enrollados (usuarios invitados con ticket activo)
+- Contador de graduados (usuarios invitados que están graduados)
+- Botón "Invitar a alguien" que abre modal con QR personal
+
+**API Response:**
+```json
+{
+  "visionId": 24,
+  "visionName": "Vision 26",
+  "tribeMission": "Nuestra misión es...",
+  "enrolledCount": 5,
+  "graduatedCount": 2
+}
+```
+
+### Fix: Página Progreso F.R.U.T.O.S. - Conteo incorrecto de tareas
+
+**Problema:** La página `/dashboard/progreso-frutos` mostraba "0 de 1 tareas" cuando el usuario tenía cientos de tareas.
+
+**Causa raíz:**
+1. El filtro de categoría comparaba labels (`'Finanzas'`) con valores de DB (`'finanzas'`)
+2. Usaba `EvidenciaAccion` para contar completadas en vez de `TaskInstance`
+
+**Solución:**
+```typescript
+// Mapeo correcto de keys a categorías en DB
+const keyToCategoriaMap: Record<string, string> = {
+  'finanzas': 'finanzas',
+  'relaciones': 'relaciones',
+  // ...
+};
+
+// Query con TaskInstance en vez de EvidenciaAccion
+const metas = await prisma.meta.findMany({
+  where: { cartaId: carta.id, categoria: categoriaDB },
+  include: {
+    Accion: {
+      include: {
+        TaskInstance: { where: { usuarioId: usuario.id } }
+      }
+    }
+  }
+});
+
+// Conteo basado en TaskInstance
+metas.forEach(meta => {
+  meta.Accion.forEach(accion => {
+    const instances = accion.TaskInstance || [];
+    tareasTotal += instances.length;
+    tareasCompletadas += instances.filter(t => t.status === 'COMPLETED').length;
+  });
+});
+```
+
+**Archivo modificado:**
+- `app/dashboard/progreso-frutos/page.tsx`
+
+## v2.3 - 26/02/2026
+### Fix: PersonalQRWidget - Carga dinámica de referralCode
+
 ## v2.2 - 26/02/2026
 - Documentación completa de 212 modelos de base de datos
 - Catálogo de flujos de procesos principales
@@ -1726,5 +1798,5 @@ useEffect(() => {
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 2.3 - Febrero 2026*  
-*Última actualización: 26/02/2026*
+*Versión 2.4 - Febrero 2026*  
+*Última actualización: 27/02/2026*
