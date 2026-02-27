@@ -202,7 +202,8 @@ export async function POST(
         submittedAt: new Date(),
         reviewedAt: new Date(), // Auto-aprobada
         pointsEarned: totalPoints,
-        earnedBonus: earnedBonus
+        earnedBonus: earnedBonus,
+        updatedAt: new Date() // Campo requerido
       }
     })
 

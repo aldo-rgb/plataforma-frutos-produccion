@@ -185,6 +185,7 @@ export async function POST(request: NextRequest) {
         evidenceText,
         evidenceUrl,
         submittedAt: new Date(),
+        updatedAt: new Date(), // Campo requerido
         // Crear respuestas si es cuestionario
         ...(answers && answers.length > 0 && {
           answers: {

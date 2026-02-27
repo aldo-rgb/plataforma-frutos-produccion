@@ -373,7 +373,8 @@ async function createSubmissionsForMission(
         data: participantIds.map(userId => ({
           missionId,
           userId,
-          status: 'PENDING'
+          status: 'PENDING',
+          updatedAt: new Date() // Campo requerido
         })),
         skipDuplicates: true
       })
