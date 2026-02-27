@@ -2,7 +2,7 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 2.2  
+**Versión:** 2.3  
 **Fecha:** Febrero 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
@@ -30,6 +30,7 @@
 18. [Librerías Core](#18-librerías-core)
 19. [Dashboards por Rol](#19-dashboards-por-rol)
 20. [Estadísticas del Sistema](#20-estadísticas-del-sistema)
+21. [Historial de Cambios](#21-historial-de-cambios)
 
 ---
 
@@ -1675,6 +1676,55 @@ Organizaciones: Múltiples
 
 ---
 
+# 21. HISTORIAL DE CAMBIOS
+
+## v2.3 - 26/02/2026
+### Fix: PersonalQRWidget - Carga dinámica de referralCode
+
+**Problema:** Los coordinadores que fueron asignados después de iniciar sesión no veían su código de referido en el QR. El link generado mostraba "No hay sedes disponibles" al ser usado.
+
+**Causa raíz:** El `referralCode` se almacena en el JWT de NextAuth al momento del login. Si el código se asigna posteriormente en la base de datos, la sesión mantiene el valor `undefined`.
+
+**Solución implementada en `/components/dashboard/PersonalQRWidget.tsx`:**
+
+```typescript
+// Estado para el referralCode (puede venir de props o cargarse dinámicamente)
+const [userReferralCode, setUserReferralCode] = useState<string | undefined>(referralCode);
+
+// Si no hay referralCode en props, obtenerlo del usuario via API
+useEffect(() => {
+  if (!referralCode && userId) {
+    fetch(`/api/me`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.referralCode) {
+          setUserReferralCode(data.referralCode);
+        }
+      })
+      .catch(err => console.error('Error fetching user referralCode:', err));
+  }
+}, [referralCode, userId]);
+```
+
+**Archivos modificados:**
+- `components/dashboard/PersonalQRWidget.tsx` - Carga dinámica del referralCode
+
+**Nota técnica:** Esta solución evita que el usuario tenga que cerrar y volver a abrir sesión. El componente detecta automáticamente cuando falta el código y lo obtiene de `/api/me`.
+
+## v2.2 - 26/02/2026
+- Documentación completa de 212 modelos de base de datos
+- Catálogo de flujos de procesos principales
+- Lista de APIs principales
+- Librerías core documentadas
+- Dashboards por rol
+
+## v2.1 - 26/02/2026
+- Sistema de comisiones por referidos (Ambassador Engine)
+- Sistema de ledger de comisiones
+- Documentación de errores comunes
+
+---
+
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 2.2 - Febrero 2026*  
+*Versión 2.3 - Febrero 2026*  
 *Última actualización: 26/02/2026*
