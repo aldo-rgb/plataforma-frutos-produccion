@@ -161,6 +161,13 @@ export default function MetamorfosisPage() {
   const [editingAssignment, setEditingAssignment] = useState<MetamorfosisAssignment | null>(null)
   const [deletingAssignmentId, setDeletingAssignmentId] = useState<number | null>(null)
 
+  // Estado para modal de confirmación de eliminación
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: 'base' | 'transform' | 'song' | 'cunaSong';
+    id: number;
+    name: string;
+  } | null>(null)
+
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 4000)
@@ -293,24 +300,29 @@ export default function MetamorfosisPage() {
     }
   }
 
-  // Eliminar elemento personalizado
-  const handleDeleteElement = async (type: 'base' | 'transform' | 'song' | 'cunaSong', id: number, name: string) => {
-    if (!confirm(`¿Estás seguro de eliminar "${name}"?`)) return
+  // Eliminar elemento personalizado - abrir modal de confirmación
+  const handleDeleteElement = (type: 'base' | 'transform' | 'song' | 'cunaSong', id: number, name: string) => {
+    setDeleteConfirm({ type, id, name })
+  }
+
+  // Confirmar eliminación
+  const confirmDeleteElement = async () => {
+    if (!deleteConfirm) return
     
     try {
       let endpoint = ''
-      switch (type) {
+      switch (deleteConfirm.type) {
         case 'base':
-          endpoint = `/api/trainer/metamorfosis/bases/${id}`
+          endpoint = `/api/trainer/metamorfosis/bases/${deleteConfirm.id}`
           break
         case 'transform':
-          endpoint = `/api/trainer/metamorfosis/transforms/${id}`
+          endpoint = `/api/trainer/metamorfosis/transforms/${deleteConfirm.id}`
           break
         case 'song':
-          endpoint = `/api/trainer/metamorfosis/songs/${id}`
+          endpoint = `/api/trainer/metamorfosis/songs/${deleteConfirm.id}`
           break
         case 'cunaSong':
-          endpoint = `/api/trainer/metamorfosis/cuna-songs/${id}`
+          endpoint = `/api/trainer/metamorfosis/cuna-songs/${deleteConfirm.id}`
           break
       }
       
@@ -319,6 +331,7 @@ export default function MetamorfosisPage() {
       if (res.ok) {
         showToast('Elemento eliminado', 'success')
         fetchElements()
+        setDeleteConfirm(null)
       } else {
         const error = await res.json()
         showToast(error.error || 'Error al eliminar', 'error')
@@ -1680,6 +1693,57 @@ export default function MetamorfosisPage() {
               >
                 Confirmar ({selectedParticipants.length} seleccionados)
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal: Confirmar Eliminación */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setDeleteConfirm(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-800 rounded-2xl p-6 max-w-md w-full border border-red-500/30"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-red-500/20 rounded-full">
+                  <Trash2 className="w-6 h-6 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Eliminar Elemento</h3>
+                  <p className="text-slate-400 text-sm">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+              
+              <p className="text-slate-300 mb-6">
+                ¿Estás seguro de eliminar <span className="font-semibold text-white">"{deleteConfirm.name}"</span>?
+              </p>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDeleteElement}
+                  className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
