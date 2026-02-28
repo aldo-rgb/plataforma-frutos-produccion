@@ -117,11 +117,33 @@ export async function GET() {
     });
 
     // Filtrar tickets que ya fueron usados (usuario tiene asistencia en esa visión+nivel)
+    // o cuya visión ya terminó
+    const now = new Date();
     const filteredTickets = tickets.filter(ticket => {
       const enrollmentLevel = ticketLevelToEnrollmentLevel[ticket.level] || ticket.level;
       const key = `${ticket.visionId}-${enrollmentLevel}`;
+      
       // Si el usuario ya asistió a este nivel en esta visión, excluir el ticket
-      return !attendedSet.has(key);
+      if (attendedSet.has(key)) {
+        return false;
+      }
+      
+      // Verificar si la visión ya terminó según el nivel del ticket
+      let endDate: Date | null = null;
+      if (ticket.level === 'BASIC') {
+        endDate = ticket.Vision.endDate;
+      } else if (ticket.level === 'ADVANCED') {
+        endDate = ticket.Vision.advancedEndDate;
+      } else if (ticket.level === 'PL') {
+        endDate = ticket.Vision.plWeekend3EndDate;
+      }
+      
+      // Si la fecha de fin ya pasó, el ticket está expirado
+      if (endDate && new Date(endDate) < now) {
+        return false;
+      }
+      
+      return true;
     });
 
     // Para cada ticket, buscar el producto correspondiente para obtener la imagen

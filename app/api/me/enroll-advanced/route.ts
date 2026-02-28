@@ -47,6 +47,33 @@ export async function POST(request: Request) {
       },
     });
 
+    // 🚨 IMPORTANTE: Verificar si el usuario ya COMPLETÓ (ATTENDED) ADVANCED en CUALQUIER visión
+    // Si ya tiene ATTENDED en ADVANCED, no debería poder comprar ADVANCED de nuevo
+    if (!isPLOnlyPurchase) {
+      const completedAdvanced = await prisma.vision_enrollments.findFirst({
+        where: {
+          userId: userId,
+          level: 'ADVANCED',
+          attendanceStatus: 'ATTENDED',  // Ya completó el entrenamiento
+        },
+        include: {
+          Vision: { select: { nombre: true } }
+        }
+      });
+
+      if (completedAdvanced) {
+        const visionName = completedAdvanced.Vision?.nombre || `Visión ${completedAdvanced.visionId}`;
+        logger.warn(`⚠️ Usuario ${userId} intentó comprar ADVANCED pero ya tiene ATTENDED en ${visionName}`);
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: `Ya completaste el entrenamiento Avanzado en ${visionName}. Si deseas continuar con Liderato (PL), selecciona la opción correspondiente.` 
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // For PL-only purchases, if no ADVANCED in specified vision, find where user HAS ADVANCED
     let effectiveVisionId = visionId;
     if (isPLOnlyPurchase && !existingAdvancedEnrollment) {

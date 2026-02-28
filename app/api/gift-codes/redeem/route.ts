@@ -297,23 +297,67 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
       );
     }
 
-    // Obtener el enrollment del usuario para determinar la visión
-    const enrollment = await prisma.vision_enrollments.findFirst({
-      where: { userId: user.id },
-      include: {
-        Vision: { select: { id: true, endDate: true } }
-      }
-    });
+    // Determinar la visión a usar:
+    // 1. Si se pasa visionId como parámetro, usarlo
+    // 2. Si el PaymentCode tiene visionId, usarlo
+    // 3. Como fallback, buscar enrollment activo del usuario (visión NO terminada)
+    let targetVisionId: number | null = null;
+    let enrollment = null;
+
+    if (visionId) {
+      targetVisionId = parseInt(String(visionId));
+      logger.debug('[REDEEM CASH] Usando visionId del parámetro:', targetVisionId);
+    } else if (paymentCode.visionId) {
+      targetVisionId = paymentCode.visionId;
+      logger.debug('[REDEEM CASH] Usando visionId del PaymentCode:', targetVisionId);
+    }
+
+    // Si tenemos una visión específica, buscar enrollment en esa visión
+    if (targetVisionId) {
+      enrollment = await prisma.vision_enrollments.findFirst({
+        where: { 
+          userId: user.id,
+          visionId: targetVisionId,
+          // Buscar enrollments que NO hayan terminado (no ATTENDED)
+          attendanceStatus: { notIn: ['ATTENDED'] }
+        },
+        include: {
+          Vision: { select: { id: true, endDate: true, advancedEndDate: true, plWeekend3EndDate: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
+
+    // Si no encontramos enrollment en la visión específica, buscar enrollment activo
+    if (!enrollment) {
+      enrollment = await prisma.vision_enrollments.findFirst({
+        where: { 
+          userId: user.id,
+          // Solo buscar visiones activas (no terminadas)
+          attendanceStatus: { notIn: ['ATTENDED', 'BACKLOG'] },
+          Vision: {
+            // Visión con fecha de fin en el futuro
+            endDate: { gte: new Date() }
+          }
+        },
+        include: {
+          Vision: { select: { id: true, endDate: true, advancedEndDate: true, plWeekend3EndDate: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
 
     if (!enrollment) {
       return NextResponse.json(
-        { success: false, error: 'El usuario no tiene un enrollment activo' },
+        { success: false, error: 'El usuario no tiene un enrollment activo en una visión vigente' },
         { status: 400 }
       );
     }
 
     const amount = Number(paymentCode.amount);
-    const userVisionId = enrollment.visionId;
+    const userVisionId = targetVisionId || enrollment.visionId;
+    
+    logger.debug('[REDEEM CASH] Usando visionId final:', userVisionId, 'Enrollment level:', enrollment.level);
 
     // Transacción para crear todo junto
     const result = await prisma.$transaction(async (tx) => {

@@ -21,8 +21,8 @@ interface Archetype {
   isSystemDefault: boolean
   isActive: boolean
   trainerId: number | null
-  Trainer: { id: number; nombre: string } | null
-  _count: { Assignments: number }
+  Usuario: { id: number; nombre: string } | null
+  _count: { ArchetypeAssignment: number }
 }
 
 interface Assignment {
@@ -136,12 +136,18 @@ export default function PersonajesPage() {
       if (filterCategory) params.set('category', filterCategory)
       
       const res = await fetch(`/api/trainer/archetypes?${params}`)
+      const data = await res.json()
+      
       if (res.ok) {
-        const data = await res.json()
+        console.log('[Personajes] Arquetipos cargados:', data.archetypes?.length || 0)
         setArchetypes(data.archetypes || [])
+      } else {
+        console.error('[Personajes] Error en respuesta:', data.error || res.status)
+        showToast(data.error || 'Error al cargar personajes', 'error')
       }
     } catch (error) {
-      console.error('Error fetching archetypes:', error)
+      console.error('[Personajes] Error fetching archetypes:', error)
+      showToast('Error de conexión al cargar personajes', 'error')
     } finally {
       setLoading(false)
     }
@@ -526,10 +532,10 @@ export default function PersonajesPage() {
                 ¿Estás seguro de eliminar <strong className="text-white">{deleteConfirm.name}</strong>?
               </p>
 
-              {deleteConfirm._count.Assignments > 0 && (
+              {deleteConfirm._count.ArchetypeAssignment > 0 && (
                 <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-4">
                   <p className="text-amber-400 text-sm">
-                    ⚠️ Este personaje tiene {deleteConfirm._count.Assignments} asignaciones.
+                    ⚠️ Este personaje tiene {deleteConfirm._count.ArchetypeAssignment} asignaciones.
                     Será desactivado en lugar de eliminado.
                   </p>
                 </div>
@@ -663,7 +669,7 @@ function ArchetypeCard({
                 {archetype.maneraSerTag}
               </span>
               <span className="text-xs text-slate-500">
-                {archetype._count.Assignments} asignados
+                {archetype._count.ArchetypeAssignment} asignados
               </span>
             </div>
           </div>
@@ -769,9 +775,9 @@ function ArchetypePreviewModal({
           )}
 
           <div className="flex items-center justify-between text-sm text-slate-500">
-            <span>{archetype._count.Assignments} veces asignado</span>
-            {archetype.Trainer && (
-              <span>Creado por: {archetype.Trainer.nombre}</span>
+            <span>{archetype._count.ArchetypeAssignment} veces asignado</span>
+            {archetype.Usuario && (
+              <span>Creado por: {archetype.Usuario.nombre}</span>
             )}
           </div>
         </div>

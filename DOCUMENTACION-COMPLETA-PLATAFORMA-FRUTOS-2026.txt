@@ -2144,6 +2144,272 @@ Esto evita mostrar:
 - Tickets PENDING/UNPAID con más de 7 días (abandonados)
 
 ================================================================================
+19. BÚSQUEDA EN PÁGINA DE GESTIÓN (/manage)
+================================================================================
+
+Se agregó funcionalidad de búsqueda por nombre/email/teléfono en la página
+de gestión de estudiantes por nivel (BASIC, ADVANCED, PL).
+
+--------------------------------------------------------------------------------
+19.1 Implementación (28 Feb 2026)
+--------------------------------------------------------------------------------
+
+Archivo: /app/dashboard/school-admin/vision/[id]/manage/page.tsx
+
+Se agregaron 3 estados de búsqueda (uno por nivel):
+
+```typescript
+const [basicSearchQuery, setBasicSearchQuery] = useState('');
+const [advancedSearchQuery, setAdvancedSearchQuery] = useState('');
+const [plSearchQuery, setPlSearchQuery] = useState('');
+```
+
+Filtro de búsqueda (ejemplo para BASIC):
+
+```typescript
+const filteredBasicStudents = basicStudents.filter(s => {
+  // Primero filtrar por asistencia según showAllBasic
+  const attendanceMatch = showAllBasic ? true : s.attendanceStatus !== 'ATTENDED';
+  if (!attendanceMatch) return false;
+  
+  // Luego filtrar por búsqueda si hay query
+  if (!basicSearchQuery.trim()) return true;
+  const query = basicSearchQuery.toLowerCase();
+  const nombre = s.Usuario?.nombre?.toLowerCase() || '';
+  const email = s.Usuario?.email?.toLowerCase() || '';
+  const telefono = s.Usuario?.telefono?.toLowerCase() || '';
+  return nombre.includes(query) || email.includes(query) || telefono.includes(query);
+});
+```
+
+UI del campo de búsqueda:
+
+```tsx
+<div className="relative flex-1 max-w-xs">
+  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+  <input
+    type="text"
+    placeholder="Buscar por nombre, email o tel..."
+    value={basicSearchQuery}
+    onChange={(e) => setBasicSearchQuery(e.target.value)}
+    className="w-full pl-9 pr-8 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 text-sm"
+  />
+  {basicSearchQuery && (
+    <button onClick={() => setBasicSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+      <X className="h-4 w-4" />
+    </button>
+  )}
+</div>
+```
+
+================================================================================
+20. FILTRADO DE TICKETS USADOS Y EXPIRADOS
+================================================================================
+
+Se mejoró la API de my-tickets para no mostrar tickets ya utilizados o expirados.
+
+--------------------------------------------------------------------------------
+20.1 Filtro de Tickets con ATTENDED (28 Feb 2026)
+--------------------------------------------------------------------------------
+
+Archivo: /app/api/tickets/my-tickets/route.ts
+
+Los tickets donde el usuario ya tiene `attendanceStatus: 'ATTENDED'` en el
+enrollment correspondiente NO deben mostrarse (ya fueron "usados").
+
+```typescript
+// Obtener enrollments con ATTENDED para filtrarlos
+const attendedEnrollments = await prisma.vision_enrollments.findMany({
+  where: {
+    userId: user.id,
+    attendanceStatus: 'ATTENDED',
+  },
+  select: { visionId: true, level: true },
+});
+
+// Crear set para búsqueda rápida
+const attendedSet = new Set(
+  attendedEnrollments.map(e => `${e.visionId}-${e.level}`)
+);
+
+// Filtrar tickets
+const filteredTickets = tickets.filter(ticket => {
+  const key = `${ticket.visionId}-${ticket.level}`;
+  return !attendedSet.has(key);  // Excluir si ya tiene ATTENDED
+});
+```
+
+--------------------------------------------------------------------------------
+20.2 Filtro de Tickets Expirados (28 Feb 2026)
+--------------------------------------------------------------------------------
+
+Los tickets cuya visión ya terminó también deben excluirse:
+
+```typescript
+const now = new Date();
+
+const finalTickets = filteredTickets.filter(ticket => {
+  if (!ticket.Vision) return true;
+  
+  // Determinar fecha de fin según el nivel del ticket
+  let endDate: Date | null = null;
+  if (ticket.level === 'BASIC') {
+    endDate = ticket.Vision.endDate;
+  } else if (ticket.level === 'ADVANCED') {
+    endDate = ticket.Vision.advancedEndDate;
+  } else if (ticket.level === 'PL') {
+    endDate = ticket.Vision.plWeekend3EndDate;
+  }
+  
+  // Si no hay fecha de fin, mostrar el ticket
+  if (!endDate) return true;
+  
+  // Excluir si la fecha de fin ya pasó
+  return endDate >= now;
+});
+```
+
+================================================================================
+21. BUG DE TICKETS ADVANCED DUPLICADOS (28 Feb 2026)
+================================================================================
+
+Se descubrió y corrigió un bug crítico que permitía a usuarios crear tickets
+de ADVANCED duplicados cuando ya habían completado ADVANCED en otra visión.
+
+--------------------------------------------------------------------------------
+21.1 Usuarios Afectados
+--------------------------------------------------------------------------------
+
+9 usuarios de Oaxaca (org ID 5) que ya habían completado ADVANCED en Vision 5
+(ID: 13) con status ATTENDED, recibieron erróneamente tickets y enrollments
+de ADVANCED para Vision 6 (ID: 16) el 22 de febrero de 2026.
+
+Usuarios: Dahirte (959), HugoAquino (206), Stephania (285), Edith (204),
+Emma (169), Geovani (187), Ana Edith (186), Griselda (170), Gabriela (173)
+
+Total afectado: ~$63,500 MXN en registros erróneos
+
+--------------------------------------------------------------------------------
+21.2 Causa Raíz
+--------------------------------------------------------------------------------
+
+BUG 1: redeemPaymentCode ignoraba el parámetro visionId
+
+Archivo: /app/api/gift-codes/redeem/route.ts
+
+```typescript
+// ANTES (BUG):
+const enrollment = await prisma.vision_enrollments.findFirst({
+  where: { userId: user.id },  // ⚠️ NO usaba visionId
+  ...
+});
+```
+
+La función recibía `visionId` como parámetro pero lo ignoraba, buscando
+cualquier enrollment del usuario sin filtrar por visión.
+
+BUG 2: enroll-advanced no verificaba graduación previa
+
+Archivo: /app/api/me/enroll-advanced/route.ts
+
+```typescript
+// ANTES (BUG):
+let existingAdvancedEnrollment = await prisma.vision_enrollments.findFirst({
+  where: {
+    userId: userId,
+    visionId: visionId,  // Solo verificaba la visión solicitada
+    level: 'ADVANCED',
+  },
+});
+```
+
+Solo verificaba si el usuario tenía enrollment ADVANCED en la visión 
+específica solicitada, pero NO verificaba si ya había completado (ATTENDED) 
+ADVANCED en otra visión anterior.
+
+--------------------------------------------------------------------------------
+21.3 Correcciones Aplicadas
+--------------------------------------------------------------------------------
+
+FIX 1: redeemPaymentCode ahora respeta visionId
+
+```typescript
+// DESPUÉS:
+let targetVisionId: number | null = null;
+
+if (visionId) {
+  targetVisionId = parseInt(String(visionId));
+} else if (paymentCode.visionId) {
+  targetVisionId = paymentCode.visionId;
+}
+
+// Buscar solo en visiones activas (no ATTENDED)
+enrollment = await prisma.vision_enrollments.findFirst({
+  where: { 
+    userId: user.id,
+    visionId: targetVisionId,
+    attendanceStatus: { notIn: ['ATTENDED'] }
+  },
+  ...
+});
+```
+
+FIX 2: enroll-advanced valida graduación previa
+
+```typescript
+// DESPUÉS:
+// Verificar si el usuario ya COMPLETÓ (ATTENDED) ADVANCED en CUALQUIER visión
+if (!isPLOnlyPurchase) {
+  const completedAdvanced = await prisma.vision_enrollments.findFirst({
+    where: {
+      userId: userId,
+      level: 'ADVANCED',
+      attendanceStatus: 'ATTENDED',
+    },
+    ...
+  });
+
+  if (completedAdvanced) {
+    return NextResponse.json({
+      success: false, 
+      error: `Ya completaste el entrenamiento Avanzado en ${visionName}...`
+    });
+  }
+}
+```
+
+--------------------------------------------------------------------------------
+21.4 Script de Corrección de Datos
+--------------------------------------------------------------------------------
+
+Se creó el script: scripts/fix-duplicate-advanced-v16.js
+
+Este script:
+1. Elimina los tickets ADVANCED de Vision 16 para usuarios afectados
+2. Elimina los enrollments ADVANCED de Vision 16
+3. Elimina los registros de pago erróneos del 22 de febrero
+
+Ejecución:
+```bash
+# Modo simulación (dry-run)
+node scripts/fix-duplicate-advanced-v16.js --dry-run
+
+# Aplicar cambios reales
+node scripts/fix-duplicate-advanced-v16.js
+```
+
+Resultado: 9 tickets, 9 enrollments y 11 pagos eliminados exitosamente.
+
+--------------------------------------------------------------------------------
+21.5 Prevención Futura
+--------------------------------------------------------------------------------
+
+Con estas correcciones:
+1. Los códigos CASH respetan la visión correcta
+2. Los usuarios que ya completaron ADVANCED no pueden comprarlo de nuevo
+3. Se muestra mensaje claro sugiriendo PL si ya graduó de ADVANCED
+
+================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
 

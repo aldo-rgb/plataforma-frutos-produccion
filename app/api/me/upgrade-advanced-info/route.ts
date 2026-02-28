@@ -312,9 +312,11 @@ export async function GET() {
     });
     
     // OPCIÓN 2: Ticket de PL con pago parcial (amountPaid > 0)
-    const apartadoTicketPL = await prisma.ticket.findFirst({
+    // IMPORTANTE: Solo considerar tickets de la visión actual
+    const apartadoTicketPL = currentVision ? await prisma.ticket.findFirst({
       where: {
         ownerId: userId,
+        visionId: currentVision.id, // Solo de la visión actual
         level: 'PL',
         status: { in: ['PENDING_PAYMENT', 'RESERVED'] },
         paymentStatus: { in: ['PARTIAL', 'PENDING'] },
@@ -324,13 +326,15 @@ export async function GET() {
         costAtPurchase: true,
         amountPaid: true,
       },
-    });
+    }) : null;
     
     // OPCIÓN 3: Ticket ADVANCED donde pagó más del costo (exceso va como crédito)
     // Esto cubre casos donde el usuario pagó por combo pero se registró como ADVANCED
-    const advancedTicketWithOverpayment = await prisma.ticket.findFirst({
+    // IMPORTANTE: Solo considerar sobrepago de la VISIÓN ACTUAL para evitar créditos de otras visiones
+    const advancedTicketWithOverpayment = currentVision ? await prisma.ticket.findFirst({
       where: {
         ownerId: userId,
+        visionId: currentVision.id, // Solo de la visión actual
         level: 'ADVANCED',
         status: 'ACTIVE',
         paymentStatus: 'PAID',
@@ -343,7 +347,7 @@ export async function GET() {
       orderBy: {
         createdAt: 'desc',
       },
-    });
+    }) : null;
     
     // Calcular si hay sobrepago en el ticket ADVANCED
     let overpaymentCredit = 0;

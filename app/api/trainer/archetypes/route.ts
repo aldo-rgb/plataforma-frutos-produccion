@@ -68,11 +68,11 @@ export async function GET(request: Request) {
         { name: 'asc' }
       ],
       include: {
-        Trainer: {
+        Usuario: {
           select: { id: true, nombre: true }
         },
         _count: {
-          select: { Assignments: true }
+          select: { ArchetypeAssignment: true }
         }
       }
     });
