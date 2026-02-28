@@ -59,6 +59,10 @@ export default function TrainerBitacorasPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'completed' | 'pending' | 'risk'>('all');
   const [level, setLevel] = useState<'ADVANCED' | 'PL'>('ADVANCED');
+  
+  // Filtro por visión
+  const [selectedVisionId, setSelectedVisionId] = useState<number | 'all'>('all');
+  const [availableVisions, setAvailableVisions] = useState<{id: number, nombre: string}[]>([]);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -79,6 +83,18 @@ export default function TrainerBitacorasPage() {
         if (result.level) {
           setLevel(result.level);
         }
+        
+        // Extraer visiones únicas de los participantes
+        const visionMap = new Map<number, {id: number, nombre: string}>();
+        result.participants.forEach((p: Participant) => {
+          if (p.vision?.id && !visionMap.has(p.vision.id)) {
+            visionMap.set(p.vision.id, {
+              id: p.vision.id,
+              nombre: p.vision.nombre || `Visión ${p.vision.id}`
+            });
+          }
+        });
+        setAvailableVisions(Array.from(visionMap.values()));
       }
     } catch (error) {
       console.error('Error loading participants:', error);
@@ -89,6 +105,11 @@ export default function TrainerBitacorasPage() {
 
   // Filter participants
   const filteredParticipants = participants.filter((p) => {
+    // Vision filter
+    if (selectedVisionId !== 'all' && p.vision?.id !== selectedVisionId) {
+      return false;
+    }
+    
     // Search filter
     const matchesSearch = 
       p.user.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -191,6 +212,45 @@ export default function TrainerBitacorasPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Vision Filter */}
+        {availableVisions.length > 1 && (
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Eye className="w-4 h-4 text-purple-400" />
+              <span className="text-sm text-gray-400">Filtrar por Visión</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedVisionId('all')}
+                className={`
+                  px-4 py-2 rounded-lg text-sm font-medium transition-all
+                  ${selectedVisionId === 'all'
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-slate-800/50 text-gray-400 border border-slate-700 hover:bg-slate-700'
+                  }
+                `}
+              >
+                Todas las Visiones
+              </button>
+              {availableVisions.map((vision) => (
+                <button
+                  key={vision.id}
+                  onClick={() => setSelectedVisionId(vision.id)}
+                  className={`
+                    px-4 py-2 rounded-lg text-sm font-medium transition-all
+                    ${selectedVisionId === vision.id
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-slate-800/50 text-gray-400 border border-slate-700 hover:bg-slate-700'
+                    }
+                  `}
+                >
+                  {vision.nombre}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
