@@ -1707,6 +1707,7 @@ export default function MetamorfosisPage() {
                   {showAddModal === 'base' && 'Nuevo Personaje Base'}
                   {showAddModal === 'transform' && 'Nueva Transformación'}
                   {showAddModal === 'song' && 'Nueva Canción'}
+                  {showAddModal === 'cunaSong' && 'Nueva Canción de Cuna'}
                 </h3>
                 <button onClick={() => setShowAddModal(null)} className="p-2 hover:bg-slate-700 rounded-lg">
                   <X className="w-5 h-5 text-slate-400" />
@@ -1716,18 +1717,18 @@ export default function MetamorfosisPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-slate-400 mb-1">
-                    {showAddModal === 'song' ? 'Título' : 'Nombre'}
+                    {(showAddModal === 'song' || showAddModal === 'cunaSong') ? 'Título' : 'Nombre'}
                   </label>
                   <input
                     type="text"
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
-                    placeholder={showAddModal === 'song' ? 'Ej: Livin la Vida Loca' : 'Ej: Shakira'}
+                    placeholder={(showAddModal === 'song' || showAddModal === 'cunaSong') ? 'Ej: Livin la Vida Loca' : 'Ej: Shakira'}
                     className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400"
                   />
                 </div>
                 
-                {showAddModal === 'song' && (
+                {(showAddModal === 'song' || showAddModal === 'cunaSong') && (
                   <div>
                     <label className="block text-sm text-slate-400 mb-1">Artista</label>
                     <input
