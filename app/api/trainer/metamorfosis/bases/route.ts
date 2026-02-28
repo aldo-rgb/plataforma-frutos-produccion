@@ -34,7 +34,8 @@ export async function POST(request: Request) {
         imageUrl: imageUrl || null,
         trainerId: userRol === 'ADMINISTRADOR' ? null : userId,
         isSystemDefault: userRol === 'ADMINISTRADOR',
-        isActive: true
+        isActive: true,
+        updatedAt: new Date()
       }
     });
 
