@@ -11,6 +11,13 @@ const levelToProductLevel: Record<string, string> = {
   'PL': 'PL',
 };
 
+// Mapear nivel de ticket a nivel de enrollment
+const ticketLevelToEnrollmentLevel: Record<string, string> = {
+  'BASIC': 'BASIC',
+  'ADVANCED': 'ADVANCED',
+  'PL': 'PL',
+};
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -40,10 +47,46 @@ export async function GET() {
       );
     }
 
-    // Obtener todos los tickets del usuario
+    // Obtener los enrollments del usuario con asistencia confirmada
+    // para excluir esos tickets (ya fueron "usados")
+    const attendedEnrollments = await prisma.vision_enrollments.findMany({
+      where: {
+        userId: user.id,
+        attendanceStatus: 'ATTENDED',
+      },
+      select: {
+        visionId: true,
+        level: true,
+      },
+    });
+
+    // Crear un Set de "visionId-level" para búsqueda rápida
+    const attendedSet = new Set(
+      attendedEnrollments.map(e => `${e.visionId}-${e.level}`)
+    );
+
+    // Obtener tickets relevantes del usuario
+    // Excluimos tickets con paymentStatus UNPAID o PENDING que tengan más de 7 días
+    // y tickets con status CANCELLED, EXPIRED, o TRANSFERRED
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
     const tickets = await prisma.ticket.findMany({
       where: {
         ownerId: user.id,
+        // Excluir tickets cancelados, expirados o transferidos
+        status: {
+          notIn: ['CANCELLED', 'EXPIRED', 'TRANSFERRED'],
+        },
+        // Mostrar solo tickets pagados, parciales, regalados, O pendientes recientes
+        OR: [
+          { paymentStatus: { in: ['PAID', 'PARTIAL', 'GIFT'] } },
+          // Tickets pendientes solo si son recientes (últimos 7 días)
+          {
+            paymentStatus: { in: ['PENDING', 'UNPAID'] },
+            createdAt: { gte: sevenDaysAgo },
+          },
+        ],
       },
       include: {
         Vision: {
@@ -67,14 +110,23 @@ export async function GET() {
         },
       },
       orderBy: [
+        { level: 'desc' }, // PL primero, luego ADVANCED, luego BASIC
         { status: 'asc' },
         { createdAt: 'desc' },
       ],
     });
 
+    // Filtrar tickets que ya fueron usados (usuario tiene asistencia en esa visión+nivel)
+    const filteredTickets = tickets.filter(ticket => {
+      const enrollmentLevel = ticketLevelToEnrollmentLevel[ticket.level] || ticket.level;
+      const key = `${ticket.visionId}-${enrollmentLevel}`;
+      // Si el usuario ya asistió a este nivel en esta visión, excluir el ticket
+      return !attendedSet.has(key);
+    });
+
     // Para cada ticket, buscar el producto correspondiente para obtener la imagen
     const ticketsWithProducts = await Promise.all(
-      tickets.map(async (ticket) => {
+      filteredTickets.map(async (ticket) => {
         // Buscar el producto que corresponde a este ticket
         const product = await prisma.schoolProduct.findFirst({
           where: {

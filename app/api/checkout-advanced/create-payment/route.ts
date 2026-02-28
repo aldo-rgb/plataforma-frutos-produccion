@@ -254,14 +254,17 @@ async function createMercadoPagoPreference(
   // Crear un ID único para esta transacción
   const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   
-  // Guardar los datos de la orden en metadata (MercadoPago los devuelve en el webhook)
-  // También usar external_reference para identificar la transacción
+  // Guardar los datos de la orden en external_reference
+  // IMPORTANTE: Incluir todos los datos necesarios para crear enrollments/tickets
   const externalReference = JSON.stringify({
     transactionId,
     userId: orderData.userId,
     visionId: orderData.visionId,
+    organizationId: orderData.organizationId,
     packageType: orderData.packageType,
     amount: orderData.amount,
+    pendingDebt: orderData.pendingDebt || 0,
+    prices: orderData.prices,
   });
   
   const preferenceRes = await fetch('https://api.mercadopago.com/checkout/preferences', {

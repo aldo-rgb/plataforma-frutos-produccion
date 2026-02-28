@@ -127,16 +127,19 @@ export default function VisionManagePage() {
   const [basicEnrollments, setBasicEnrollments] = useState<any[]>([]);
   const [loadingBasicEnrollments, setLoadingBasicEnrollments] = useState(false);
   const [basicAttendanceFilter, setBasicAttendanceFilter] = useState<'ALL' | 'ATTENDED' | 'NOT_ATTENDED' | 'PENDING' | 'DROP' | 'BACKLOG'>('ALL');
+  const [basicSearchQuery, setBasicSearchQuery] = useState('');
   
   // Estado para registros del nivel AVANZADO
   const [advancedEnrollments, setAdvancedEnrollments] = useState<any[]>([]);
   const [loadingAdvancedEnrollments, setLoadingAdvancedEnrollments] = useState(false);
   const [advancedAttendanceFilter, setAdvancedAttendanceFilter] = useState<'ALL' | 'ATTENDED' | 'NOT_ATTENDED' | 'PENDING' | 'DROP' | 'BACKLOG'>('ALL');
+  const [advancedSearchQuery, setAdvancedSearchQuery] = useState('');
   
   // Estado para registros del nivel LIDERATO (PL)
   const [plEnrollments, setPlEnrollments] = useState<any[]>([]);
   const [loadingPlEnrollments, setLoadingPlEnrollments] = useState(false);
   const [plAttendanceFilter, setPlAttendanceFilter] = useState<'ALL' | 'ATTENDED' | 'NOT_ATTENDED' | 'PENDING' | 'DROP' | 'BACKLOG'>('ALL');
+  const [plSearchQuery, setPlSearchQuery] = useState('');
   
   // Estado para productos (para mostrar coordinador y trainer de cada nivel)
   const [productos, setProductos] = useState<any>({
@@ -1804,6 +1807,27 @@ export default function VisionManagePage() {
                     </button>
                   </div>
 
+                  {/* Búsqueda por nombre */}
+                  <div className="mb-4">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="🔍 Buscar por nombre, email o teléfono..."
+                        value={basicSearchQuery}
+                        onChange={(e) => setBasicSearchQuery(e.target.value)}
+                        className="w-full md:w-96 bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50"
+                      />
+                      {basicSearchQuery && (
+                        <button
+                          onClick={() => setBasicSearchQuery('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {loadingBasicEnrollments ? (
                     <div className="text-center py-8 text-slate-400">Cargando registros...</div>
                   ) : basicEnrollments.length === 0 ? (
@@ -1831,9 +1855,25 @@ export default function VisionManagePage() {
                         <tbody>
                           {basicEnrollments
                             .filter(enrollment => {
-                              if (basicAttendanceFilter === 'ALL') return true;
-                              if (basicAttendanceFilter === 'PENDING') return !enrollment.attendanceStatus || enrollment.attendanceStatus === 'PENDING';
-                              return enrollment.attendanceStatus === basicAttendanceFilter;
+                              // Filtro de asistencia
+                              let passesAttendanceFilter = true;
+                              if (basicAttendanceFilter !== 'ALL') {
+                                if (basicAttendanceFilter === 'PENDING') {
+                                  passesAttendanceFilter = !enrollment.attendanceStatus || enrollment.attendanceStatus === 'PENDING';
+                                } else {
+                                  passesAttendanceFilter = enrollment.attendanceStatus === basicAttendanceFilter;
+                                }
+                              }
+                              // Filtro de búsqueda
+                              let passesSearchFilter = true;
+                              if (basicSearchQuery.trim()) {
+                                const query = basicSearchQuery.toLowerCase().trim();
+                                const nombre = (enrollment.Usuario?.nombre || '').toLowerCase();
+                                const email = (enrollment.Usuario?.email || '').toLowerCase();
+                                const telefono = (enrollment.Usuario?.telefono || '').toLowerCase();
+                                passesSearchFilter = nombre.includes(query) || email.includes(query) || telefono.includes(query);
+                              }
+                              return passesAttendanceFilter && passesSearchFilter;
                             })
                             .map((enrollment) => (
                             <tr 
@@ -2204,6 +2244,27 @@ export default function VisionManagePage() {
                     </button>
                   </div>
 
+                  {/* Búsqueda por nombre */}
+                  <div className="mb-4">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="🔍 Buscar por nombre, email o teléfono..."
+                        value={advancedSearchQuery}
+                        onChange={(e) => setAdvancedSearchQuery(e.target.value)}
+                        className="w-full md:w-96 bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50"
+                      />
+                      {advancedSearchQuery && (
+                        <button
+                          onClick={() => setAdvancedSearchQuery('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {loadingAdvancedEnrollments ? (
                     <div className="text-center py-8 text-slate-400">Cargando registros...</div>
                   ) : advancedEnrollments.length === 0 ? (
@@ -2231,9 +2292,25 @@ export default function VisionManagePage() {
                         <tbody>
                           {advancedEnrollments
                             .filter(enrollment => {
-                              if (advancedAttendanceFilter === 'ALL') return true;
-                              if (advancedAttendanceFilter === 'PENDING') return !enrollment.attendanceStatus || enrollment.attendanceStatus === 'PENDING';
-                              return enrollment.attendanceStatus === advancedAttendanceFilter;
+                              // Filtro de asistencia
+                              let passesAttendanceFilter = true;
+                              if (advancedAttendanceFilter !== 'ALL') {
+                                if (advancedAttendanceFilter === 'PENDING') {
+                                  passesAttendanceFilter = !enrollment.attendanceStatus || enrollment.attendanceStatus === 'PENDING';
+                                } else {
+                                  passesAttendanceFilter = enrollment.attendanceStatus === advancedAttendanceFilter;
+                                }
+                              }
+                              // Filtro de búsqueda
+                              let passesSearchFilter = true;
+                              if (advancedSearchQuery.trim()) {
+                                const query = advancedSearchQuery.toLowerCase().trim();
+                                const nombre = (enrollment.Usuario?.nombre || '').toLowerCase();
+                                const email = (enrollment.Usuario?.email || '').toLowerCase();
+                                const telefono = (enrollment.Usuario?.telefono || '').toLowerCase();
+                                passesSearchFilter = nombre.includes(query) || email.includes(query) || telefono.includes(query);
+                              }
+                              return passesAttendanceFilter && passesSearchFilter;
                             })
                             .map((enrollment) => (
                             <tr 
@@ -2607,6 +2684,27 @@ export default function VisionManagePage() {
                     </button>
                   </div>
 
+                  {/* Búsqueda por nombre */}
+                  <div className="mb-4">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="🔍 Buscar por nombre, email o teléfono..."
+                        value={plSearchQuery}
+                        onChange={(e) => setPlSearchQuery(e.target.value)}
+                        className="w-full md:w-96 bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
+                      />
+                      {plSearchQuery && (
+                        <button
+                          onClick={() => setPlSearchQuery('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {loadingPlEnrollments ? (
                     <div className="text-center py-8 text-slate-400">Cargando registros...</div>
                   ) : plEnrollments.length === 0 ? (
@@ -2631,9 +2729,25 @@ export default function VisionManagePage() {
                         <tbody>
                           {plEnrollments
                             .filter(enrollment => {
-                              if (plAttendanceFilter === 'ALL') return true;
-                              if (plAttendanceFilter === 'PENDING') return !enrollment.attendanceStatus || enrollment.attendanceStatus === 'PENDING';
-                              return enrollment.attendanceStatus === plAttendanceFilter;
+                              // Filtro de asistencia
+                              let passesAttendanceFilter = true;
+                              if (plAttendanceFilter !== 'ALL') {
+                                if (plAttendanceFilter === 'PENDING') {
+                                  passesAttendanceFilter = !enrollment.attendanceStatus || enrollment.attendanceStatus === 'PENDING';
+                                } else {
+                                  passesAttendanceFilter = enrollment.attendanceStatus === plAttendanceFilter;
+                                }
+                              }
+                              // Filtro de búsqueda
+                              let passesSearchFilter = true;
+                              if (plSearchQuery.trim()) {
+                                const query = plSearchQuery.toLowerCase().trim();
+                                const nombre = (enrollment.Usuario?.nombre || '').toLowerCase();
+                                const email = (enrollment.Usuario?.email || '').toLowerCase();
+                                const telefono = (enrollment.Usuario?.telefono || '').toLowerCase();
+                                passesSearchFilter = nombre.includes(query) || email.includes(query) || telefono.includes(query);
+                              }
+                              return passesAttendanceFilter && passesSearchFilter;
                             })
                             .map((enrollment) => (
                             <tr 

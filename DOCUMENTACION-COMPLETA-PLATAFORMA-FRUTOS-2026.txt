@@ -1945,10 +1945,210 @@ ARCHIVOS MODIFICADOS:
   - Mensajes de éxito para PL_COMPLETO y PL_APARTADO
 
 ================================================================================
+17. CALLBACK DE PAGO EXITOSO (/api/checkout-advanced/payment-success)
+================================================================================
+
+Este endpoint es llamado por MercadoPago o Stripe cuando un pago es exitoso.
+Procesa la inscripción del usuario y crea enrollments/tickets.
+
+--------------------------------------------------------------------------------
+17.1 Flujo del Callback
+--------------------------------------------------------------------------------
+
+1. Recibe parámetros de la pasarela de pago:
+   - MercadoPago: payment_id, status, collection_status, external_reference
+   - Stripe: session_id, provider=stripe
+
+2. Parsea orderData desde:
+   - external_reference (JSON con datos de la orden)
+   - O metadata de la sesión de pago (Stripe)
+   - O API de MercadoPago (si falta external_reference)
+
+3. Valida que el pago esté aprobado:
+   - MercadoPago: status='approved' o collection_status='approved'
+   - Stripe: session.payment_status='paid'
+
+4. Crea enrollments y tickets según packageType
+
+--------------------------------------------------------------------------------
+17.2 Datos en external_reference (MercadoPago)
+--------------------------------------------------------------------------------
+
+El external_reference es un JSON que contiene todos los datos necesarios:
+
+```typescript
+const externalReference = JSON.stringify({
+  transactionId,
+  userId: orderData.userId,
+  visionId: orderData.visionId,
+  organizationId: orderData.organizationId,  // ✅ AGREGADO Feb 2026
+  packageType: orderData.packageType,
+  amount: orderData.amount,
+  pendingDebt: orderData.pendingDebt || 0,   // ✅ AGREGADO Feb 2026
+  prices: orderData.prices,                   // ✅ AGREGADO Feb 2026
+});
+```
+
+⚠️ IMPORTANTE: Si falta organizationId, el ticket se crea en la org incorrecta.
+
+--------------------------------------------------------------------------------
+17.3 Detección de Compra Solo-PL en payment-success
+--------------------------------------------------------------------------------
+
+Igual que en enroll-advanced, debe detectar correctamente las compras de solo PL:
+
+```typescript
+const isPLOnly = 
+  packageType === 'PL_BASE' || 
+  packageType === 'PL_CON_CREDITO' || 
+  packageType === 'PL_APARTADO' || 
+  packageType === 'PL_COMPLETO';
+```
+
+--------------------------------------------------------------------------------
+17.4 Búsqueda del Enrollment ADVANCED para PL
+--------------------------------------------------------------------------------
+
+Cuando isPLOnly=true, necesita encontrar el enrollment ADVANCED del usuario
+para crear el PL en la misma visión:
+
+```typescript
+// 1. Primero buscar ADVANCED en la visión específica del orderData
+let advancedEnrollment = await tx.vision_enrollments.findFirst({
+  where: {
+    userId: userId,
+    visionId: visionId,  // La visión que viene en orderData
+    level: 'ADVANCED',
+    enrollmentStatus: { in: ['ACTIVE', 'ENROLLED'] },
+  },
+  include: { Vision: { select: { id, organizationId, plWeekend3EndDate } } },
+});
+
+// 2. Si no hay en esa visión, buscar cualquier ADVANCED activo (el más reciente)
+if (!advancedEnrollment) {
+  advancedEnrollment = await tx.vision_enrollments.findFirst({
+    where: {
+      userId: userId,
+      level: 'ADVANCED',
+      enrollmentStatus: { in: ['ACTIVE', 'ENROLLED'] },
+    },
+    orderBy: { enrolledAt: 'desc' },
+    include: { Vision: { select: { id, organizationId, plWeekend3EndDate } } },
+  });
+}
+```
+
+--------------------------------------------------------------------------------
+17.5 Estados según Tipo de Paquete PL
+--------------------------------------------------------------------------------
+
+```typescript
+const isApartado = packageType === 'PL_APARTADO';
+
+// Estados de Enrollment
+const enrollmentStatus = isApartado ? 'PENDING' : 'ACTIVE';
+const paymentStatus = isApartado ? 'PARTIAL' : 'PAID';
+
+// Estados de Ticket
+const ticketStatus = isApartado ? 'PENDING_PAYMENT' : 'ACTIVE';
+const ticketType = isApartado ? 'APARTADO' : 'STANDARD';
+```
+
+--------------------------------------------------------------------------------
+17.6 Fallback para organizationId
+--------------------------------------------------------------------------------
+
+Si orderData no contiene organizationId (ej: transacciones antiguas),
+se obtiene de la visión:
+
+```typescript
+let organizationId = orderData.organizationId;
+if (!organizationId) {
+  const visionForOrg = await prisma.vision.findUnique({
+    where: { id: visionId },
+    select: { organizationId: true },
+  });
+  organizationId = visionForOrg?.organizationId || 1;
+}
+```
+
+--------------------------------------------------------------------------------
+17.7 Correcciones Realizadas (27 Feb 2026)
+--------------------------------------------------------------------------------
+
+PROBLEMA: Tickets de PL se creaban con visión incorrecta o estados incorrectos
+
+CAUSAS IDENTIFICADAS:
+1. isPLOnly no incluía PL_APARTADO ni PL_COMPLETO
+2. Estados de enrollment/ticket eran siempre ACTIVE/PAID (incorrectos para APARTADO)
+3. organizationId faltaba en external_reference
+4. Búsqueda de ADVANCED usaba findFirst sin ordenar (podía traer visión antigua)
+
+CORRECCIONES EN /app/api/checkout-advanced/payment-success/route.ts:
+
+1. isPLOnly ahora incluye 4 tipos de paquete PL
+2. Estados dinámicos según isApartado (PENDING/PARTIAL para apartados)
+3. external_reference ahora incluye organizationId, pendingDebt, prices
+4. Fallback para obtener organizationId de la visión si falta
+5. Búsqueda de ADVANCED mejorada:
+   - Primero busca en visionId específico del orderData
+   - Si no encuentra, busca cualquier ADVANCED ordenado por enrolledAt desc
+
+CORRECCIONES EN /app/api/checkout-advanced/create-payment/route.ts:
+
+1. external_reference ampliado con todos los datos necesarios
+
+================================================================================
+18. API DE MIS TICKETS (/api/tickets/my-tickets)
+================================================================================
+
+Esta API retorna los tickets del usuario para mostrar en el Quantum Wallet.
+
+--------------------------------------------------------------------------------
+18.1 Filtrado de Tickets (Feb 2026)
+--------------------------------------------------------------------------------
+
+Para evitar mostrar tickets obsoletos o irrelevantes, se agregó filtrado:
+
+```typescript
+const sevenDaysAgo = new Date();
+sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+const tickets = await prisma.ticket.findMany({
+  where: {
+    ownerId: user.id,
+    // Excluir tickets cancelados, expirados o transferidos
+    status: {
+      notIn: ['CANCELLED', 'EXPIRED', 'TRANSFERRED'],
+    },
+    // Mostrar solo tickets pagados, parciales, regalados, O pendientes recientes
+    OR: [
+      { paymentStatus: { in: ['PAID', 'PARTIAL', 'GIFT'] } },
+      // Tickets pendientes solo si son recientes (últimos 7 días)
+      {
+        paymentStatus: { in: ['PENDING', 'UNPAID'] },
+        createdAt: { gte: sevenDaysAgo },
+      },
+    ],
+  },
+  orderBy: [
+    { level: 'desc' },  // PL primero, luego ADVANCED, luego BASIC
+    { status: 'asc' },
+    { createdAt: 'desc' },
+  ],
+});
+```
+
+Esto evita mostrar:
+- Tickets CANCELLED, EXPIRED, TRANSFERRED
+- Tickets PENDING/UNPAID con más de 7 días (abandonados)
+
+================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
 
 Esta documentación debe permitirte continuar exactamente donde quedamos, con 
 todo el contexto de lo que se ha hecho, los problemas resueltos, y los que 
 quedan pendientes.
+
 

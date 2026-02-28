@@ -133,13 +133,23 @@ export async function GET(request: NextRequest) {
     const { 
       userId, 
       visionId, 
-      organizationId, 
       packageType, 
       amount, 
       pendingDebt,
       prices,
       appliedCodes,
     } = orderData;
+    
+    // organizationId puede no venir si es una transacción antigua, buscar de la visión
+    let organizationId = orderData.organizationId;
+    if (!organizationId) {
+      const visionForOrg = await prisma.vision.findUnique({
+        where: { id: visionId },
+        select: { organizationId: true },
+      });
+      organizationId = visionForOrg?.organizationId || 1;
+      logger.debug(`   organizationId no en orderData, usando de vision: ${organizationId}`);
+    }
 
     // Verify payment status (approved)
     // Para MercadoPago: status === 'approved' o collectionStatus === 'approved'
@@ -161,7 +171,8 @@ export async function GET(request: NextRequest) {
     logger.debug(`   Monto: $${amount} MXN`);
 
     // Check if user already has the enrollment (avoid duplicates)
-    const isPLOnly = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO';
+    // PL_APARTADO y PL_COMPLETO son compras de solo PL (usuario ya tiene ADVANCED)
+    const isPLOnly = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO' || packageType === 'PL_APARTADO' || packageType === 'PL_COMPLETO';
     
     if (isPLOnly) {
       const existingPL = await prisma.vision_enrollments.findFirst({
@@ -233,10 +244,14 @@ export async function GET(request: NextRequest) {
     // Create enrollments in transaction
     await prisma.$transaction(async (tx) => {
       if (isPLOnly) {
-        // For PL-only, find where user has ADVANCED
-        const advancedEnrollment = await tx.vision_enrollments.findFirst({
+        // For PL-only purchases (PL_BASE, PL_CON_CREDITO, PL_APARTADO, PL_COMPLETO)
+        // User must already have ADVANCED enrollment - preferir la visión del orderData
+        
+        // Primero intentar buscar ADVANCED en la visión específica del orderData
+        let advancedEnrollment = await tx.vision_enrollments.findFirst({
           where: {
             userId: userId,
+            visionId: visionId, // La visión que viene en orderData
             level: 'ADVANCED',
             enrollmentStatus: { in: ['ACTIVE', 'ENROLLED'] },
           },
@@ -251,12 +266,43 @@ export async function GET(request: NextRequest) {
           },
         });
 
+        // Si no hay en esa visión específica, buscar cualquier ADVANCED activo
+        if (!advancedEnrollment) {
+          advancedEnrollment = await tx.vision_enrollments.findFirst({
+            where: {
+              userId: userId,
+              level: 'ADVANCED',
+              enrollmentStatus: { in: ['ACTIVE', 'ENROLLED'] },
+            },
+            orderBy: { enrolledAt: 'desc' }, // El más reciente
+            include: {
+              Vision: {
+                select: { 
+                  id: true, 
+                  organizationId: true,
+                  plWeekend3EndDate: true,
+                },
+              },
+            },
+          });
+        }
+
         if (!advancedEnrollment) {
           throw new Error('No se encontró inscripción ADVANCED');
         }
 
+        // Usar la visión del enrollment ADVANCED encontrado
         const effectiveVisionId = advancedEnrollment.visionId;
         const effectiveOrgId = advancedEnrollment.Vision?.organizationId || organizationId;
+        
+        logger.debug(`   PL para visionId: ${effectiveVisionId} (orderData visionId: ${visionId})`);
+
+        // Determinar estado según el tipo de paquete
+        const isApartado = packageType === 'PL_APARTADO';
+        const enrollmentStatus = isApartado ? 'PENDING' : 'ACTIVE';
+        const paymentStatus = isApartado ? 'PARTIAL' : 'PAID';
+        const ticketStatus = isApartado ? 'PENDING_PAYMENT' : 'ACTIVE';
+        const ticketType = isApartado ? 'APARTADO' : 'STANDARD';
 
         // Create PL enrollment
         await tx.vision_enrollments.create({
@@ -265,8 +311,8 @@ export async function GET(request: NextRequest) {
             visionId: effectiveVisionId,
             coordinatorId: advancedEnrollment.coordinatorId,
             level: 'PL',
-            enrollmentStatus: 'ACTIVE',
-            paymentStatus: 'PAID',
+            enrollmentStatus: enrollmentStatus,
+            paymentStatus: paymentStatus,
             enrolledAt: new Date(),
             updatedAt: new Date(),
           },
@@ -279,17 +325,17 @@ export async function GET(request: NextRequest) {
             organizationId: effectiveOrgId,
             visionId: effectiveVisionId,
             level: 'PL',
-            type: 'STANDARD',
-            status: 'ACTIVE',
-            paymentStatus: 'PAID',
-            costAtPurchase: prices?.PL_BASE || amount,
+            type: ticketType,
+            status: ticketStatus,
+            paymentStatus: paymentStatus,
+            costAtPurchase: prices?.PL_BASE || prices?.PL || 9000,
             amountPaid: amount,
             isTransferable: false,
             validUntil: advancedEnrollment.Vision?.plWeekend3EndDate || null,
           },
         });
 
-        logger.debug(`✅ Inscripción PL creada para usuario ${userId} en visión ${effectiveVisionId}`);
+        logger.debug(`✅ Inscripción PL (${packageType}) creada para usuario ${userId} en visión ${effectiveVisionId}`);
       } else {
         // Create ADVANCED enrollment
         const advancedEnrollment = await tx.vision_enrollments.create({
