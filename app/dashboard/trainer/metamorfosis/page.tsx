@@ -116,6 +116,7 @@ export default function MetamorfosisPage() {
   // Estados principales
   const [activeTab, setActiveTab] = useState<'constructor' | 'asignaciones' | 'biblioteca'>('constructor')
   const [loading, setLoading] = useState(true)
+  const [loadingVisions, setLoadingVisions] = useState(true)
   
   // Datos cargados de la BD
   const [bases, setBases] = useState<MetamorfosisBase[]>([])
@@ -186,10 +187,55 @@ export default function MetamorfosisPage() {
     setTimeout(() => setToast(null), 4000)
   }
 
-  // Cargar datos iniciales
+  // Cargar visiones primero (paso inicial)
   useEffect(() => {
-    fetchAllData()
+    fetchVisions()
   }, [])
+
+  // Cuando se selecciona una visión, cargar el resto de datos
+  useEffect(() => {
+    if (selectedVision) {
+      fetchAllData()
+    }
+  }, [selectedVision])
+
+  const fetchVisions = async () => {
+    setLoadingVisions(true)
+    try {
+      const visRes = await fetch('/api/trainer/mis-entrenamientos')
+      if (visRes.ok) {
+        const visData = await visRes.json()
+        const visionMap = new Map<number, TrainerVision>()
+        const entrenamientos = visData.entrenamientos || {}
+        const todosProductos = [
+          ...(entrenamientos.enCurso || []),
+          ...(entrenamientos.proximos || [])
+        ]
+        
+        for (const producto of todosProductos) {
+          if (producto.Vision?.id && !visionMap.has(producto.Vision.id)) {
+            visionMap.set(producto.Vision.id, {
+              id: producto.Vision.id,
+              nombre: producto.Vision.nombre || `Visión ${producto.Vision.id}`,
+              participantCount: producto.inscritos || 0
+            })
+          }
+        }
+        
+        const visions = Array.from(visionMap.values())
+        setTrainerVisions(visions)
+        
+        // Si solo hay una visión, seleccionarla automáticamente
+        if (visions.length === 1) {
+          setSelectedVision(visions[0])
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching visions:', error)
+    } finally {
+      setLoadingVisions(false)
+    }
+  }
 
   const fetchAllData = async () => {
     setLoading(true)
@@ -235,65 +281,31 @@ export default function MetamorfosisPage() {
 
   const fetchParticipants = async () => {
     try {
-      // Obtener participantes de los entrenamientos activos del trainer
-      const res = await fetch('/api/trainer/participants')
-      if (res.ok) {
-        const data = await res.json()
-        setParticipants(data.participants || [])
-      }
-      
-      // Obtener visiones del trainer
-      const visRes = await fetch('/api/trainer/mis-entrenamientos')
-      if (visRes.ok) {
-        const visData = await visRes.json()
-        // Extraer visiones únicas de los entrenamientos (enCurso + proximos)
-        const visionMap = new Map<number, TrainerVision>()
-        const entrenamientos = visData.entrenamientos || {}
-        const todosProductos = [
-          ...(entrenamientos.enCurso || []),
-          ...(entrenamientos.proximos || [])
-        ]
-        
-        console.log('📦 Entrenamientos encontrados:', todosProductos.length)
-        
-        for (const producto of todosProductos) {
-          if (producto.Vision?.id && !visionMap.has(producto.Vision.id)) {
-            visionMap.set(producto.Vision.id, {
-              id: producto.Vision.id,
-              nombre: producto.Vision.nombre || `Visión ${producto.Vision.id}`,
-              participantCount: producto.inscritos || 0
-            })
-          }
+      // Cargar participantes de la visión seleccionada
+      if (selectedVision) {
+        const res = await fetch(`/api/trainer/participants?visionId=${selectedVision.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setParticipants(data.participants || [])
+          setVisionParticipants(data.participants || [])
         }
-        
-        console.log('👁️ Visiones extraídas:', Array.from(visionMap.values()))
-        setTrainerVisions(Array.from(visionMap.values()))
       }
     } catch (error) {
       console.error('Error fetching participants:', error)
     }
   }
 
-  // Cargar participantes de una visión específica
-  const fetchVisionParticipants = async (visionId: number) => {
-    try {
-      const res = await fetch(`/api/trainer/participants?visionId=${visionId}`)
-      if (res.ok) {
-        const data = await res.json()
-        setVisionParticipants(data.participants || [])
-      }
-    } catch (error) {
-      console.error('Error fetching vision participants:', error)
-      setVisionParticipants([])
-    }
+  // Handler para seleccionar visión inicial
+  const handleSelectInitialVision = (vision: TrainerVision) => {
+    setSelectedVision(vision)
   }
 
-  // Handler para seleccionar visión y cargar sus participantes
-  const handleSelectVision = async (vision: TrainerVision) => {
-    setSelectedVision(vision)
-    await fetchVisionParticipants(vision.id)
-    setShowSelectVision(false)
-    setShowSelectParticipant(true)
+  // Handler para cambiar de visión
+  const handleChangeVision = () => {
+    setSelectedVision(null)
+    setParticipants([])
+    setVisionParticipants([])
+    setSelectedParticipants([])
   }
 
   // Construir la frase de metamorfosis
@@ -567,10 +579,91 @@ export default function MetamorfosisPage() {
     (s.artist && s.artist.toLowerCase().includes(searchSong.toLowerCase()))
   )
   
-  // Usar visionParticipants si hay una visión seleccionada, sino todos los participantes
-  const filteredParticipants = (selectedVision ? visionParticipants : participants).filter(p => 
+  // Usar los participantes de la visión seleccionada
+  const filteredParticipants = participants.filter(p => 
     p.nombre.toLowerCase().includes(searchParticipant.toLowerCase())
   )
+
+  // Pantalla de carga de visiones
+  if (loadingVisions) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-purple-400 animate-spin" />
+          <p className="text-purple-300">Cargando visiones...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Pantalla de selección de visión (primer paso obligatorio)
+  if (!selectedVision) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-4 md:p-8">
+        <div className="max-w-2xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <div className="p-3 bg-gradient-to-br from-fuchsia-500 to-purple-600 rounded-2xl shadow-lg shadow-purple-500/30">
+                <Theater className="w-8 h-8 text-white" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-fuchsia-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+              🎭 SALTOS CUÁNTICOS
+            </h1>
+            <p className="text-purple-300/70">Selecciona la visión con la que trabajarás</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20"
+          >
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <Eye className="w-5 h-5 text-purple-400" />
+              Seleccionar Visión
+            </h2>
+
+            {trainerVisions.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <Eye className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No tienes visiones asignadas</p>
+                <p className="text-sm mt-1">Contacta al administrador para que te asigne entrenamientos</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {trainerVisions.map((vision, index) => (
+                  <motion.button
+                    key={vision.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => handleSelectInitialVision(vision)}
+                    className="w-full p-4 rounded-xl text-left transition-all flex items-center gap-4 bg-slate-700/50 hover:bg-purple-500/20 border-2 border-transparent hover:border-purple-500/50 group"
+                  >
+                    <div className="p-3 bg-purple-500/20 rounded-xl group-hover:bg-purple-500/30 transition-colors">
+                      <Eye className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white font-medium text-lg">{vision.nombre}</p>
+                      <p className="text-purple-300/70 text-sm">
+                        {vision.participantCount} participante{vision.participantCount !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
+                  </motion.button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -599,16 +692,28 @@ export default function MetamorfosisPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-gradient-to-br from-fuchsia-500 to-purple-600 rounded-2xl shadow-lg shadow-purple-500/30">
-              <Theater className="w-8 h-8 text-white" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-br from-fuchsia-500 to-purple-600 rounded-2xl shadow-lg shadow-purple-500/30">
+                <Theater className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-fuchsia-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  🎭 SALTOS CUÁNTICOS
+                </h1>
+                <p className="text-purple-300/70">Salto Cuántico</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-fuchsia-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                🎭 SALTOS CUÁNTICOS
-              </h1>
-              <p className="text-purple-300/70">Salto Cuántico</p>
-            </div>
+            
+            {/* Badge de visión seleccionada */}
+            <button
+              onClick={handleChangeVision}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-xl transition-all group"
+            >
+              <Eye className="w-4 h-4 text-purple-400" />
+              <span className="text-purple-300 font-medium">{selectedVision.nombre}</span>
+              <X className="w-4 h-4 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
           </div>
 
           {/* Tabs */}
@@ -950,16 +1055,7 @@ export default function MetamorfosisPage() {
               
               {/* Botón para agregar más participantes */}
               <button
-                onClick={() => {
-                  // Si hay visiones disponibles, mostrar selector de visión primero
-                  if (trainerVisions.length > 0) {
-                    setShowSelectVision(true)
-                  } else {
-                    // Si no hay visiones, mostrar todos los participantes directamente
-                    setVisionParticipants(participants)
-                    setShowSelectParticipant(true)
-                  }
-                }}
+                onClick={() => setShowSelectParticipant(true)}
                 className="p-4 border-2 border-dashed border-amber-500/30 rounded-xl hover:border-amber-400/50 hover:bg-amber-500/5 transition-all group w-full"
               >
                 <div className="flex items-center justify-center gap-3 text-amber-400 group-hover:text-amber-300">
@@ -1668,63 +1764,6 @@ export default function MetamorfosisPage() {
         )}
       </AnimatePresence>
 
-      {/* Modal: Seleccionar Visión */}
-      <AnimatePresence>
-        {showSelectVision && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowSelectVision(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-800 rounded-2xl p-6 w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-white">Seleccionar Visión</h3>
-                <button onClick={() => setShowSelectVision(false)} className="p-2 hover:bg-slate-700 rounded-lg">
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
-              
-              <p className="text-slate-400 text-sm mb-4">
-                Selecciona la visión para ver sus participantes
-              </p>
-              
-              <div className="flex-1 overflow-y-auto space-y-2">
-                {trainerVisions.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400">
-                    <Eye className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No tienes visiones asignadas</p>
-                  </div>
-                ) : (
-                  trainerVisions.map(vision => (
-                    <button
-                      key={vision.id}
-                      onClick={() => handleSelectVision(vision)}
-                      className="w-full p-4 rounded-xl text-left transition-colors flex items-center gap-3 bg-slate-700/50 hover:bg-purple-500/20 border-2 border-transparent hover:border-purple-500/50"
-                    >
-                      <div className="p-2 bg-purple-500/20 rounded-lg">
-                        <Eye className="w-5 h-5 text-purple-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-white font-medium">{vision.nombre}</p>
-                      </div>
-                      <ChevronDown className="w-5 h-5 text-slate-400 -rotate-90" />
-                    </button>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Modal: Seleccionar Participante */}
       <AnimatePresence>
         {showSelectParticipant && (
@@ -1743,15 +1782,7 @@ export default function MetamorfosisPage() {
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-bold text-white">Seleccionar Participantes</h3>
-                  {selectedVision && (
-                    <p className="text-sm text-purple-400 mt-1">
-                      <Eye className="w-3 h-3 inline mr-1" />
-                      {selectedVision.nombre}
-                    </p>
-                  )}
-                </div>
+                <h3 className="text-xl font-bold text-white">Seleccionar Participantes</h3>
                 <button onClick={() => setShowSelectParticipant(false)} className="p-2 hover:bg-slate-700 rounded-lg">
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
@@ -1779,7 +1810,7 @@ export default function MetamorfosisPage() {
                   <div className="text-center py-8 text-slate-400">
                     <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p>No hay participantes disponibles</p>
-                    <p className="text-xs mt-1">{selectedVision ? 'Esta visión no tiene participantes inscritos' : 'Asegúrate de tener entrenamientos activos'}</p>
+                    <p className="text-xs mt-1">Esta visión no tiene participantes inscritos</p>
                   </div>
                 ) : (
                   filteredParticipants.map(participant => {
