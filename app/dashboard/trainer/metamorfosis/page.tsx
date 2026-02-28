@@ -246,20 +246,27 @@ export default function MetamorfosisPage() {
       const visRes = await fetch('/api/trainer/mis-entrenamientos')
       if (visRes.ok) {
         const visData = await visRes.json()
-        // Extraer visiones únicas de los productos
+        // Extraer visiones únicas de los entrenamientos (enCurso + proximos)
         const visionMap = new Map<number, TrainerVision>()
-        const productos = visData.productos || []
+        const entrenamientos = visData.entrenamientos || {}
+        const todosProductos = [
+          ...(entrenamientos.enCurso || []),
+          ...(entrenamientos.proximos || [])
+        ]
         
-        for (const producto of productos) {
+        console.log('📦 Entrenamientos encontrados:', todosProductos.length)
+        
+        for (const producto of todosProductos) {
           if (producto.Vision?.id && !visionMap.has(producto.Vision.id)) {
             visionMap.set(producto.Vision.id, {
               id: producto.Vision.id,
               nombre: producto.Vision.nombre || `Visión ${producto.Vision.id}`,
-              participantCount: 0
+              participantCount: producto.inscritos || 0
             })
           }
         }
         
+        console.log('👁️ Visiones extraídas:', Array.from(visionMap.values()))
         setTrainerVisions(Array.from(visionMap.values()))
       }
     } catch (error) {
