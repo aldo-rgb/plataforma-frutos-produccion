@@ -24,12 +24,12 @@ export async function GET(
     const archetype = await prisma.archetype.findUnique({
       where: { id: archetypeId },
       include: {
-        Trainer: {
+        Usuario: {
           select: { id: true, nombre: true }
         },
-        Assignments: {
+        ArchetypeAssignment: {
           include: {
-            Participant: {
+            Usuario_ArchetypeAssignment_participantIdToUsuario: {
               select: { id: true, nombre: true, email: true, profileImage: true }
             }
           },
@@ -37,7 +37,7 @@ export async function GET(
           take: 20
         },
         _count: {
-          select: { Assignments: true }
+          select: { ArchetypeAssignment: true }
         }
       }
     });
@@ -159,7 +159,7 @@ export async function DELETE(
 
     const existingArchetype = await prisma.archetype.findUnique({
       where: { id: archetypeId },
-      include: { _count: { select: { Assignments: true } } }
+      include: { _count: { select: { ArchetypeAssignment: true } } }
     });
 
     if (!existingArchetype) {
@@ -177,7 +177,7 @@ export async function DELETE(
     }
 
     // Si tiene asignaciones, solo desactivar
-    if (existingArchetype._count.Assignments > 0) {
+    if (existingArchetype._count.ArchetypeAssignment > 0) {
       await prisma.archetype.update({
         where: { id: archetypeId },
         data: { isActive: false }
