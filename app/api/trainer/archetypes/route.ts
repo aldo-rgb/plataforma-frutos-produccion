@@ -148,7 +148,8 @@ export async function POST(request: Request) {
         scriptFeedback,
         description,
         imageUrl,
-        isSystemDefault: false
+        isSystemDefault: false,
+        updatedAt: new Date()
       }
     });
 
