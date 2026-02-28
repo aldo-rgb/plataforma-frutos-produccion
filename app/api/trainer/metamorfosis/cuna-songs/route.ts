@@ -34,8 +34,8 @@ export async function POST(request: Request) {
         spotifyUrl: spotifyUrl || null,
         previewUrl: previewUrl || null,
         imageUrl: imageUrl || null,
-        trainerId: userRol === 'ADMINISTRADOR' ? null : userId,
-        isSystemDefault: userRol === 'ADMINISTRADOR',
+        trainerId: userId,
+        isSystemDefault: true, // Disponible para todos los trainers
         isActive: true,
         updatedAt: new Date()
       }

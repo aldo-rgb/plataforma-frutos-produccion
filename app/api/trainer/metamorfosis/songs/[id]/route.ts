@@ -32,14 +32,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Canción no encontrada' }, { status: 404 });
     }
 
-    // No permitir eliminar elementos del sistema
-    if (existing.isSystemDefault) {
-      return NextResponse.json({ error: 'No se pueden eliminar elementos del sistema' }, { status: 403 });
-    }
-
-    // Solo el dueño puede eliminar
+    // Solo el creador o admin pueden eliminar
     if (existing.trainerId !== userId) {
-      return NextResponse.json({ error: 'Solo puedes eliminar tus propios elementos' }, { status: 403 });
+      return NextResponse.json({ error: 'Solo puedes eliminar elementos que hayas creado' }, { status: 403 });
     }
 
     // Soft delete

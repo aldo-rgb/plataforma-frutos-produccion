@@ -32,8 +32,8 @@ export async function POST(request: Request) {
         name: name.trim(),
         description: description?.trim() || null,
         imageUrl: imageUrl || null,
-        trainerId: userRol === 'ADMINISTRADOR' ? null : userId,
-        isSystemDefault: userRol === 'ADMINISTRADOR',
+        trainerId: userId,
+        isSystemDefault: true, // Disponible para todos los trainers
         isActive: true,
         updatedAt: new Date()
       }
