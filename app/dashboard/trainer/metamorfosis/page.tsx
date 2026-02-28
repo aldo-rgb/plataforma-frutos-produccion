@@ -293,6 +293,42 @@ export default function MetamorfosisPage() {
     }
   }
 
+  // Eliminar elemento personalizado
+  const handleDeleteElement = async (type: 'base' | 'transform' | 'song' | 'cunaSong', id: number, name: string) => {
+    if (!confirm(`¿Estás seguro de eliminar "${name}"?`)) return
+    
+    try {
+      let endpoint = ''
+      switch (type) {
+        case 'base':
+          endpoint = `/api/trainer/metamorfosis/bases/${id}`
+          break
+        case 'transform':
+          endpoint = `/api/trainer/metamorfosis/transforms/${id}`
+          break
+        case 'song':
+          endpoint = `/api/trainer/metamorfosis/songs/${id}`
+          break
+        case 'cunaSong':
+          endpoint = `/api/trainer/metamorfosis/cuna-songs/${id}`
+          break
+      }
+      
+      const res = await fetch(endpoint, { method: 'DELETE' })
+      
+      if (res.ok) {
+        showToast('Elemento eliminado', 'success')
+        fetchElements()
+      } else {
+        const error = await res.json()
+        showToast(error.error || 'Error al eliminar', 'error')
+      }
+    } catch (error) {
+      console.error('Error deleting element:', error)
+      showToast('Error al eliminar elemento', 'error')
+    }
+  }
+
   // Enviar asignación a múltiples participantes
   const handleSendAssignment = async () => {
     if (!selectedTransform || !selectedSong || selectedParticipants.length === 0) {
@@ -1069,14 +1105,25 @@ export default function MetamorfosisPage() {
                 {bases.map(base => (
                   <div
                     key={base.id}
-                    className={`px-3 py-1.5 rounded-lg text-sm ${
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${
                       base.isSystemDefault
                         ? 'bg-blue-500/20 text-blue-300'
                         : 'bg-slate-700/50 text-slate-300'
                     }`}
                   >
                     {base.name}
-                    {!base.isSystemDefault && <span className="text-xs ml-1 text-blue-400">✓</span>}
+                    {!base.isSystemDefault && (
+                      <>
+                        <span className="text-xs ml-1 text-blue-400">✓</span>
+                        <button
+                          onClick={() => handleDeleteElement('base', base.id, base.name)}
+                          className="ml-1 p-0.5 hover:bg-red-500/30 rounded text-red-400 hover:text-red-300"
+                          title="Eliminar"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1101,14 +1148,25 @@ export default function MetamorfosisPage() {
                 {transforms.map(transform => (
                   <div
                     key={transform.id}
-                    className={`px-3 py-1.5 rounded-lg text-sm ${
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${
                       transform.isSystemDefault
                         ? 'bg-fuchsia-500/20 text-fuchsia-300'
                         : 'bg-slate-700/50 text-slate-300'
                     }`}
                   >
                     {transform.name}
-                    {!transform.isSystemDefault && <span className="text-xs ml-1 text-fuchsia-400">✓</span>}
+                    {!transform.isSystemDefault && (
+                      <>
+                        <span className="text-xs ml-1 text-fuchsia-400">✓</span>
+                        <button
+                          onClick={() => handleDeleteElement('transform', transform.id, transform.name)}
+                          className="ml-1 p-0.5 hover:bg-red-500/30 rounded text-red-400 hover:text-red-300"
+                          title="Eliminar"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1144,7 +1202,18 @@ export default function MetamorfosisPage() {
                       <p className="text-white text-sm">{song.title}</p>
                       {song.artist && <p className="text-xs text-green-300/60">{song.artist}</p>}
                     </div>
-                    {!song.isSystemDefault && <span className="text-xs text-green-400">Personalizado</span>}
+                    {!song.isSystemDefault && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-green-400">Personalizado</span>
+                        <button
+                          onClick={() => handleDeleteElement('song', song.id, song.title)}
+                          className="p-1 hover:bg-red-500/30 rounded text-red-400 hover:text-red-300"
+                          title="Eliminar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1183,7 +1252,18 @@ export default function MetamorfosisPage() {
                         <p className="text-white text-sm">{song.title}</p>
                         {song.artist && <p className="text-xs text-indigo-300/60">{song.artist}</p>}
                       </div>
-                      {!song.isSystemDefault && <span className="text-xs text-indigo-400">Personalizado</span>}
+                      {!song.isSystemDefault && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-indigo-400">Personalizado</span>
+                          <button
+                            onClick={() => handleDeleteElement('cunaSong', song.id, song.title)}
+                            className="p-1 hover:bg-red-500/30 rounded text-red-400 hover:text-red-300"
+                            title="Eliminar"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
