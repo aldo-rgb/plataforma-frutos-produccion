@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id);
     const userRol = session.user.rol;
 
     if (!['TRAINER', 'ADMINISTRADOR'].includes(userRol || '')) {
@@ -56,7 +56,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id);
 
     const cunaSongs = await prisma.metamorfosisCunaSong.findMany({
       where: {

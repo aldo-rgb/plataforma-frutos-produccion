@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id);
     const userRol = session.user.rol;
 
     if (!['TRAINER', 'ADMINISTRADOR'].includes(userRol || '')) {
@@ -162,7 +162,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id);
     const { searchParams } = new URL(request.url);
     const visionId = searchParams.get('visionId');
     const productId = searchParams.get('productId');

@@ -64,7 +64,7 @@ export async function PUT(
 
     const { id } = await params;
     const assignmentId = parseInt(id);
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id);
     const userRol = session.user.rol;
     
     if (isNaN(assignmentId)) {
@@ -140,7 +140,7 @@ export async function DELETE(
 
     const { id } = await params;
     const assignmentId = parseInt(id);
-    const userId = session.user.id;
+    const userId = parseInt(session.user.id);
     const userRol = session.user.rol;
     
     if (isNaN(assignmentId)) {
