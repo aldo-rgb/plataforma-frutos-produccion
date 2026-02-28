@@ -94,15 +94,15 @@ export async function POST(request: Request) {
         updatedAt: new Date()
       },
       include: {
-        Base: true,
-        Transform: true,
-        Song: true,
-        CunaSong: true,
-        Participant: {
+        MetamorfosisBase: true,
+        MetamorfosisTransform: true,
+        MetamorfosisSong: true,
+        MetamorfosisCunaSong: true,
+        Usuario_MetamorfosisAssignment_participantIdToUsuario: {
           select: {
             id: true,
             nombre: true,
-            imagen: true
+            profileImage: true
           }
         }
       }
@@ -147,7 +147,22 @@ export async function POST(request: Request) {
 
     logger.debug(`✅ Metamorfosis ${transform?.name} asignada a participante ${participantId} con tarea (200 pts) y notificación`);
 
-    return NextResponse.json(assignment);
+    // Transformar los nombres de las relaciones para el frontend
+    const transformedAssignment = {
+      ...assignment,
+      Base: assignment.MetamorfosisBase,
+      Transform: assignment.MetamorfosisTransform,
+      Song: assignment.MetamorfosisSong,
+      CunaSong: assignment.MetamorfosisCunaSong,
+      Participant: assignment.Usuario_MetamorfosisAssignment_participantIdToUsuario
+        ? {
+            ...assignment.Usuario_MetamorfosisAssignment_participantIdToUsuario,
+            imagen: assignment.Usuario_MetamorfosisAssignment_participantIdToUsuario.profileImage
+          }
+        : null
+    };
+
+    return NextResponse.json(transformedAssignment);
   } catch (error) {
     logger.error('Error al crear asignación:', error);
     return NextResponse.json({ error: 'Error al crear asignación' }, { status: 500 });
@@ -182,15 +197,15 @@ export async function GET(request: Request) {
     const assignments = await prisma.metamorfosisAssignment.findMany({
       where: whereClause,
       include: {
-        Base: true,
-        Transform: true,
-        Song: true,
-        CunaSong: true,
-        Participant: {
+        MetamorfosisBase: true,
+        MetamorfosisTransform: true,
+        MetamorfosisSong: true,
+        MetamorfosisCunaSong: true,
+        Usuario_MetamorfosisAssignment_participantIdToUsuario: {
           select: {
             id: true,
             nombre: true,
-            imagen: true
+            profileImage: true
           }
         }
       },
@@ -199,7 +214,22 @@ export async function GET(request: Request) {
       }
     });
 
-    return NextResponse.json(assignments);
+    // Transformar los nombres de las relaciones para el frontend
+    const transformedAssignments = assignments.map(a => ({
+      ...a,
+      Base: a.MetamorfosisBase,
+      Transform: a.MetamorfosisTransform,
+      Song: a.MetamorfosisSong,
+      CunaSong: a.MetamorfosisCunaSong,
+      Participant: a.Usuario_MetamorfosisAssignment_participantIdToUsuario
+        ? {
+            ...a.Usuario_MetamorfosisAssignment_participantIdToUsuario,
+            imagen: a.Usuario_MetamorfosisAssignment_participantIdToUsuario.profileImage
+          }
+        : null
+    }));
+
+    return NextResponse.json(transformedAssignments);
   } catch (error) {
     logger.error('Error al obtener asignaciones:', error);
     return NextResponse.json({ error: 'Error al obtener asignaciones' }, { status: 500 });
