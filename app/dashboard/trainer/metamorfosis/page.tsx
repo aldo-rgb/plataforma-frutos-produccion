@@ -71,6 +71,13 @@ interface Participant {
   nombre: string
   imagen: string | null
   email?: string
+  visionId?: number
+}
+
+interface TrainerVision {
+  id: number
+  nombre: string
+  participantCount: number
 }
 
 // Datos predefinidos del sistema (se cargarán desde la BD)
@@ -148,6 +155,12 @@ export default function MetamorfosisPage() {
   const [searchSong, setSearchSong] = useState('')
   const [searchCunaSong, setSearchCunaSong] = useState('')
   const [searchParticipant, setSearchParticipant] = useState('')
+
+  // Visiones del trainer
+  const [trainerVisions, setTrainerVisions] = useState<TrainerVision[]>([])
+  const [selectedVision, setSelectedVision] = useState<TrainerVision | null>(null)
+  const [showSelectVision, setShowSelectVision] = useState(false)
+  const [visionParticipants, setVisionParticipants] = useState<Participant[]>([])
 
   // Audio preview
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -228,9 +241,52 @@ export default function MetamorfosisPage() {
         const data = await res.json()
         setParticipants(data.participants || [])
       }
+      
+      // Obtener visiones del trainer
+      const visRes = await fetch('/api/trainer/mis-entrenamientos')
+      if (visRes.ok) {
+        const visData = await visRes.json()
+        // Extraer visiones únicas de los productos
+        const visionMap = new Map<number, TrainerVision>()
+        const productos = visData.productos || []
+        
+        for (const producto of productos) {
+          if (producto.Vision?.id && !visionMap.has(producto.Vision.id)) {
+            visionMap.set(producto.Vision.id, {
+              id: producto.Vision.id,
+              nombre: producto.Vision.nombre || `Visión ${producto.Vision.id}`,
+              participantCount: 0
+            })
+          }
+        }
+        
+        setTrainerVisions(Array.from(visionMap.values()))
+      }
     } catch (error) {
       console.error('Error fetching participants:', error)
     }
+  }
+
+  // Cargar participantes de una visión específica
+  const fetchVisionParticipants = async (visionId: number) => {
+    try {
+      const res = await fetch(`/api/trainer/participants?visionId=${visionId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setVisionParticipants(data.participants || [])
+      }
+    } catch (error) {
+      console.error('Error fetching vision participants:', error)
+      setVisionParticipants([])
+    }
+  }
+
+  // Handler para seleccionar visión y cargar sus participantes
+  const handleSelectVision = async (vision: TrainerVision) => {
+    setSelectedVision(vision)
+    await fetchVisionParticipants(vision.id)
+    setShowSelectVision(false)
+    setShowSelectParticipant(true)
   }
 
   // Construir la frase de metamorfosis
@@ -504,7 +560,8 @@ export default function MetamorfosisPage() {
     (s.artist && s.artist.toLowerCase().includes(searchSong.toLowerCase()))
   )
   
-  const filteredParticipants = participants.filter(p => 
+  // Usar visionParticipants si hay una visión seleccionada, sino todos los participantes
+  const filteredParticipants = (selectedVision ? visionParticipants : participants).filter(p => 
     p.nombre.toLowerCase().includes(searchParticipant.toLowerCase())
   )
 
@@ -886,7 +943,16 @@ export default function MetamorfosisPage() {
               
               {/* Botón para agregar más participantes */}
               <button
-                onClick={() => setShowSelectParticipant(true)}
+                onClick={() => {
+                  // Si hay visiones disponibles, mostrar selector de visión primero
+                  if (trainerVisions.length > 0) {
+                    setShowSelectVision(true)
+                  } else {
+                    // Si no hay visiones, mostrar todos los participantes directamente
+                    setVisionParticipants(participants)
+                    setShowSelectParticipant(true)
+                  }
+                }}
                 className="p-4 border-2 border-dashed border-amber-500/30 rounded-xl hover:border-amber-400/50 hover:bg-amber-500/5 transition-all group w-full"
               >
                 <div className="flex items-center justify-center gap-3 text-amber-400 group-hover:text-amber-300">
@@ -1595,6 +1661,63 @@ export default function MetamorfosisPage() {
         )}
       </AnimatePresence>
 
+      {/* Modal: Seleccionar Visión */}
+      <AnimatePresence>
+        {showSelectVision && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowSelectVision(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-800 rounded-2xl p-6 w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">Seleccionar Visión</h3>
+                <button onClick={() => setShowSelectVision(false)} className="p-2 hover:bg-slate-700 rounded-lg">
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+              
+              <p className="text-slate-400 text-sm mb-4">
+                Selecciona la visión para ver sus participantes
+              </p>
+              
+              <div className="flex-1 overflow-y-auto space-y-2">
+                {trainerVisions.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400">
+                    <Eye className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No tienes visiones asignadas</p>
+                  </div>
+                ) : (
+                  trainerVisions.map(vision => (
+                    <button
+                      key={vision.id}
+                      onClick={() => handleSelectVision(vision)}
+                      className="w-full p-4 rounded-xl text-left transition-colors flex items-center gap-3 bg-slate-700/50 hover:bg-purple-500/20 border-2 border-transparent hover:border-purple-500/50"
+                    >
+                      <div className="p-2 bg-purple-500/20 rounded-lg">
+                        <Eye className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white font-medium">{vision.nombre}</p>
+                      </div>
+                      <ChevronDown className="w-5 h-5 text-slate-400 -rotate-90" />
+                    </button>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Modal: Seleccionar Participante */}
       <AnimatePresence>
         {showSelectParticipant && (
@@ -1613,7 +1736,15 @@ export default function MetamorfosisPage() {
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-white">Seleccionar Participantes</h3>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Seleccionar Participantes</h3>
+                  {selectedVision && (
+                    <p className="text-sm text-purple-400 mt-1">
+                      <Eye className="w-3 h-3 inline mr-1" />
+                      {selectedVision.nombre}
+                    </p>
+                  )}
+                </div>
                 <button onClick={() => setShowSelectParticipant(false)} className="p-2 hover:bg-slate-700 rounded-lg">
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
@@ -1641,7 +1772,7 @@ export default function MetamorfosisPage() {
                   <div className="text-center py-8 text-slate-400">
                     <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p>No hay participantes disponibles</p>
-                    <p className="text-xs mt-1">Asegúrate de tener entrenamientos activos</p>
+                    <p className="text-xs mt-1">{selectedVision ? 'Esta visión no tiene participantes inscritos' : 'Asegúrate de tener entrenamientos activos'}</p>
                   </div>
                 ) : (
                   filteredParticipants.map(participant => {
