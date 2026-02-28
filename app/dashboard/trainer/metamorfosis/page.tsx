@@ -207,11 +207,10 @@ export default function MetamorfosisPage() {
         const visData = await visRes.json()
         const visionMap = new Map<number, TrainerVision>()
         const entrenamientos = visData.entrenamientos || {}
-        // Incluir TODOS los entrenamientos: en curso, próximos Y finalizados
+        // Solo entrenamientos activos: en curso y próximos (NO finalizados)
         const todosProductos = [
           ...(entrenamientos.enCurso || []),
-          ...(entrenamientos.proximos || []),
-          ...(entrenamientos.finalizados || [])
+          ...(entrenamientos.proximos || [])
         ]
         
         for (const producto of todosProductos) {
