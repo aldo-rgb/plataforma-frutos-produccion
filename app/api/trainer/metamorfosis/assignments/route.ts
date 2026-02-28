@@ -90,7 +90,8 @@ export async function POST(request: Request) {
         includeBase,
         customNote: customNote?.trim() || null,
         constructedPhrase,
-        status: 'SENT'
+        status: 'SENT',
+        updatedAt: new Date()
       },
       include: {
         Base: true,
