@@ -2,7 +2,7 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 2.6  
+**Versión:** 2.7  
 **Fecha:** Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
@@ -1688,6 +1688,72 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
+## v2.7 - 01/03/2026
+
+### Fix: School Admin Users API - Filtrado por enrollmentStatus
+
+**Problema:** La página "Mis Participantes" mostraba 22 usuarios para Vision 13 nivel PL, pero la página "Gestionar Visión" mostraba 17.
+
+**Causa raíz:** La API `/api/school-admin/users` obtenía los visionIds y levels de los Tickets, sin considerar el `enrollmentStatus` de `vision_enrollments`. Esto incluía usuarios con `enrollmentStatus = 'PENDING'` que aún no estaban realmente inscritos.
+
+**Solución implementada:**
+```typescript
+// Agregar enrollments del usuario al query
+vision_enrollments_vision_enrollments_userIdToUsuario: {
+  where: {
+    enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+  },
+  select: {
+    id: true,
+    visionId: true,
+    level: true,
+    enrollmentStatus: true,
+    Vision: { select: { id: true, nombre: true } }
+  }
+}
+
+// Usar enrollments como fuente principal (no Tickets)
+const enrollments = (u as any).vision_enrollments_vision_enrollments_userIdToUsuario || [];
+const enrollmentVisionIds = enrollments.map((e: any) => e.visionId);
+const enrollmentLevels = enrollments.map((e: any) => e.level);
+```
+
+**Archivo modificado:**
+- `app/api/school-admin/users/route.ts` - Agregado filtro por enrollmentStatus ENROLLED/ACTIVE/COMPLETED
+
+**Valores de `enrollmentStatus`:**
+| Valor | Incluido en filtro | Descripción |
+|-------|-------------------|-------------|
+| `ENROLLED` | ✅ Sí | Inscrito activamente |
+| `ACTIVE` | ✅ Sí | Participando activamente |
+| `COMPLETED` | ✅ Sí | Completó el programa |
+| `PENDING` | ❌ No | Pendiente de inscripción |
+| `CANCELLED` | ❌ No | Cancelado |
+| `DROP` | ❌ No | Baja |
+| `MOVED_TO_NEXT` | ❌ No | Movido a siguiente visión |
+
+### Fix: MetamorfosisTaskCard - Error 404 en Mis Saltos
+
+**Problema:** Al hacer clic en "Ver Más" de una tarea de salto cuántico, redirigía a `/dashboard/participante/mis-saltos` que no existía (404).
+
+**Solución:** Se agregó un modal in-place para mostrar el detalle del salto en lugar de redirigir a otra página.
+
+**Archivo modificado:**
+- `components/dashboard/MetamorfosisTaskCard.tsx` - Agregado modal con AnimatePresence
+
+### Fix: School Admin Users API - Relaciones Prisma incorrectas
+
+**Problema:** La API `/api/school-admin/users` no cargaba usuarios (mostraba "Cargando..." indefinidamente).
+
+**Causa raíz:** Nombres de relaciones Prisma incorrectos:
+- `Ticket_TicketOwner` → `Ticket_Ticket_ownerIdToUsuario`
+- `MedicalForm` → `MedicalForm_MedicalForm_userIdToUsuario`
+- `AdvancedQuestionnaire` → `AdvancedQuestionnaire_AdvancedQuestionnaire_userIdToUsuario`
+- `VisionParticipante` → `VisionParticipante_VisionParticipante_participanteIdToUsuario`
+
+**Archivo modificado:**
+- `app/api/school-admin/users/route.ts` - Corregidos todos los nombres de relaciones
+
 ## v2.6 - 01/03/2026
 
 ### Feature: Visiones CORE - Filtrado por Nivel PL (Liderato)
@@ -1944,5 +2010,5 @@ metas.forEach(meta => {
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 2.6 - Marzo 2026*  
+*Versión 2.7 - Marzo 2026*  
 *Última actualización: 01/03/2026*

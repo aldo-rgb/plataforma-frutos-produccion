@@ -81,13 +81,13 @@ export async function GET(req: Request) {
           }
         },
         // Incluir datos de cuestionarios
-        MedicalForm: {
+        MedicalForm_MedicalForm_userIdToUsuario: {
           select: {
             id: true,
             consentAccepted: true,
           }
         },
-        AdvancedQuestionnaire: {
+        AdvancedQuestionnaire_AdvancedQuestionnaire_userIdToUsuario: {
           select: {
             id: true,
             status: true,
@@ -115,6 +115,24 @@ export async function GET(req: Request) {
             enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
           },
           select: { id: true }
+        },
+        // Enrollments del usuario (para filtrar por visión y nivel correctamente)
+        vision_enrollments_vision_enrollments_userIdToUsuario: {
+          where: {
+            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+          },
+          select: {
+            id: true,
+            visionId: true,
+            level: true,
+            enrollmentStatus: true,
+            Vision: {
+              select: {
+                id: true,
+                nombre: true
+              }
+            }
+          }
         }
       },
       orderBy: {
@@ -171,6 +189,8 @@ export async function GET(req: Request) {
     const uniqueUsers = Array.from(uniqueUsersMap.values()).map(u => {
       // Determinar el estado de pago general del usuario
       const tickets = (u as any).Ticket_Ticket_ownerIdToUsuario || [];
+      const enrollments = (u as any).vision_enrollments_vision_enrollments_userIdToUsuario || [];
+      
       let overallPaymentStatus = 'NO_TICKET';
       
       if (tickets.length > 0) {
@@ -187,6 +207,29 @@ export async function GET(req: Request) {
         }
       }
       
+      // Usar enrollments como fuente principal para visiones y niveles
+      // (Solo incluye ENROLLED, ACTIVE, COMPLETED - no PENDING)
+      const enrollmentVisionIds = enrollments.map((e: any) => e.visionId).filter(Boolean);
+      const enrollmentLevels = enrollments.map((e: any) => e.level).filter(Boolean);
+      const enrollmentVisiones = enrollments
+        .filter((e: any) => e.Vision)
+        .map((e: any) => ({ id: e.Vision.id, nombre: e.Vision.nombre }));
+      
+      // También obtener de VisionParticipante como backup
+      const vpVisiones = ((u as any).VisionParticipante_VisionParticipante_participanteIdToUsuario || [])
+        .filter((vp: any) => vp.Vision)
+        .map((vp: any) => ({ id: vp.Vision.id, nombre: vp.Vision.nombre }));
+      const vpVisionIds = ((u as any).VisionParticipante_VisionParticipante_participanteIdToUsuario || [])
+        .map((vp: any) => vp.visionId).filter(Boolean);
+      
+      // Combinar y deduplicar
+      const allVisionIds = [...new Set([...enrollmentVisionIds, ...vpVisionIds])];
+      const allLevels = [...new Set(enrollmentLevels)];
+      const allVisiones = [...new Map([
+        ...enrollmentVisiones.map((v: any) => [v.id, v]),
+        ...vpVisiones.map((v: any) => [v.id, v])
+      ]).values()];
+      
       return {
         id: u.id,
         nombre: u.nombre,
@@ -198,20 +241,14 @@ export async function GET(req: Request) {
         createdAt: u.createdAt,
         paymentStatus: overallPaymentStatus,
         ticketsCount: tickets.length,
-        // Niveles de tickets (BASIC, ADVANCED, PL)
-        levels: [...new Set(tickets.map((t: any) => t.level))],
-        // Visiones del usuario (de tickets y participaciones)
-        visionIds: [...new Set([
-          ...tickets.map((t: any) => t.visionId),
-          ...((u as any).VisionParticipante_VisionParticipante_participanteIdToUsuario || []).map((vp: any) => vp.visionId)
-        ])].filter(Boolean),
-        visiones: [...new Map([
-          ...tickets.map((t: any) => t.Vision ? [t.Vision.id, { id: t.Vision.id, nombre: t.Vision.nombre }] : null).filter(Boolean),
-          ...((u as any).VisionParticipante_VisionParticipante_participanteIdToUsuario || []).map((vp: any) => [vp.Vision.id, { id: vp.Vision.id, nombre: vp.Vision.nombre }])
-        ]).values()],
+        // Niveles de enrollments activos (ENROLLED, ACTIVE, COMPLETED - no PENDING)
+        levels: allLevels,
+        // Visiones del usuario (de enrollments activos y VisionParticipante)
+        visionIds: allVisionIds,
+        visiones: allVisiones,
         // Nuevos campos de cuestionarios
-        quizMedico: !!(u as any).MedicalForm?.consentAccepted,
-        quizAvanzado: (u as any).AdvancedQuestionnaire?.status === 'COMPLETED',
+        quizMedico: !!(u as any).MedicalForm_MedicalForm_userIdToUsuario?.consentAccepted,
+        quizAvanzado: (u as any).AdvancedQuestionnaire_AdvancedQuestionnaire_userIdToUsuario?.status === 'COMPLETED',
         cartaFrutos: (u as any).CartaFrutos?.[0]?.estado || null,
         tieneNegocio: !!(u as any).BusinessProfile?.id,
         negocioStatus: (u as any).BusinessProfile?.status || null,
