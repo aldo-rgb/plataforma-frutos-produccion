@@ -50,13 +50,13 @@ export async function GET(req: Request) {
         experienciaXP: true,
         isActive: true,
         createdAt: true,
-        Ticket_TicketOwner: {
+        Ticket_Ticket_ownerIdToUsuario: {
           select: {
             id: true,
             level: true,
             paymentStatus: true,
             visionId: true,
-            vision: {
+            Vision: {
               select: {
                 id: true,
                 nombre: true,
@@ -146,7 +146,7 @@ export async function GET(req: Request) {
         experienciaXP: true,
         isActive: true,
         createdAt: true,
-        Ticket_TicketOwner: {
+        Ticket_Ticket_ownerIdToUsuario: {
           select: {
             id: true,
             level: true,
@@ -170,7 +170,7 @@ export async function GET(req: Request) {
     const uniqueUsersMap = new Map(allUsers.map(u => [u.id, u]));
     const uniqueUsers = Array.from(uniqueUsersMap.values()).map(u => {
       // Determinar el estado de pago general del usuario
-      const tickets = (u as any).Ticket_TicketOwner || [];
+      const tickets = (u as any).Ticket_Ticket_ownerIdToUsuario || [];
       let overallPaymentStatus = 'NO_TICKET';
       
       if (tickets.length > 0) {
@@ -206,7 +206,7 @@ export async function GET(req: Request) {
           ...((u as any).VisionParticipante_VisionParticipante_participanteIdToUsuario || []).map((vp: any) => vp.visionId)
         ])].filter(Boolean),
         visiones: [...new Map([
-          ...tickets.map((t: any) => t.vision ? [t.vision.id, { id: t.vision.id, nombre: t.vision.nombre }] : null).filter(Boolean),
+          ...tickets.map((t: any) => t.Vision ? [t.Vision.id, { id: t.Vision.id, nombre: t.Vision.nombre }] : null).filter(Boolean),
           ...((u as any).VisionParticipante_VisionParticipante_participanteIdToUsuario || []).map((vp: any) => [vp.Vision.id, { id: vp.Vision.id, nombre: vp.Vision.nombre }])
         ]).values()],
         // Nuevos campos de cuestionarios
