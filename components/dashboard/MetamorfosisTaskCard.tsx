@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, CheckCircle, Sparkles, Loader2, Eye } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Zap, CheckCircle, Sparkles, Loader2, Eye, X, Star } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface MetamorfosisTaskCardProps {
   task: {
@@ -17,8 +17,9 @@ interface MetamorfosisTaskCardProps {
 }
 
 export default function MetamorfosisTaskCard({ task, onComplete }: MetamorfosisTaskCardProps) {
-  const router = useRouter();
   const [isCompleting, setIsCompleting] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [hasAccepted, setHasAccepted] = useState(false);
   const isCompleted = task.status === 'COMPLETED' || task.status === 'APPROVED';
 
   const handleComplete = async (e: React.MouseEvent) => {
@@ -37,7 +38,14 @@ export default function MetamorfosisTaskCard({ task, onComplete }: MetamorfosisT
 
   const handleViewMetamorfosis = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push('/dashboard/participante/mis-saltos');
+    setShowModal(true);
+  };
+
+  const handleAccept = () => {
+    setHasAccepted(true);
+    setTimeout(() => {
+      setShowModal(false);
+    }, 500);
   };
 
   return (
@@ -121,6 +129,94 @@ export default function MetamorfosisTaskCard({ task, onComplete }: MetamorfosisT
           )}
         </div>
       </div>
+
+      {/* Modal Ver Salto */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border border-amber-500/30 max-w-lg w-full shadow-2xl shadow-amber-500/20 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="relative bg-gradient-to-r from-amber-600 to-orange-600 p-6">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                    <Zap className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Tu Salto Cuántico</h3>
+                    <p className="text-amber-100/80 text-sm">Tu transformación personal</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700 mb-6">
+                  <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    <Star className="w-5 h-5 text-amber-400" />
+                    {task.title}
+                  </h4>
+                  <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
+                    {task.description}
+                  </p>
+                </div>
+
+                {task.pointsReward && task.pointsReward > 0 && (
+                  <div className="flex items-center justify-center gap-2 mb-6 text-green-400">
+                    <Sparkles className="w-5 h-5" />
+                    <span className="font-semibold">+{task.pointsReward} Puntos de Conexión al completar</span>
+                  </div>
+                )}
+
+                {/* Accept Button */}
+                <button
+                  onClick={handleAccept}
+                  disabled={hasAccepted}
+                  className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 ${
+                    hasAccepted
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white hover:shadow-lg hover:shadow-amber-500/30'
+                  }`}
+                >
+                  {hasAccepted ? (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      ¡Aceptado!
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-5 h-5" />
+                      Acepto mi Salto Cuántico
+                    </>
+                  )}
+                </button>
+
+                <p className="text-center text-slate-500 text-xs mt-4">
+                  Al aceptar, te comprometes a realizar este salto cuántico
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

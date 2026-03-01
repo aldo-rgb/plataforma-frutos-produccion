@@ -13,6 +13,7 @@ export async function GET(req: Request) {
     }
 
     const user = session.user as any;
+    logger.info('SCHOOL_ADMIN users API - Session user:', { id: user.id, rol: user.rol, organizationId: user.organizationId });
 
     // Verificar que el usuario sea SCHOOL_ADMIN
     if (user.rol !== 'SCHOOL_ADMIN') {
@@ -24,6 +25,8 @@ export async function GET(req: Request) {
       where: { id: user.id },
       select: { id: true, organizationId: true }
     });
+    
+    logger.info('SCHOOL_ADMIN users API - Full user from DB:', fullUser);
 
     if (!fullUser?.organizationId) {
       return NextResponse.json({ 
@@ -159,6 +162,8 @@ export async function GET(req: Request) {
         experienciaXP: 'desc'
       }
     });
+
+    logger.info('SCHOOL_ADMIN users API - orgUsers count:', orgUsers.length, 'activeMentors count:', activeMentors.length);
 
     // Combinar ambas listas y eliminar duplicados
     const allUsers = [...orgUsers, ...activeMentors];

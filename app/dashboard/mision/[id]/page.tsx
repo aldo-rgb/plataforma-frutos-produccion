@@ -674,7 +674,7 @@ export default function MisionDetailPage() {
             ) : (
               <>
                 <Send size={20} />
-                Enviar Misión
+                Completar Tarea
               </>
             )}
           </button>

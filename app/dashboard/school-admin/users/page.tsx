@@ -77,6 +77,12 @@ export default function UsersListPage() {
         const res = await fetch('/api/school-admin/users');
         const data = await res.json();
         
+        console.log('API Response:', data);
+        
+        if (data.error) {
+          console.error('API Error:', data.error);
+        }
+        
         if (data.success && data.users) {
           const userList = data.users.map((u: any) => ({
             id: u.id,
