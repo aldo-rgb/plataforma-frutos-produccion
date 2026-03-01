@@ -295,13 +295,23 @@ model CallTrackingInteraction {
 }
 
 enum AttendanceStatus {
-  PENDING
-  ASISTE
-  NO_ASISTE
-  NO_ANSWER
-  BUSY
+  PENDING       // Pendiente de asistencia
+  ATTENDED      // Asistió al entrenamiento ✅
+  NOT_ATTENDED  // No asistió
+  DROP          // Baja/Abandono
+  BACKLOG       // En lista de espera para siguiente visión
+  MOVED         // Movido a otra visión
 }
 ```
+
+> **⚠️ IMPORTANTE:** Los valores de `attendanceStatus` en `vision_enrollments` son:
+> - `PENDING` (787) - Pendiente
+> - `ATTENDED` (297) - Asistió ✅
+> - `NOT_ATTENDED` (11) - No asistió
+> - `DROP` (10) - Baja
+> - `BACKLOG` (2) - Lista de espera
+> - `MOVED` (25) - Movido
+> - `null` (103) - Sin estado
 
 ## 5.3 APIs Principales
 
@@ -1721,6 +1731,42 @@ const effectiveLevel = isCoreVision ? 'PL' : activeLevel;
 
 **Archivos modificados:**
 - `app/dashboard/school-admin/visiones/[id]/page.tsx`
+
+### Feature: Participantes CORE solo con asistencia confirmada
+
+**Descripción:** En visiones CORE, la sección de Participantes solo muestra usuarios con asistencia confirmada (`attendanceStatus = 'ATTENDED'`) en el nivel PL.
+
+**Valores de `attendanceStatus` en `vision_enrollments`:**
+| Valor | Descripción | Count (actual) |
+|-------|-------------|----------------|
+| `PENDING` | Pendiente de asistencia | 787 |
+| `ATTENDED` | ✅ Asistió al entrenamiento | 297 |
+| `NOT_ATTENDED` | No asistió | 11 |
+| `DROP` | Baja/Abandono | 10 |
+| `BACKLOG` | Lista de espera | 2 |
+| `MOVED` | Movido a otra visión | 25 |
+| `null` | Sin estado | 103 |
+
+> **⚠️ IMPORTANTE:** El valor es `ATTENDED`, NO `ASISTE`. Este es un error común.
+
+**Filtro aplicado:**
+```typescript
+const enrollmentWhereClause = {
+  visionId,
+  level: effectiveLevel,
+  ...(isCoreVision 
+    ? { attendanceStatus: 'ATTENDED' } // CORE: solo con asistencia confirmada
+    : { 
+        OR: [
+          { attendanceStatus: null },
+          { attendanceStatus: { notIn: ['DROP', 'BACKLOG', 'MOVED'] } }
+        ]
+      }
+  ),
+  enrollmentStatus: { notIn: ['MOVED_TO_NEXT', 'CANCELLED', 'DROP'] },
+  droppedAt: null,
+};
+```
 
 ### Feature: Filtro de roles para Game Changers
 
