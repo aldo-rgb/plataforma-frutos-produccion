@@ -496,15 +496,6 @@ export default function UsersListPage() {
                       <span className="hidden sm:inline">TOP FILE</span>
                       <span className="sm:hidden">TOP</span>
                     </button>
-
-                    {/* Ver Detalles */}
-                    <Link
-                      href={`/dashboard/school-admin/users/${user.id}`}
-                      className="px-3 sm:px-4 py-1.5 sm:py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
-                    >
-                      <span className="hidden sm:inline">Ver Detalles</span>
-                      <span className="sm:hidden">Ver</span>
-                    </Link>
                   </div>
                 </div>
               </div>
