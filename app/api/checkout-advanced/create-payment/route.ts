@@ -13,19 +13,9 @@ function getBaseUrl(): string {
   // URL de producción hardcodeada para evitar problemas
   const PRODUCTION_URL = 'https://www.impactocuantico.net';
   
-  // En producción, siempre usar la URL de producción
-  if (process.env.NODE_ENV === 'production') {
-    return PRODUCTION_URL;
-  }
-  
-  // En desarrollo, usar NEXTAUTH_URL si está configurada
-  if (process.env.NEXTAUTH_URL) {
-    // Asegurarse de que no tenga trailing slash
-    return process.env.NEXTAUTH_URL.replace(/\/$/, '');
-  }
-  
-  // Fallback para desarrollo
-  return 'http://localhost:3000';
+  // SIEMPRE usar URL de producción para Mercado Pago (no acepta localhost)
+  // Los webhooks y redirects funcionarán correctamente en producción
+  return PRODUCTION_URL;
 }
 
 /**

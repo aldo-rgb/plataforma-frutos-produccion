@@ -138,6 +138,7 @@ export async function POST(request: Request) {
         // Crear transacción de registro
         await tx.ticketTransaction.create({
           data: {
+            id: crypto.randomUUID(),
             ticketId: ticket.id,
             gateway: 'GIFT_CODE',
             transactionRef: giftCode.code,
@@ -314,30 +315,56 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
 
     // Si tenemos una visión específica, buscar enrollment en esa visión
     if (targetVisionId) {
+      // Primero intentar encontrar enrollment activo (no completado)
       enrollment = await prisma.vision_enrollments.findFirst({
         where: { 
           userId: user.id,
           visionId: targetVisionId,
-          // Buscar enrollments que NO hayan terminado (no ATTENDED)
-          attendanceStatus: { notIn: ['ATTENDED'] }
+          // Buscar enrollments que NO sean ATTENDED (completados)
+          OR: [
+            { attendanceStatus: null },
+            { attendanceStatus: { notIn: ['ATTENDED'] } }
+          ]
         },
         include: {
           Vision: { select: { id: true, endDate: true, advancedEndDate: true, plWeekend3EndDate: true } }
         },
         orderBy: { createdAt: 'desc' }
       });
+      
+      // Si no encontramos uno activo, buscar cualquier enrollment en esa visión
+      if (!enrollment) {
+        enrollment = await prisma.vision_enrollments.findFirst({
+          where: { 
+            userId: user.id,
+            visionId: targetVisionId
+          },
+          include: {
+            Vision: { select: { id: true, endDate: true, advancedEndDate: true, plWeekend3EndDate: true } }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+        logger.debug('[REDEEM CASH] Usando enrollment existente (aunque sea ATTENDED):', enrollment?.id, 'Level:', enrollment?.level);
+      }
     }
 
     // Si no encontramos enrollment en la visión específica, buscar enrollment activo
     if (!enrollment) {
+      // Buscar cualquier enrollment en una visión que aún no haya terminado completamente
+      // (considerando endDate para básico, advancedEndDate para avanzado, o plWeekend3EndDate para PL)
       enrollment = await prisma.vision_enrollments.findFirst({
         where: { 
           userId: user.id,
-          // Solo buscar visiones activas (no terminadas)
-          attendanceStatus: { notIn: ['ATTENDED', 'BACKLOG'] },
+          OR: [
+            { attendanceStatus: null },
+            { attendanceStatus: { notIn: ['ATTENDED', 'BACKLOG'] } }
+          ],
           Vision: {
-            // Visión con fecha de fin en el futuro
-            endDate: { gte: new Date() }
+            OR: [
+              { endDate: { gte: new Date() } },
+              { advancedEndDate: { gte: new Date() } },
+              { plWeekend3EndDate: { gte: new Date() } }
+            ]
           }
         },
         include: {
@@ -348,8 +375,30 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
     }
 
     if (!enrollment) {
+      // Buscar los enrollments activos del usuario para mostrar en qué visiones está
+      const activeEnrollments = await prisma.vision_enrollments.findMany({
+        where: { 
+          userId: user.id,
+          enrollmentStatus: 'ENROLLED'
+        },
+        include: {
+          Vision: { select: { id: true, nombre: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      if (activeEnrollments.length > 0) {
+        const visionesActivas = activeEnrollments
+          .map(e => `${e.Vision?.nombre || 'Sin nombre'} (ID: ${e.visionId}, Nivel: ${e.level})`)
+          .join(', ');
+        return NextResponse.json(
+          { success: false, error: `El usuario tiene enrollments en: ${visionesActivas}. Pero no en la visión seleccionada para este pago.` },
+          { status: 400 }
+        );
+      }
+      
       return NextResponse.json(
-        { success: false, error: 'El usuario no tiene un enrollment activo en una visión vigente' },
+        { success: false, error: 'El usuario no tiene un enrollment activo en ninguna visión' },
         { status: 400 }
       );
     }
@@ -409,6 +458,7 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
         // 4. Crear transacción del ticket
         await tx.ticketTransaction.create({
           data: {
+            id: crypto.randomUUID(),
             ticketId: ticket.id,
             gateway: 'CASH_MANUAL',
             transactionRef: code,

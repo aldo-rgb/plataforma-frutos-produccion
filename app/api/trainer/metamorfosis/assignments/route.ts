@@ -112,7 +112,7 @@ export async function POST(request: Request) {
     await prisma.notification.create({
       data: {
         userId: participantId,
-        type: 'METAMORFOSIS_ASSIGNMENT',
+        type: 'SYSTEM_ALERT',
         title: '⚡ ¡Nuevo Salto Cuántico Asignado!',
         message: `Tu entrenador te asignó la transformación "${transform?.name}". ¡Revísalo en tus tareas y prepárate para tu Salto Cuántico!`,
         relatedId: assignment.id

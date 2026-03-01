@@ -25,16 +25,16 @@ export async function GET(
     const submission = await prisma.missionSubmission.findUnique({
       where: { id: submissionId },
       include: {
-        Mission: {
+        TrainerMission: {
           include: {
-            Template: {
+            TrainerTaskTemplate: {
               include: {
-                Questions: {
+                TrainerTaskQuestion: {
                   orderBy: { orderIndex: 'asc' }
                 }
               }
             },
-            Trainer: {
+            Usuario: {
               select: {
                 id: true,
                 nombre: true,
@@ -49,8 +49,8 @@ export async function GET(
             }
           }
         },
-        QuestionAnswers: true,
-        Reviewer: {
+        MissionQuestionAnswer: true,
+        Usuario_MissionSubmission_reviewedByToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -83,29 +83,29 @@ export async function GET(
       reviewNote: sub.reviewNote,
       pointsEarned: sub.pointsEarned,
       earnedBonus: sub.earnedBonus,
-      reviewer: sub.Reviewer,
+      reviewer: sub.Usuario_MissionSubmission_reviewedByToUsuario,
       mission: {
-        id: sub.Mission.id,
-        releaseAt: sub.Mission.releaseAt,
-        deadlineAt: sub.Mission.deadlineAt,
-        trainerMessage: sub.Mission.trainerMessage,
-        bonusPoints: sub.Mission.bonusPoints,
-        bonusDeadline: sub.Mission.bonusDeadline,
-        trainer: sub.Mission.Trainer,
-        vision: sub.Mission.Vision ? {
-          id: sub.Mission.Vision.id,
-          name: sub.Mission.Vision.nombre
+        id: sub.TrainerMission.id,
+        releaseAt: sub.TrainerMission.releaseAt,
+        deadlineAt: sub.TrainerMission.deadlineAt,
+        trainerMessage: sub.TrainerMission.trainerMessage,
+        bonusPoints: sub.TrainerMission.bonusPoints,
+        bonusDeadline: sub.TrainerMission.bonusDeadline,
+        trainer: sub.TrainerMission.Usuario,
+        vision: sub.TrainerMission.Vision ? {
+          id: sub.TrainerMission.Vision.id,
+          name: sub.TrainerMission.Vision.nombre
         } : null
       },
       template: {
-        id: sub.Mission.Template.id,
-        title: sub.Mission.Template.title,
-        type: sub.Mission.Template.type,
-        instructions: sub.Mission.Template.instructions,
-        tags: sub.Mission.Template.tags,
-        pointsReward: sub.Mission.Template.pointsReward,
-        requiresEvidence: sub.Mission.Template.requiresEvidence,
-        questions: sub.Mission.Template.Questions.map((q: any) => ({
+        id: sub.TrainerMission.TrainerTaskTemplate.id,
+        title: sub.TrainerMission.TrainerTaskTemplate.title,
+        type: sub.TrainerMission.TrainerTaskTemplate.type,
+        instructions: sub.TrainerMission.TrainerTaskTemplate.description,
+        tags: sub.TrainerMission.TrainerTaskTemplate.tags,
+        pointsReward: sub.TrainerMission.TrainerTaskTemplate.pointsReward,
+        requiresEvidence: sub.TrainerMission.TrainerTaskTemplate.requiresEvidence,
+        questions: sub.TrainerMission.TrainerTaskTemplate.TrainerTaskQuestion.map((q: any) => ({
           id: q.id,
           questionText: q.questionText,
           questionType: q.questionType,
@@ -113,7 +113,7 @@ export async function GET(
           isRequired: q.isRequired,
           order: q.orderIndex,
           // Incluir respuesta existente si hay
-          answer: sub.QuestionAnswers.find((a: any) => a.questionId === q.id)
+          answer: sub.MissionQuestionAnswer.find((a: any) => a.questionId === q.id)
         }))
       }
     }
@@ -148,11 +148,11 @@ export async function POST(
     const submission = await prisma.missionSubmission.findUnique({
       where: { id: submissionId },
       include: {
-        Mission: {
+        TrainerMission: {
           include: {
-            Template: {
+            TrainerTaskTemplate: {
               include: {
-                Questions: true
+                TrainerTaskQuestion: true
               }
             }
           }
@@ -177,7 +177,7 @@ export async function POST(
     const { textResponse, evidenceUrl, learningNote, answers } = body
 
     // Verificar si aplica para bonus (si hay deadline de bonus)
-    const mission = submission.Mission
+    const mission = submission.TrainerMission
     let earnedBonus = false
     if (mission.bonusPoints && mission.bonusDeadline) {
       const bonusDeadline = new Date(mission.bonusDeadline)
@@ -187,7 +187,7 @@ export async function POST(
     }
 
     // Calcular puntos ganados
-    const basePoints = mission.Template.pointsReward || 0
+    const basePoints = mission.TrainerTaskTemplate.pointsReward || 0
     const bonusPoints = earnedBonus ? (mission.bonusPoints || 0) : 0
     const totalPoints = basePoints + bonusPoints
 

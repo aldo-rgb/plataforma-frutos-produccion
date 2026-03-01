@@ -16,6 +16,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('productId');
     const visionId = searchParams.get('visionId');
+    const excludeWithMetamorfosis = searchParams.get('excludeWithMetamorfosis') === 'true';
 
     // Obtener el trainer y sus productos asignados
     const trainer = await prisma.usuario.findUnique({
@@ -29,6 +30,20 @@ export async function GET(request: Request) {
 
     if (!trainer) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    // Si necesitamos excluir participantes con metamorfosis activa, obtener sus IDs
+    let participantsWithActiveMetamorfosis: number[] = [];
+    if (excludeWithMetamorfosis) {
+      // Excluir CUALQUIER participante con metamorfosis activa (sin importar visión)
+      const activeAssignments = await prisma.metamorfosisAssignment.findMany({
+        where: {
+          status: { in: ['SENT', 'IN_PROGRESS'] }
+        },
+        select: { participantId: true },
+        distinct: ['participantId']
+      });
+      participantsWithActiveMetamorfosis = activeAssignments.map(a => a.participantId);
     }
 
     // Construir consulta basada en el rol
@@ -69,9 +84,14 @@ export async function GET(request: Request) {
         const userIds = enrollments.map(e => e.userId);
 
         if (userIds.length > 0) {
+          // Filtrar los que ya tienen metamorfosis activa
+          const filteredUserIds = excludeWithMetamorfosis 
+            ? userIds.filter(id => !participantsWithActiveMetamorfosis.includes(id))
+            : userIds;
+
           participants = await prisma.usuario.findMany({
             where: {
-              id: { in: userIds },
+              id: { in: filteredUserIds },
               isActive: true
             },
             select: {
@@ -91,6 +111,9 @@ export async function GET(request: Request) {
         where: {
           rol: 'PARTICIPANTE',
           isActive: true,
+          ...(excludeWithMetamorfosis && participantsWithActiveMetamorfosis.length > 0 && {
+            id: { notIn: participantsWithActiveMetamorfosis }
+          }),
           ...(trainer.rol !== 'ADMINISTRADOR' && trainer.organizationId && {
             organizationId: trainer.organizationId
           }),

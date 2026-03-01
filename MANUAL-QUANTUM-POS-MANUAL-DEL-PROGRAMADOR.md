@@ -2,7 +2,7 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 2.4  
+**Versión:** 2.5  
 **Fecha:** Febrero 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 

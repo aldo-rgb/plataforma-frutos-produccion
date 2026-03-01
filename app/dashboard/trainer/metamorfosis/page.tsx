@@ -282,9 +282,9 @@ export default function MetamorfosisPage() {
 
   const fetchParticipants = async () => {
     try {
-      // Cargar participantes de la visión seleccionada
+      // Cargar participantes de la visión seleccionada (excluir los que ya tienen metamorfosis activa)
       if (selectedVision) {
-        const res = await fetch(`/api/trainer/participants?visionId=${selectedVision.id}`)
+        const res = await fetch(`/api/trainer/participants?visionId=${selectedVision.id}&excludeWithMetamorfosis=true`)
         if (res.ok) {
           const data = await res.json()
           setParticipants(data.participants || [])
@@ -476,7 +476,7 @@ export default function MetamorfosisPage() {
         
         const msg = editingAssignment 
           ? '¡Metamorfosis actualizada!' 
-          : `¡Metamorfosis asignada a ${selectedParticipants.length} participante(s)!`
+          : `¡Salto Cuantico asignado a ${selectedParticipants.length} participante(s)!`
         showToast(msg, 'success')
       } else {
         showToast('Algunas asignaciones fallaron. Revisa la lista.', 'error')
