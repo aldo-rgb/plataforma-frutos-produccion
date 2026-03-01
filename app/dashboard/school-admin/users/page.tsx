@@ -51,7 +51,7 @@ export default function UsersListPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
-  const [paymentFilter, setPaymentFilter] = useState<string>('ALL');
+  const [progressFilter, setProgressFilter] = useState<string>('ALL');
   const [visionFilter, setVisionFilter] = useState<string>('ALL');
   const [levelFilter, setLevelFilter] = useState<string>('ALL');
   const [visionOptions, setVisionOptions] = useState<VisionOption[]>([]);
@@ -137,9 +137,28 @@ export default function UsersListPage() {
       filtered = filtered.filter(u => u.rol === roleFilter);
     }
 
-    // Filtrar por estado de pago
-    if (paymentFilter !== 'ALL') {
-      filtered = filtered.filter(u => u.paymentStatus === paymentFilter);
+    // Filtrar por progreso
+    if (progressFilter !== 'ALL') {
+      switch (progressFilter) {
+        case 'CARTA':
+          filtered = filtered.filter(u => u.cartaFrutos !== null);
+          break;
+        case 'QUIZ_MEDICO':
+          filtered = filtered.filter(u => u.quizMedico === true);
+          break;
+        case 'QUIZ_AVANZADO':
+          filtered = filtered.filter(u => u.quizAvanzado === true);
+          break;
+        case 'NEGOCIO':
+          filtered = filtered.filter(u => u.tieneNegocio === true);
+          break;
+        case 'SIN_CARTA':
+          filtered = filtered.filter(u => u.cartaFrutos === null);
+          break;
+        case 'SIN_QUIZ_MEDICO':
+          filtered = filtered.filter(u => u.quizMedico === false);
+          break;
+      }
     }
 
     // Filtrar por visión
@@ -166,7 +185,7 @@ export default function UsersListPage() {
     }
 
     setFilteredUsers(filtered);
-  }, [searchTerm, roleFilter, paymentFilter, visionFilter, levelFilter, users]);
+  }, [searchTerm, roleFilter, progressFilter, visionFilter, levelFilter, users]);
 
   if (status === 'loading' || loading) {
     return (
@@ -306,19 +325,21 @@ export default function UsersListPage() {
               </select>
             </div>
 
-            {/* Filtro por Estado de Pago */}
+            {/* Filtro por Progreso */}
             <div className="relative">
-              <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <CheckCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
               <select
-                value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value)}
+                value={progressFilter}
+                onChange={(e) => setProgressFilter(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none cursor-pointer"
               >
-                <option value="ALL">Todos los pagos</option>
-                <option value="PAID">✅ Pagado</option>
-                <option value="PARTIAL">⏳ Pago Parcial</option>
-                <option value="UNPAID">⚠️ Sin Pagar</option>
-                <option value="NO_TICKET">📭 Sin Ticket</option>
+                <option value="ALL">Todos los progresos</option>
+                <option value="CARTA">📝 Con Carta</option>
+                <option value="QUIZ_MEDICO">💊 Quiz Médico ✓</option>
+                <option value="QUIZ_AVANZADO">📋 Quiz Avanzado ✓</option>
+                <option value="NEGOCIO">💼 Tiene Negocio</option>
+                <option value="SIN_CARTA">❌ Sin Carta</option>
+                <option value="SIN_QUIZ_MEDICO">⚠️ Sin Quiz Médico</option>
               </select>
             </div>
           </div>
