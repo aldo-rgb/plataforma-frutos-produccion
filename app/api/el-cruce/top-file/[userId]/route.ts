@@ -335,7 +335,7 @@ export async function GET(
         ticketValidated: true,
         medicalFormValidated: true,
         photoValidated: true,
-        Product: {
+        SchoolProduct: {
           select: {
             id: true,
             name: true,
@@ -563,7 +563,7 @@ export async function GET(
           id: ci.id,
           fecha: ci.checkInTime,
           metodo: ci.checkInMethod,
-          producto: ci.Product,
+          producto: ci.SchoolProduct,
           validaciones: {
             ticket: ci.ticketValidated,
             formaMedica: ci.medicalFormValidated,
@@ -628,8 +628,9 @@ export async function GET(
 
   } catch (error) {
     logger.error('Error obteniendo TOP FILE:', error)
+    console.error('TOP FILE ERROR DETAILS:', error)
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: 'Error interno del servidor', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
