@@ -2,7 +2,7 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 2.7  
+**Versión:** 2.8  
 **Fecha:** Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
@@ -1688,6 +1688,51 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
+## v2.8 - 01/03/2026
+
+### Fix: TOP FILE API - Relaciones Prisma incorrectas en AdvancedPreRegistration
+
+**Problema:** El botón "TOP FILE" en la lista de usuarios mostraba "Error interno del servidor" (500).
+
+**Causa raíz:** Nombres de relaciones Prisma incorrectos en `/api/el-cruce/top-file/[userId]/route.ts`:
+- `currentProduct` → `SchoolProduct_AdvancedPreRegistration_currentProductIdToSchoolProduct`
+- `targetProduct` → `SchoolProduct_AdvancedPreRegistration_targetProductIdToSchoolProduct`
+- `scannedByStaff` → `Usuario_AdvancedPreRegistration_scannedByStaffIdToUsuario`
+
+**Archivos modificados:**
+- `app/api/el-cruce/top-file/[userId]/route.ts`
+
+### Fix: Filtrado preciso de usuarios por Vision + Level
+
+**Problema:** La página "Mis Participantes" mostraba 19 usuarios cuando deberían ser 17 al filtrar por Vision 13 + Nivel PL.
+
+**Causa raíz:** El filtrado verificaba que el usuario tuviera Vision 13 Y nivel PL por separado, pero no que tuviera un enrollment que fuera Vision 13 CON nivel PL al mismo tiempo.
+
+**Solución implementada:**
+```typescript
+// API: Crear combinaciones vision+level para filtrado preciso
+const visionLevelCombos = enrollments.map((e: any) => `${e.visionId}_${e.level}`);
+
+// Frontend: Usar combinación cuando ambos filtros están activos
+if (visionFilter !== 'ALL' && levelFilter !== 'ALL') {
+  const combo = `${visionId}_${levelFilter}`;
+  filtered = filtered.filter(u => u.visionLevelCombos.includes(combo));
+}
+```
+
+**Archivos modificados:**
+- `app/api/school-admin/users/route.ts` - Agregar campo `visionLevelCombos`
+- `app/dashboard/school-admin/users/page.tsx` - Usar combinación para filtrado
+
+### Fix: Ícono de Carta solo activo con declaraciones
+
+**Problema:** El ícono de carta en la lista de usuarios se mostraba amarillo (activo) para usuarios con carta BORRADOR vacía.
+
+**Solución:** El ícono ahora solo se muestra amarillo cuando el usuario tiene al menos una declaración en su carta, consistente con el widget de "Saltos Cuánticos".
+
+**Archivo modificado:**
+- `app/api/school-admin/users/route.ts` - Verificar declaraciones antes de retornar estado de carta
+
 ## v2.7 - 01/03/2026
 
 ### Fix: School Admin Users API - Filtrado por enrollmentStatus
@@ -2010,5 +2055,5 @@ metas.forEach(meta => {
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 2.7 - Marzo 2026*  
+*Versión 2.8 - Marzo 2026*  
 *Última actualización: 01/03/2026*
