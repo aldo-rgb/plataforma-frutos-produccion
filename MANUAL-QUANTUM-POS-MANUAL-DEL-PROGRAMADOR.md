@@ -2,7 +2,7 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 2.8  
+**Versión:** 2.9  
 **Fecha:** Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
@@ -1688,6 +1688,44 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
+## v2.9 - 01/03/2026
+
+### Fix: TOP FILE API - Relaciones GCCallLog y GCCallAttempt
+
+**Problema:** El botón "TOP FILE" seguía mostrando error 500 después de fixes anteriores.
+
+**Causa raíz:** Nombres de relaciones Prisma incorrectos en el mapeo de respuesta:
+- `c.gameChanger` → `c.Usuario_GCCallLog_gameChangerIdToUsuario` (en GCCallLog)
+- `c.gameChanger` → `c.Usuario_GCCallAttempt_gameChangerIdToUsuario` (en GCCallAttempt)
+- `c.vision` → `c.Vision`
+
+**Archivo modificado:**
+- `app/api/el-cruce/top-file/[userId]/route.ts`
+
+### UI: Reemplazar filtro de pagos por filtro de progreso
+
+**Cambio:** En la página "Mis Participantes", el filtro "Todos los pagos" fue reemplazado por un filtro de progreso más útil.
+
+**Opciones de filtro:**
+| Valor | Descripción |
+|-------|-------------|
+| `CARTA` | 📝 Con Carta (tiene declaraciones) |
+| `QUIZ_MEDICO` | 💊 Quiz Médico completado |
+| `QUIZ_AVANZADO` | 📋 Quiz Avanzado completado |
+| `NEGOCIO` | 💼 Tiene perfil de negocio |
+| `SIN_CARTA` | ❌ Sin carta |
+| `SIN_QUIZ_MEDICO` | ⚠️ Sin quiz médico |
+
+**Archivo modificado:**
+- `app/dashboard/school-admin/users/page.tsx`
+
+### UI: Eliminar botón "Ver Detalles"
+
+**Cambio:** Se eliminó el botón "Ver Detalles" de la lista de usuarios, dejando solo el botón "TOP FILE" para ver información del participante.
+
+**Archivo modificado:**
+- `app/dashboard/school-admin/users/page.tsx`
+
 ## v2.8 - 01/03/2026
 
 ### Fix: TOP FILE API - Relaciones Prisma incorrectas en AdvancedPreRegistration
@@ -2055,5 +2093,5 @@ metas.forEach(meta => {
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 2.8 - Marzo 2026*  
+*Versión 2.9 - Marzo 2026*  
 *Última actualización: 01/03/2026*
