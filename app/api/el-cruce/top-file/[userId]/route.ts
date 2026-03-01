@@ -40,8 +40,9 @@ export async function GET(
 
     // Solo trainers, coordinadores, directores y admins pueden ver el TOP FILE
     const allowedRoles = [
-      'TRAINER', 'SCHOOL_ADMIN', 'COORDINATOR', 'COORDINATOR_BASIC',
-      'COORDINATOR_ADVANCED', 'COORDINATOR_PL', 'DIRECTOR', 'ADMINISTRADOR'
+      'TRAINER', 'SCHOOL_ADMIN', 'COORDINATOR', 'COORDINADOR', 'COORDINATOR_BASIC',
+      'COORDINATOR_ADVANCED', 'COORDINATOR_PL', 'DIRECTOR', 'ADMINISTRADOR',
+      'GAMECHANGER', 'MENTOR'
     ]
     
     if (!allowedRoles.includes(requester.rol)) {
@@ -128,14 +129,14 @@ export async function GET(
         isAtRisk: true,
         riskReason: true,
         createdAt: true,
-        gameChanger: {
+        Usuario_GCCallLog_gameChangerIdToUsuario: {
           select: {
             id: true,
             nombre: true,
             imagen: true
           }
         },
-        vision: {
+        Vision: {
           select: {
             id: true,
             nombre: true
@@ -158,7 +159,7 @@ export async function GET(
         potentialRating: true,
         notes: true,
         attemptedAt: true,
-        gameChanger: {
+        Usuario_GCCallAttempt_gameChangerIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -197,8 +198,8 @@ export async function GET(
         compromiso: c.commitment,
         enRiesgo: c.isAtRisk,
         razonRiesgo: c.riskReason,
-        mentor: c.gameChanger,
-        vision: c.vision
+        mentor: c.Usuario_GCCallLog_gameChangerIdToUsuario,
+        vision: c.Vision
       })),
       ...gcCallAttempts.map(c => ({
         id: c.id,
@@ -211,7 +212,7 @@ export async function GET(
         tipoLlamada: c.trainingType,
         diaEntrenamiento: c.trainingDay,
         intentoNumero: c.attemptNumber,
-        mentor: c.gameChanger
+        mentor: c.Usuario_GCCallAttempt_gameChangerIdToUsuario
       }))
     ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
 
@@ -445,8 +446,8 @@ export async function GET(
           compromiso: c.commitment,
           enRiesgo: c.isAtRisk,
           razonRiesgo: c.riskReason,
-          gameChanger: c.gameChanger,
-          vision: c.vision
+          gameChanger: c.Usuario_GCCallLog_gameChangerIdToUsuario,
+          vision: c.Vision
         })),
         intentosGC: gcCallAttempts.map(c => ({
           id: c.id,
@@ -457,7 +458,7 @@ export async function GET(
           tipoEntrenamiento: c.trainingType,
           diaEntrenamiento: c.trainingDay,
           intentoNumero: c.attemptNumber,
-          gameChanger: c.gameChanger
+          gameChanger: c.Usuario_GCCallAttempt_gameChangerIdToUsuario
         }))
       },
 
