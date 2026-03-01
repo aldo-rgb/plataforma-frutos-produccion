@@ -273,21 +273,21 @@ export async function GET(
         paidAt: true,
         paymentAmount: true,
         paymentMethod: true,
-        currentProduct: {
+        SchoolProduct_AdvancedPreRegistration_currentProductIdToSchoolProduct: {
           select: {
             id: true,
             name: true,
             levelType: true
           }
         },
-        targetProduct: {
+        SchoolProduct_AdvancedPreRegistration_targetProductIdToSchoolProduct: {
           select: {
             id: true,
             name: true,
             levelType: true
           }
         },
-        scannedByStaff: {
+        Usuario_AdvancedPreRegistration_scannedByStaffIdToUsuario: {
           select: {
             id: true,
             nombre: true
@@ -516,9 +516,9 @@ export async function GET(
           fechaPago: reg.paidAt,
           montoPagado: reg.paymentAmount,
           metodoPago: reg.paymentMethod,
-          productoOrigen: reg.currentProduct,
-          productoDestino: reg.targetProduct,
-          escaneadoPor: reg.scannedByStaff
+          productoOrigen: reg.SchoolProduct_AdvancedPreRegistration_currentProductIdToSchoolProduct,
+          productoDestino: reg.SchoolProduct_AdvancedPreRegistration_targetProductIdToSchoolProduct,
+          escaneadoPor: reg.Usuario_AdvancedPreRegistration_scannedByStaffIdToUsuario
         }))
       },
 

@@ -27,6 +27,8 @@ interface User {
   levels: string[];
   visionIds: number[];
   visiones: { id: number; nombre: string }[];
+  // Combinaciones vision_level para filtrado preciso
+  visionLevelCombos: string[];
   // Campos de cuestionarios
   quizMedico: boolean;
   quizAvanzado: boolean;
@@ -98,6 +100,7 @@ export default function UsersListPage() {
             levels: u.levels || [],
             visionIds: u.visionIds || [],
             visiones: u.visiones || [],
+            visionLevelCombos: u.visionLevelCombos || [],
             quizMedico: u.quizMedico || false,
             quizAvanzado: u.quizAvanzado || false,
             cartaFrutos: u.cartaFrutos || null,
@@ -142,11 +145,15 @@ export default function UsersListPage() {
     // Filtrar por visión
     if (visionFilter !== 'ALL') {
       const visionId = parseInt(visionFilter);
-      filtered = filtered.filter(u => u.visionIds.includes(visionId));
-    }
-
-    // Filtrar por nivel
-    if (levelFilter !== 'ALL') {
+      // Si también hay filtro de nivel, usar combinación precisa
+      if (levelFilter !== 'ALL') {
+        const combo = `${visionId}_${levelFilter}`;
+        filtered = filtered.filter(u => u.visionLevelCombos.includes(combo));
+      } else {
+        filtered = filtered.filter(u => u.visionIds.includes(visionId));
+      }
+    } else if (levelFilter !== 'ALL') {
+      // Solo filtro de nivel sin visión específica
       filtered = filtered.filter(u => u.levels.includes(levelFilter));
     }
 

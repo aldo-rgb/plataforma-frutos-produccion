@@ -224,6 +224,9 @@ export async function GET(req: Request) {
         .filter((e: any) => e.Vision)
         .map((e: any) => ({ id: e.Vision.id, nombre: e.Vision.nombre }));
       
+      // Crear combinaciones vision+level para filtrado preciso
+      const visionLevelCombos = enrollments.map((e: any) => `${e.visionId}_${e.level}`);
+      
       // También obtener de VisionParticipante como backup
       const vpVisiones = ((u as any).VisionParticipante_VisionParticipante_participanteIdToUsuario || [])
         .filter((vp: any) => vp.Vision)
@@ -255,6 +258,8 @@ export async function GET(req: Request) {
         // Visiones del usuario (de enrollments activos y VisionParticipante)
         visionIds: allVisionIds,
         visiones: allVisiones,
+        // Combinaciones vision_level para filtrado preciso (ej: "13_PL")
+        visionLevelCombos: visionLevelCombos,
         // Nuevos campos de cuestionarios
         quizMedico: !!(u as any).MedicalForm_MedicalForm_userIdToUsuario?.consentAccepted,
         quizAvanzado: (u as any).AdvancedQuestionnaire_AdvancedQuestionnaire_userIdToUsuario?.status === 'COMPLETED',
