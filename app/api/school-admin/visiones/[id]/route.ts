@@ -242,17 +242,26 @@ export async function GET(
 
     // PRIMERO verificar si hay vision_enrollments (sistema nuevo)
     // Si existen, usarlos como fuente principal y complementar con gameChangerId de VisionParticipante
+    // Para visiones CORE: solo contar usuarios con asistencia confirmada en PL (ASISTE)
+    // Para otras visiones: contar todos los que no sean DROP/BACKLOG/MOVED
+    const enrollmentWhereClause = {
+      visionId,
+      level: effectiveLevel,
+      ...(isCoreVision 
+        ? { attendanceStatus: 'ASISTE' } // CORE: solo con asistencia confirmada
+        : { 
+            OR: [
+              { attendanceStatus: null },
+              { attendanceStatus: { notIn: ['DROP', 'BACKLOG', 'MOVED'] } }
+            ]
+          }
+      ),
+      enrollmentStatus: { notIn: ['MOVED_TO_NEXT', 'CANCELLED', 'DROP'] },
+      droppedAt: null,
+    };
+
     const enrollmentsCount = await prisma.vision_enrollments.count({
-      where: { 
-        visionId,
-        level: effectiveLevel,
-        OR: [
-          { attendanceStatus: null },
-          { attendanceStatus: { notIn: ['DROP', 'BACKLOG', 'MOVED'] } }
-        ],
-        enrollmentStatus: { notIn: ['MOVED_TO_NEXT', 'CANCELLED', 'DROP'] },
-        droppedAt: null,
-      }
+      where: enrollmentWhereClause
     });
 
     let participantes: any[] = [];
@@ -260,18 +269,7 @@ export async function GET(
     // Si hay enrollments, SIEMPRE usarlos como fuente principal
     if (enrollmentsCount > 0) {
       const enrollments = await prisma.vision_enrollments.findMany({
-        where: { 
-          visionId,
-          level: effectiveLevel,
-          // Excluir usuarios DROP, BACKLOG y MOVED de la lista activa
-          OR: [
-            { attendanceStatus: null },
-            { attendanceStatus: { notIn: ['DROP', 'BACKLOG', 'MOVED'] } }
-          ],
-          // También excluir por enrollmentStatus
-          enrollmentStatus: { notIn: ['MOVED_TO_NEXT', 'CANCELLED', 'DROP'] },
-          droppedAt: null,
-        },
+        where: enrollmentWhereClause,
         include: {
           Usuario_vision_enrollments_userIdToUsuario: {
             select: {
