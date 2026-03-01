@@ -242,13 +242,13 @@ export async function GET(
 
     // PRIMERO verificar si hay vision_enrollments (sistema nuevo)
     // Si existen, usarlos como fuente principal y complementar con gameChangerId de VisionParticipante
-    // Para visiones CORE: solo contar usuarios con asistencia confirmada en PL (ASISTE)
+    // Para visiones CORE: solo contar usuarios con asistencia confirmada en PL (ATTENDED)
     // Para otras visiones: contar todos los que no sean DROP/BACKLOG/MOVED
     const enrollmentWhereClause = {
       visionId,
       level: effectiveLevel,
       ...(isCoreVision 
-        ? { attendanceStatus: 'ASISTE' } // CORE: solo con asistencia confirmada
+        ? { attendanceStatus: 'ATTENDED' } // CORE: solo con asistencia confirmada
         : { 
             OR: [
               { attendanceStatus: null },
