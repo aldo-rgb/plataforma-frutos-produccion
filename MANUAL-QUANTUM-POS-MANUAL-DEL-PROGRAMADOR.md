@@ -3,7 +3,7 @@
 ## Guía Completa de Desarrollo y Arquitectura
 
 **Versión:** 2.5  
-**Fecha:** Febrero 2026  
+**Fecha:** Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
 ---
@@ -1678,7 +1678,32 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
-## v2.3 - 26/02/2026
+## v2.5 - 01/03/2026
+### Fix: API Misión Participante - Nombres de relaciones Prisma incorrectos
+
+**Problema:** Al acceder a `/dashboard/mision/[id]` se mostraba "Error interno" (500).
+
+**Causa raíz:** El API `/api/participante/mision/[id]/route.ts` usaba nombres de relaciones que no coincidían con el schema de Prisma:
+- `Mission` → debía ser `TrainerMission`
+- `Template` → debía ser `TrainerTaskTemplate`
+- `Questions` → debía ser `TrainerTaskQuestion`
+- `Trainer` → debía ser `Usuario`
+- `QuestionAnswers` → debía ser `MissionQuestionAnswer`
+- `Reviewer` → debía ser `Usuario_MissionSubmission_reviewedByToUsuario`
+
+**Solución:** Se corrigieron todos los nombres de relaciones en las queries de Prisma y en el formateo de respuestas.
+
+**Archivo modificado:**
+- `app/api/participante/mision/[id]/route.ts`
+
+### UI: Eliminación de "Instalar App" del Sidebar
+
+**Descripción:** Se eliminó el botón "Instalar App" (PWA) del sidebar del dashboard.
+
+**Archivos modificados:**
+- `components/dashboard/Sidebar.tsx` - Eliminado componente InstallAppButton y su import
+
+## v2.4 - 27/02/2026
 ### Fix: PersonalQRWidget - Carga dinámica de referralCode
 
 **Problema:** Los coordinadores que fueron asignados después de iniciar sesión no veían su código de referido en el QR. El link generado mostraba "No hay sedes disponibles" al ser usado.
@@ -1798,5 +1823,5 @@ metas.forEach(meta => {
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 2.4 - Febrero 2026*  
-*Última actualización: 27/02/2026*
+*Versión 2.5 - Marzo 2026*  
+*Última actualización: 01/03/2026*
