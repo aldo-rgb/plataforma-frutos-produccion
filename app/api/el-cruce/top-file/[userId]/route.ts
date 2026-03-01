@@ -220,23 +220,23 @@ export async function GET(
       where: { userId: userId },
       orderBy: { submittedAt: 'desc' },
       include: {
-        Mission: {
+        TrainerMission: {
           include: {
-            Template: {
+            TrainerTaskTemplate: {
               include: {
-                Questions: {
+                TrainerTaskQuestion: {
                   orderBy: { orderIndex: 'asc' }
                 }
               }
             },
-            Trainer: {
+            Usuario: {
               select: {
                 id: true,
                 nombre: true,
                 imagen: true
               }
             },
-            Product: {
+            SchoolProduct: {
               select: {
                 id: true,
                 name: true,
@@ -245,12 +245,12 @@ export async function GET(
             }
           }
         },
-        QuestionAnswers: {
+        MissionQuestionAnswer: {
           include: {
-            Question: true
+            TrainerTaskQuestion: true
           }
         },
-        Reviewer: {
+        Usuario_MissionSubmission_reviewedByToUsuario: {
           select: {
             id: true,
             nombre: true
@@ -476,28 +476,28 @@ export async function GET(
           respuestaTexto: sub.textResponse,
           evidencia: sub.evidenceUrl,
           notaAprendizaje: sub.learningNote,
-          mision: sub.Mission ? {
-            id: sub.Mission.id,
-            titulo: sub.Mission.Template?.title,
-            descripcion: sub.Mission.Template?.description,
-            tipo: sub.Mission.Template?.type,
-            tags: sub.Mission.Template?.tags,
-            mensajeTrainer: sub.Mission.trainerMessage,
-            fechaLanzamiento: sub.Mission.releaseAt,
-            fechaLimite: sub.Mission.deadlineAt,
-            trainer: sub.Mission.Trainer,
-            producto: sub.Mission.Product,
-            preguntas: sub.Mission.Template?.Questions
+          mision: sub.TrainerMission ? {
+            id: sub.TrainerMission.id,
+            titulo: sub.TrainerMission.TrainerTaskTemplate?.title,
+            descripcion: sub.TrainerMission.TrainerTaskTemplate?.description,
+            tipo: sub.TrainerMission.TrainerTaskTemplate?.type,
+            tags: sub.TrainerMission.TrainerTaskTemplate?.tags,
+            mensajeTrainer: sub.TrainerMission.trainerMessage,
+            fechaLanzamiento: sub.TrainerMission.releaseAt,
+            fechaLimite: sub.TrainerMission.deadlineAt,
+            trainer: sub.TrainerMission.Usuario,
+            producto: sub.TrainerMission.SchoolProduct,
+            preguntas: sub.TrainerMission.TrainerTaskTemplate?.TrainerTaskQuestion
           } : null,
-          respuestasPreguntas: sub.QuestionAnswers?.map((qa: any) => ({
-            pregunta: qa.Question?.questionText,
-            tipoPregunta: qa.Question?.questionType,
+          respuestasPreguntas: sub.MissionQuestionAnswer?.map((qa: any) => ({
+            pregunta: qa.TrainerTaskQuestion?.questionText,
+            tipoPregunta: qa.TrainerTaskQuestion?.questionType,
             respuestaTexto: qa.textAnswer,
             opcionesSeleccionadas: qa.selectedOptions,
             valorEscala: qa.scaleValue,
             respuestaBooleana: qa.booleanAnswer
           })) || [],
-          revisor: sub.Reviewer
+          revisor: sub.Usuario_MissionSubmission_reviewedByToUsuario
         }))
       },
 
