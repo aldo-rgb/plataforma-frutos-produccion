@@ -344,6 +344,12 @@ export default function VisionDetailPage() {
     }
   };
 
+  // Detectar si es una visión CORE (tiene los 3 niveles: BASIC, ADVANCED, PL)
+  const isCoreVision = productos.length > 0 && 
+    productos.some(p => p.levelType === 'BASIC') && 
+    productos.some(p => p.levelType === 'ADVANCED') && 
+    productos.some(p => p.levelType === 'PL');
+
   const fetchPlCaptain = async () => {
     try {
       const res = await fetch(`/api/school-admin/visiones/${visionId}/pl-captain`);
@@ -1733,15 +1739,16 @@ export default function VisionDetailPage() {
               <Users size={16} />
               <span className="whitespace-nowrap">{randomAssigning ? 'Asignando...' : 'Asignación Aleatoria'}</span>
             </button>
-            {/* Botón Asignar/Cambiar Capitán PL */}
+            {/* Botón Asignar/Cambiar Capitán PL - Deshabilitado en visiones CORE */}
             <button
               onClick={() => setShowPlCaptainModal(true)}
-              disabled={participantes.length === 0}
+              disabled={participantes.length === 0 || isCoreVision}
+              title={isCoreVision ? 'No disponible en visiones con producto CORE' : undefined}
               className={`inline-flex items-center justify-center gap-2 px-3 py-2.5 ${
                 plCaptain 
                   ? 'bg-amber-600 hover:bg-amber-700' 
                   : 'bg-yellow-600 hover:bg-yellow-700'
-              } disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg ${
+              } disabled:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg ${
                 plCaptain ? 'hover:shadow-amber-500/30' : 'hover:shadow-yellow-500/30'
               }`}
             >
@@ -1764,16 +1771,22 @@ export default function VisionDetailPage() {
                 <span className="whitespace-nowrap">Generar QR</span>
               </button>
             )}
+            {/* Botón Agregar Game Changer - Deshabilitado en visiones CORE */}
             <button
               onClick={() => setShowAddTeamModal(true)}
-              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-cyan-500/30"
+              disabled={isCoreVision}
+              title={isCoreVision ? 'No disponible en visiones con producto CORE' : undefined}
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-cyan-500/30"
             >
               <Users size={16} />
               <span className="whitespace-nowrap">Agregar Game Changer</span>
             </button>
+            {/* Botón Agregar Participante - Deshabilitado en visiones CORE */}
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-purple-500/30 sm:col-span-2 lg:col-span-1"
+              disabled={isCoreVision}
+              title={isCoreVision ? 'No disponible en visiones con producto CORE' : undefined}
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-purple-500/30 sm:col-span-2 lg:col-span-1"
             >
               <UserPlus size={16} />
               <span className="whitespace-nowrap">Agregar Participante</span>
@@ -2289,11 +2302,16 @@ export default function VisionDetailPage() {
               <Package className="w-16 h-16 text-slate-600 mx-auto mb-4" />
               <p className="text-slate-400 text-lg mb-2">No hay participantes</p>
               <p className="text-slate-500 text-sm mb-6">
-                Agrega participantes a esta visión para gestionar sus licencias
+                {isCoreVision 
+                  ? 'Los participantes se agregan a través del proceso de inscripción en visiones CORE'
+                  : 'Agrega participantes a esta visión para gestionar sus licencias'
+                }
               </p>
               <button
                 onClick={() => setShowAddModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
+                disabled={isCoreVision}
+                title={isCoreVision ? 'No disponible en visiones con producto CORE' : undefined}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded-lg font-semibold transition-colors"
               >
                 <UserPlus size={20} />
                 Agregar Primer Participante
@@ -2540,11 +2558,16 @@ export default function VisionDetailPage() {
               <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
               <p className="text-slate-400 text-lg mb-2">No hay game changers</p>
               <p className="text-slate-500 text-sm mb-6">
-                Agrega game changers (equipo) a esta visión
+                {isCoreVision 
+                  ? 'Los game changers se agregan a través del proceso de inscripción en visiones CORE'
+                  : 'Agrega game changers (equipo) a esta visión'
+                }
               </p>
               <button
                 onClick={() => setShowAddTeamModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold transition-colors"
+                disabled={isCoreVision}
+                title={isCoreVision ? 'No disponible en visiones con producto CORE' : undefined}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded-lg font-semibold transition-colors"
               >
                 <Users size={20} />
                 Agregar Primer Game Changer

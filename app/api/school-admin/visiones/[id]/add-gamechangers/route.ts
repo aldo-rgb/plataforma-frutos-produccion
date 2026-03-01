@@ -161,15 +161,31 @@ export async function POST(
         }
       }
       
+      // Roles que NO pueden ser Game Changers
+      const ROLES_NO_PERMITIDOS_GC = ['TRAINER', 'SCHOOL_ADMIN', 'ADMINISTRADOR'];
+      const skippedUsers: { email: string; reason: string }[] = [];
+      
       for (const userId of gameChangerIds) {
         // Verificar que el usuario existe y pertenece a una organización relacionada
         const user = await prisma.usuario.findUnique({
           where: { id: userId },
-          select: { id: true, email: true, organizationId: true, rol: true, nombre: true }
+          select: { id: true, email: true, organizationId: true, rol: true, nombre: true, esEntrenador: true }
         });
 
         if (!user || !user.organizationId || !relatedOrgIds.includes(user.organizationId)) {
           continue; // Skip usuarios inválidos o de organizaciones no relacionadas
+        }
+
+        // Validar que NO sea TRAINER, SCHOOL_ADMIN o tenga esEntrenador = true
+        if (ROLES_NO_PERMITIDOS_GC.includes(user.rol)) {
+          skippedUsers.push({ email: user.email, reason: `Rol ${user.rol} no puede ser Game Changer` });
+          logger.debug(`🚫 Usuario ${user.nombre} (${user.email}) omitido: rol ${user.rol} no permitido como Game Changer`);
+          continue;
+        }
+        if (user.esEntrenador) {
+          skippedUsers.push({ email: user.email, reason: 'Usuario es Entrenador' });
+          logger.debug(`🚫 Usuario ${user.nombre} (${user.email}) omitido: es Entrenador`);
+          continue;
         }
 
         // Verificar si ya está asignado EN ESE NIVEL
@@ -284,9 +300,10 @@ export async function POST(
 
       return NextResponse.json({ 
         success: true, 
-        message: `${addedGameChangers.length} Game Changer(s) asignado(s). ${licensesCreated.length} licencia(s) creada(s).`,
+        message: `${addedGameChangers.length} Game Changer(s) asignado(s). ${licensesCreated.length} licencia(s) creada(s).${skippedUsers.length > 0 ? ` ${skippedUsers.length} usuario(s) omitido(s).` : ''}`,
         gameChangers: addedGameChangers,
-        licensesCreated: licensesCreated.length
+        licensesCreated: licensesCreated.length,
+        skippedUsers: skippedUsers
       });
     }
 
@@ -308,13 +325,30 @@ export async function POST(
     // Buscar usuarios existentes
     const allExistingUsers = await prisma.usuario.findMany({
       where: { email: { in: emailList } },
-      select: { id: true, email: true, organizationId: true, rol: true }
+      select: { id: true, email: true, organizationId: true, rol: true, esEntrenador: true, nombre: true }
     });
 
-    // Separar por organización
-    const usersInSameOrg = allExistingUsers.filter(u => u.organizationId === director.organizationId);
-    const usersInDifferentOrg = allExistingUsers.filter(u => u.organizationId && u.organizationId !== director.organizationId);
-    const usersWithoutOrg = allExistingUsers.filter(u => !u.organizationId); // LOBO_SOLITARIO
+    // Roles que NO pueden ser Game Changers
+    const ROLES_NO_PERMITIDOS = ['TRAINER', 'SCHOOL_ADMIN', 'ADMINISTRADOR'];
+    
+    // Filtrar usuarios que NO pueden ser Game Changers
+    const usuariosNoPermitidos = allExistingUsers.filter(u => 
+      ROLES_NO_PERMITIDOS.includes(u.rol) || u.esEntrenador === true
+    );
+    
+    if (usuariosNoPermitidos.length > 0) {
+      logger.debug(`🚫 Usuarios omitidos por rol/entrenador:`, usuariosNoPermitidos.map(u => `${u.email} (${u.rol}, esEntrenador: ${u.esEntrenador})`));
+    }
+    
+    // Excluir usuarios no permitidos de la lista
+    const usuariosPermitidos = allExistingUsers.filter(u => 
+      !ROLES_NO_PERMITIDOS.includes(u.rol) && u.esEntrenador !== true
+    );
+
+    // Separar por organización (solo usuarios permitidos)
+    const usersInSameOrg = usuariosPermitidos.filter(u => u.organizationId === director.organizationId);
+    const usersInDifferentOrg = usuariosPermitidos.filter(u => u.organizationId && u.organizationId !== director.organizationId);
+    const usersWithoutOrg = usuariosPermitidos.filter(u => !u.organizationId); // LOBO_SOLITARIO
 
     const newEmails = emailList.filter((e: string) => !allExistingUsers.find(u => u.email === e));
 

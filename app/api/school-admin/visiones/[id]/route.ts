@@ -173,6 +173,17 @@ export async function GET(
 
     logger.debug('📊 Nivel activo de la visión:', activeLevel);
 
+    // Detectar si es visión CORE (tiene los 3 niveles: BASIC, ADVANCED, PL)
+    const hasBasic = visionProducts.some(p => p.levelType === 'BASIC');
+    const hasAdvanced = visionProducts.some(p => p.levelType === 'ADVANCED');
+    const hasPL = visionProducts.some(p => p.levelType === 'PL');
+    const isCoreVision = hasBasic && hasAdvanced && hasPL;
+
+    // Para visiones CORE, participantes y Game Changers siempre son del nivel PL (Liderato)
+    // Para otras visiones, usar el nivel activo
+    const effectiveLevel = isCoreVision ? 'PL' : activeLevel;
+    logger.debug(`📋 Nivel efectivo para participantes/GC: ${effectiveLevel} (isCoreVision: ${isCoreVision})`);
+
     // Obtener participantes de VisionParticipante (legacy)
     const visionParticipantes = await prisma.visionParticipante.findMany({
       where: { visionId },
@@ -234,7 +245,7 @@ export async function GET(
     const enrollmentsCount = await prisma.vision_enrollments.count({
       where: { 
         visionId,
-        level: activeLevel,
+        level: effectiveLevel,
         OR: [
           { attendanceStatus: null },
           { attendanceStatus: { notIn: ['DROP', 'BACKLOG', 'MOVED'] } }
@@ -251,7 +262,7 @@ export async function GET(
       const enrollments = await prisma.vision_enrollments.findMany({
         where: { 
           visionId,
-          level: activeLevel,
+          level: effectiveLevel,
           // Excluir usuarios DROP, BACKLOG y MOVED de la lista activa
           OR: [
             { attendanceStatus: null },
@@ -351,16 +362,17 @@ export async function GET(
         };
       });
 
-      logger.debug(`📋 Usando ${participantes.length} participantes de vision_enrollments (nivel: ${activeLevel})`);
+      logger.debug(`📋 Usando ${participantes.length} participantes de vision_enrollments (nivel: ${effectiveLevel})`);
     } else {
       // FALLBACK: Si NO hay vision_enrollments, usar VisionParticipante (sistema legacy)
       participantes = visionParticipantes;
       logger.debug(`📋 Usando ${participantes.length} participantes de VisionParticipante (legacy)`);
     }
 
-    // Obtener game changers de la visión filtrados por el nivel activo
+    // Obtener game changers de la visión (usando effectiveLevel ya calculado)
+    logger.debug(`👥 Buscando Game Changers del nivel: ${effectiveLevel}`);
     const gameChangers = await prisma.visionGameChanger.findMany({
-      where: { visionId, level: activeLevel },
+      where: { visionId, level: effectiveLevel },
       include: {
         Usuario_VisionGameChanger_gameChangerIdToUsuario: {
           select: {
@@ -555,6 +567,8 @@ export async function GET(
       participantes,
       gameChangers,
       activeLevel, // Nivel activo de la visión (para saber qué Game Changers se muestran)
+      effectiveLevel, // Nivel efectivo (PL si es CORE, o activeLevel)
+      isCoreVision, // Si es visión CORE (tiene los 3 niveles)
       mentoresAsignados: mentoresConCostos,
       cicloInfo,
       productos: productos.map(p => ({

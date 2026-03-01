@@ -53,13 +53,30 @@ export async function POST(
     // Buscar usuarios existentes
     const allExistingUsers = await prisma.usuario.findMany({
       where: { email: { in: emailList } },
-      select: { id: true, email: true, organizationId: true, rol: true }
+      select: { id: true, email: true, organizationId: true, rol: true, esEntrenador: true, nombre: true }
     });
 
-    // Separar por organización
-    const usersInSameOrg = allExistingUsers.filter(u => u.organizationId === coordinador.organizationId);
-    const usersInDifferentOrg = allExistingUsers.filter(u => u.organizationId && u.organizationId !== coordinador.organizationId);
-    const usersWithoutOrg = allExistingUsers.filter(u => !u.organizationId);
+    // Roles que NO pueden ser Game Changers
+    const ROLES_NO_PERMITIDOS = ['TRAINER', 'SCHOOL_ADMIN', 'ADMINISTRADOR'];
+    
+    // Filtrar usuarios que NO pueden ser Game Changers
+    const usuariosNoPermitidos = allExistingUsers.filter(u => 
+      ROLES_NO_PERMITIDOS.includes(u.rol) || u.esEntrenador === true
+    );
+    
+    if (usuariosNoPermitidos.length > 0) {
+      logger.debug(`🚫 Usuarios omitidos por rol/entrenador:`, usuariosNoPermitidos.map(u => `${u.email} (${u.rol}, esEntrenador: ${u.esEntrenador})`));
+    }
+    
+    // Excluir usuarios no permitidos de la lista
+    const usuariosPermitidos = allExistingUsers.filter(u => 
+      !ROLES_NO_PERMITIDOS.includes(u.rol) && u.esEntrenador !== true
+    );
+
+    // Separar por organización (solo usuarios permitidos)
+    const usersInSameOrg = usuariosPermitidos.filter(u => u.organizationId === coordinador.organizationId);
+    const usersInDifferentOrg = usuariosPermitidos.filter(u => u.organizationId && u.organizationId !== coordinador.organizationId);
+    const usersWithoutOrg = usuariosPermitidos.filter(u => !u.organizationId);
 
     const newEmails = emailList.filter((e: string) => !allExistingUsers.find(u => u.email === e));
 

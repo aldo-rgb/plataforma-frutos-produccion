@@ -2,7 +2,7 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 2.5  
+**Versión:** 2.6  
 **Fecha:** Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
@@ -1678,6 +1678,81 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
+## v2.6 - 01/03/2026
+
+### Feature: Visiones CORE - Filtrado por Nivel PL (Liderato)
+
+**Descripción:** En visiones CORE (que tienen configurados los 3 niveles: BASIC, ADVANCED, PL), los participantes y Game Changers se filtran automáticamente para mostrar solo los del nivel PL (Liderato).
+
+**Problema resuelto:** En la página `/dashboard/school-admin/visiones/[id]`, cuando una visión tenía los 3 niveles configurados (CORE), mostraba participantes y Game Changers del nivel activo en lugar del nivel PL.
+
+**Solución implementada:**
+```typescript
+// Detectar si es visión CORE (tiene los 3 niveles)
+const hasBasic = visionProducts.some(p => p.levelType === 'BASIC');
+const hasAdvanced = visionProducts.some(p => p.levelType === 'ADVANCED');
+const hasPL = visionProducts.some(p => p.levelType === 'PL');
+const isCoreVision = hasBasic && hasAdvanced && hasPL;
+
+// Para visiones CORE, usar nivel PL; sino, usar activeLevel
+const effectiveLevel = isCoreVision ? 'PL' : activeLevel;
+```
+
+**Archivos modificados:**
+- `app/api/school-admin/visiones/[id]/route.ts` - Lógica de filtrado por effectiveLevel
+
+**Respuesta API actualizada:**
+```json
+{
+  "success": true,
+  "activeLevel": "BASIC",
+  "effectiveLevel": "PL",
+  "isCoreVision": true,
+  "participantes": [...],
+  "gameChangers": [...]
+}
+```
+
+### Feature: Botones deshabilitados en Visiones CORE
+
+**Descripción:** En visiones CORE, los botones "Asignar Capitán", "Agregar Game Changer" y "Agregar Participante" se deshabilitan automáticamente.
+
+**Razón:** Los participantes y Game Changers en visiones CORE se agregan a través del proceso de inscripción estándar, no manualmente.
+
+**Archivos modificados:**
+- `app/dashboard/school-admin/visiones/[id]/page.tsx`
+
+### Feature: Filtro de roles para Game Changers
+
+**Descripción:** Se agregó validación para evitar que usuarios con ciertos roles sean registrados como Game Changers.
+
+**Roles NO permitidos como Game Changer:**
+| Rol/Condición | Puede ser GC |
+|---------------|--------------|
+| TRAINER | ❌ No |
+| SCHOOL_ADMIN | ❌ No |
+| ADMINISTRADOR | ❌ No |
+| esEntrenador = true | ❌ No |
+| PARTICIPANTE | ✅ Sí |
+| GAMECHANGER | ✅ Sí |
+| MENTOR | ✅ Sí |
+| COORDINADOR | ✅ Sí |
+
+**Archivos modificados:**
+- `app/api/school-admin/visiones/[id]/add-gamechangers/route.ts`
+- `app/api/coordinador/visiones/[id]/add-gamechangers/route.ts`
+
+**Comportamiento:** Los usuarios con roles no permitidos son omitidos silenciosamente y reportados en la respuesta:
+```json
+{
+  "success": true,
+  "message": "3 Game Changer(s) asignado(s). 1 usuario(s) omitido(s).",
+  "skippedUsers": [
+    { "email": "trainer@example.com", "reason": "Rol TRAINER no puede ser Game Changer" }
+  ]
+}
+```
+
 ## v2.5 - 01/03/2026
 ### Fix: API Misión Participante - Nombres de relaciones Prisma incorrectos
 
@@ -1823,5 +1898,5 @@ metas.forEach(meta => {
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 2.5 - Marzo 2026*  
+*Versión 2.6 - Marzo 2026*  
 *Última actualización: 01/03/2026*
