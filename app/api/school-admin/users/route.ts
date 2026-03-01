@@ -99,6 +99,15 @@ export async function GET(req: Request) {
             id: true,
             estado: true,
             invitadosInscritos: true,
+            // Declaraciones para verificar si tiene contenido
+            finanzasDeclaracion: true,
+            relacionesDeclaracion: true,
+            talentosDeclaracion: true,
+            pazMentalDeclaracion: true,
+            ocioDeclaracion: true,
+            saludDeclaracion: true,
+            servicioTransDeclaracion: true,
+            servicioComunDeclaracion: true,
           },
           orderBy: { fechaCreacion: 'desc' },
           take: 1
@@ -249,7 +258,25 @@ export async function GET(req: Request) {
         // Nuevos campos de cuestionarios
         quizMedico: !!(u as any).MedicalForm_MedicalForm_userIdToUsuario?.consentAccepted,
         quizAvanzado: (u as any).AdvancedQuestionnaire_AdvancedQuestionnaire_userIdToUsuario?.status === 'COMPLETED',
-        cartaFrutos: (u as any).CartaFrutos?.[0]?.estado || null,
+        // Carta: verificar si tiene al menos una declaración (no solo estado BORRADOR vacío)
+        cartaFrutos: (() => {
+          const carta = (u as any).CartaFrutos?.[0];
+          if (!carta) return null;
+          // Verificar si tiene al menos una declaración
+          const hasDeclaration = !!(
+            carta.finanzasDeclaracion ||
+            carta.relacionesDeclaracion ||
+            carta.talentosDeclaracion ||
+            carta.pazMentalDeclaracion ||
+            carta.ocioDeclaracion ||
+            carta.saludDeclaracion ||
+            carta.servicioTransDeclaracion ||
+            carta.servicioComunDeclaracion
+          );
+          // Si está en BORRADOR sin declaraciones, retornar null (como si no tuviera carta)
+          if (carta.estado === 'BORRADOR' && !hasDeclaration) return null;
+          return carta.estado;
+        })(),
         tieneNegocio: !!(u as any).BusinessProfile?.id,
         negocioStatus: (u as any).BusinessProfile?.status || null,
         invitadosEnrolados: (u as any).vision_enrollments_vision_enrollments_invitedByToUsuario?.length || 0,
