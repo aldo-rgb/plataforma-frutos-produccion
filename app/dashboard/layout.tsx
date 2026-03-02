@@ -49,6 +49,8 @@ export default async function DashboardLayout({
   // Serializar campos Decimal del perfil de mentor para componentes de cliente
   const usuarioSerializado = {
     ...usuarioReal,
+    // Convertir Decimal a number para que sea serializable
+    ambassadorBalance: usuarioReal.ambassadorBalance ? Number(usuarioReal.ambassadorBalance) : 0,
     PerfilMentor: usuarioReal.PerfilMentor ? {
       ...usuarioReal.PerfilMentor,
       comisionMentor: usuarioReal.PerfilMentor.comisionMentor?.toString() || null,

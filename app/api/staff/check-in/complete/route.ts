@@ -265,6 +265,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // *** GRADUACIÓN AUTOMÁTICA EN TERCER FIN DE SEMANA (PL) ***
+    // Si el producto es tipo PL y estamos en el tercer fin de semana, graduar al usuario
+    let userGraduated = false;
+    if (product.levelType === 'PL' && product.plWeekend3StartDate && product.plWeekend3EndDate) {
+      const now = new Date();
+      const weekend3Start = new Date(product.plWeekend3StartDate);
+      const weekend3End = new Date(product.plWeekend3EndDate);
+      
+      // Verificar si estamos dentro del rango del tercer fin de semana
+      if (now >= weekend3Start && now <= weekend3End) {
+        // Marcar al usuario como graduado
+        if (!user.isGraduated) {
+          await prisma.usuario.update({
+            where: { id: user.id },
+            data: {
+              isGraduated: true,
+              graduatedFromAdvanced: true // PL es posterior a avanzado
+            }
+          });
+          userGraduated = true;
+          logger.info(`🎓 Usuario ${user.nombre} (ID: ${user.id}) GRADUADO automáticamente por check-in en tercer fin de semana PL`);
+        }
+      }
+    }
+
     // *** CREAR CHECKINRECORD ***
     await prisma.checkInRecord.create({
       data: {
@@ -287,13 +312,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `¡Bienvenido ${user.nombre}!`,
+      message: userGraduated 
+        ? `¡Felicidades ${user.nombre}! 🎓 Te has graduado` 
+        : `¡Bienvenido ${user.nombre}!`,
       participant: {
         id: user.id,
         name: user.nombre,
         nickname: user.apodo,
         photoUrl: user.imagen || user.profileImage,
-        role: enrollment?.level || 'Participante'
+        role: enrollment?.level || 'Participante',
+        graduated: userGraduated || user.isGraduated
       },
       organization: {
         id: organization.id,
@@ -303,6 +331,7 @@ export async function POST(request: NextRequest) {
       },
       licenseConsumed,
       licensesWentNegative,
+      userGraduated,
       badgePrinted: badgePrinted || false
     });
 

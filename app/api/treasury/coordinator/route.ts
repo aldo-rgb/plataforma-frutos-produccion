@@ -48,6 +48,8 @@ export async function GET() {
       return NextResponse.json({ error: 'No tienes permisos para acceder a esta sección' }, { status: 403 });
     }
 
+    logger.info(`📊 Treasury API - Usuario: ${user.id} (${session.user.email}), Rol: ${user.rol}`);
+
     // Obtener códigos generados por este coordinador (solo los que NO han sido procesados en un corte)
     const codes = await prisma.paymentCode.findMany({
       where: { 
@@ -55,19 +57,21 @@ export async function GET() {
         batchId: null // Solo códigos sin procesar
       },
       include: {
-        vision: {
+        Vision: {
           select: { id: true, nombre: true }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
 
+    logger.info(`📊 Treasury API - Códigos encontrados: ${codes.length} para usuario ${user.id}`);
+
     // Obtener cortes de caja del coordinador con detalle de códigos y gastos
     const batches = await prisma.cashBatch.findMany({
       where: { coordinatorId: user.id },
       include: {
-        _count: { select: { paymentCodes: true, expenses: true } },
-        paymentCodes: {
+        _count: { select: { PaymentCode: true, Expense: true } },
+        PaymentCode: {
           select: {
             id: true,
             code: true,
@@ -76,7 +80,7 @@ export async function GET() {
             status: true
           }
         },
-        expenses: {
+        Expense: {
           select: {
             id: true,
             concept: true,
@@ -96,7 +100,7 @@ export async function GET() {
         batchId: null // Solo gastos sin procesar
       },
       include: {
-        vision: {
+        Vision: {
           select: { id: true, nombre: true }
         }
       },
@@ -157,7 +161,7 @@ export async function GET() {
         cancelledAt: c.cancelledAt?.toISOString() || null,
         cancellationReason: c.cancellationReason || null,
         batchId: c.batchId || null,
-        vision: c.vision
+        vision: c.Vision
       })),
       batches: batches.map(b => ({
         id: b.id,
@@ -165,21 +169,21 @@ export async function GET() {
         amount: Number(b.netAmount),
         totalCollected: Number(b.totalCollected),
         totalExpenses: Number(b.totalExpenses),
-        codesCount: b._count.paymentCodes,
-        expensesCount: b._count.expenses,
+        codesCount: b._count.PaymentCode,
+        expensesCount: b._count.Expense,
         status: b.status,
         hasConfirmationCode: !!b.confirmationCode,
         createdAt: b.createdAt.toISOString(),
         confirmedAt: b.confirmedAt?.toISOString() || null,
         notes: null,
-        paymentCodes: b.paymentCodes.map(pc => ({
+        paymentCodes: b.PaymentCode.map(pc => ({
           id: pc.id,
           code: pc.code,
           amount: Number(pc.amount),
           reference: pc.reference,
           status: pc.status
         })),
-        expenses: b.expenses.map(ex => ({
+        expenses: b.Expense.map(ex => ({
           id: ex.id,
           concept: ex.concept,
           amount: Number(ex.amount),
@@ -197,7 +201,7 @@ export async function GET() {
         notes: e.notes,
         createdAt: e.createdAt.toISOString(),
         batchId: e.batchId || null,
-        vision: e.vision
+        vision: e.Vision
       }))
     });
 
