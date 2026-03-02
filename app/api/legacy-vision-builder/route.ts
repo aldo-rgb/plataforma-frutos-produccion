@@ -316,9 +316,9 @@ export async function GET(request: NextRequest) {
     const captaincies = await prisma.tribeCaptaincy.findMany({
       where: { visionId: targetVisionId },
       include: {
-        assignments: {
+        TribeCaptainAssignment: {
           include: {
-            user: {
+            Usuario_TribeCaptainAssignment_userIdToUsuario: {
               select: { id: true, nombre: true, profileImage: true }
             }
           }
@@ -330,10 +330,10 @@ export async function GET(request: NextRequest) {
     const userAssignments = await prisma.tribeCaptainAssignment.findMany({
       where: {
         userId: usuario.id,
-        captaincy: { visionId: targetVisionId }
+        TribeCaptaincy: { visionId: targetVisionId }
       },
       include: {
-        captaincy: true
+        TribeCaptaincy: true
       }
     });
 
@@ -344,9 +344,9 @@ export async function GET(request: NextRequest) {
         isRead: false
       },
       include: {
-        assignment: {
+        TribeCaptainAssignment: {
           include: {
-            captaincy: true
+            TribeCaptaincy: true
           }
         }
       },
@@ -376,18 +376,18 @@ export async function GET(request: NextRequest) {
         ...def,
         captaincyId: existingCaptaincy?.id || null,
         isActive: existingCaptaincy?.isActive ?? true,
-        assignments: existingCaptaincy?.assignments.map(a => ({
+        TribeCaptainAssignment: existingCaptaincy?.TribeCaptainAssignment.map(a => ({
           id: a.id,
           userId: a.userId,
-          userName: a.user.nombre,
-          userImage: a.user.profileImage,
+          userName: a.Usuario_TribeCaptainAssignment_userIdToUsuario.nombre,
+          userImage: a.Usuario_TribeCaptainAssignment_userIdToUsuario.profileImage,
           status: a.status,
           acceptedAt: a.acceptedAt,
         })) || [],
-        confirmedCount: existingCaptaincy?.assignments.filter(
+        confirmedCount: existingCaptaincy?.TribeCaptainAssignment.filter(
           a => a.status === 'ACCEPTED'
         ).length || 0,
-        pendingCount: existingCaptaincy?.assignments.filter(
+        pendingCount: existingCaptaincy?.TribeCaptainAssignment.filter(
           a => a.status === 'PENDING'
         ).length || 0,
       };
@@ -428,7 +428,7 @@ export async function GET(request: NextRequest) {
       
       // Asignaciones del usuario actual
       userAssignments: userAssignments.map(ua => ({
-        roleType: ua.captaincy.roleType,
+        roleType: ua.TribeCaptaincy.roleType,
         status: ua.status,
         permissions: ua.permissions,
       })),
@@ -438,7 +438,7 @@ export async function GET(request: NextRequest) {
         id: n.id,
         title: n.title,
         message: n.message,
-        roleType: n.assignment.captaincy.roleType,
+        roleType: n.TribeCaptainAssignment.TribeCaptaincy.roleType,
         assignmentId: n.assignmentId,
         createdAt: n.createdAt,
       })),
@@ -581,14 +581,14 @@ export async function POST(request: NextRequest) {
           }
         },
         include: {
-          assignments: {
+          TribeCaptainAssignment: {
             where: { status: { in: ['PENDING', 'ACCEPTED'] } }
           }
         }
       });
 
       // Verificar si ya hay un capitán
-      if (captaincy && captaincy.assignments.length > 0) {
+      if (captaincy && captaincy.TribeCaptainAssignment.length > 0) {
         return NextResponse.json({ 
           error: "Ya hay un Capitán de Tribu asignado" 
         }, { status: 400 });
@@ -602,7 +602,7 @@ export async function POST(request: NextRequest) {
             roleType: 'TRIBE_CAPTAIN',
             maxCaptains: 1,
           },
-          include: { assignments: true }
+          include: { TribeCaptainAssignment: true }
         });
       }
 
@@ -626,7 +626,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: `¡${usuario.nombre} es ahora el Capitán de Tribu!`,
-        assignment: {
+        TribeCaptainAssignment: {
           id: assignment.id,
           roleType: 'TRIBE_CAPTAIN',
           status: 'ACCEPTED',
@@ -654,7 +654,7 @@ export async function POST(request: NextRequest) {
           }
         },
         include: {
-          assignments: {
+          TribeCaptainAssignment: {
             where: { 
               userId: usuario.id,
               status: 'ACCEPTED'
@@ -664,7 +664,7 @@ export async function POST(request: NextRequest) {
       });
 
       const isStaff = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);
-      const isTribeCaptain = tribeCaptaincy && tribeCaptaincy.assignments.length > 0;
+      const isTribeCaptain = tribeCaptaincy && tribeCaptaincy.TribeCaptainAssignment.length > 0;
 
       if (!isStaff && !isTribeCaptain) {
         return NextResponse.json({ 
@@ -696,7 +696,7 @@ export async function POST(request: NextRequest) {
           roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
         },
         include: {
-          assignments: {
+          TribeCaptainAssignment: {
             where: { 
               userId: usuario.id,
               status: 'ACCEPTED'
@@ -705,7 +705,7 @@ export async function POST(request: NextRequest) {
         }
       });
       
-      const isTribeCaptainOrCo = tribeCaptaincies.some(c => c.assignments.length > 0);
+      const isTribeCaptainOrCo = tribeCaptaincies.some(c => c.TribeCaptainAssignment.length > 0);
       
       if (!isStaff && !isTribeCaptainOrCo) {
         return NextResponse.json({ 
@@ -801,7 +801,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: `Usuario nominado como ${roleDef.name}`,
-        assignment: {
+        TribeCaptainAssignment: {
           id: assignment.id,
           roleType,
           status: assignment.status,
@@ -822,7 +822,7 @@ export async function POST(request: NextRequest) {
       // Buscar la asignación
       const assignment = await prisma.tribeCaptainAssignment.findUnique({
         where: { id: parseInt(assignmentId) },
-        include: { captaincy: true }
+        include: { TribeCaptaincy: true }
       });
 
       if (!assignment) {
@@ -863,16 +863,16 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      const roleDef = CAPTAINCY_DEFINITIONS[assignment.captaincy.roleType];
+      const roleDef = CAPTAINCY_DEFINITIONS[assignment.TribeCaptaincy.roleType];
 
       return NextResponse.json({
         success: true,
         message: accept 
           ? `¡Has aceptado el cargo de ${roleDef.name}!` 
           : `Has rechazado el cargo de ${roleDef.name}`,
-        assignment: {
+        TribeCaptainAssignment: {
           id: updatedAssignment.id,
-          roleType: assignment.captaincy.roleType,
+          roleType: assignment.TribeCaptaincy.roleType,
           status: updatedAssignment.status,
         }
       });
@@ -893,7 +893,7 @@ export async function POST(request: NextRequest) {
         where: {
           userId: usuario.id,
           status: 'ACCEPTED',
-          captaincy: {
+          TribeCaptaincy: {
             visionId: parseInt(visionId),
             roleType: 'SHIRTS_LOGO'
           }
@@ -969,7 +969,7 @@ export async function DELETE(request: NextRequest) {
           roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
         },
         include: {
-          assignments: {
+          TribeCaptainAssignment: {
             where: { 
               userId: usuario.id,
               status: 'ACCEPTED'
@@ -977,7 +977,7 @@ export async function DELETE(request: NextRequest) {
           }
         }
       });
-      isTribeCaptainOrCo = tribeCaptaincies.some(c => c.assignments.length > 0);
+      isTribeCaptainOrCo = tribeCaptaincies.some(c => c.TribeCaptainAssignment.length > 0);
     }
     
     if (!isStaff && !isTribeCaptainOrCo) {
@@ -988,10 +988,10 @@ export async function DELETE(request: NextRequest) {
     const assignment = await prisma.tribeCaptainAssignment.update({
       where: { id: parseInt(assignmentId) },
       data: { status: 'REMOVED' },
-      include: { captaincy: true }
+      include: { TribeCaptaincy: true }
     });
 
-    const roleDef = CAPTAINCY_DEFINITIONS[assignment.captaincy.roleType];
+    const roleDef = CAPTAINCY_DEFINITIONS[assignment.TribeCaptaincy.roleType];
 
     return NextResponse.json({
       success: true,

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, Drama, Theater,
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket, Plane, Archive, Printer, Phone, Wallet
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket, Plane, Archive, Printer, Phone, Wallet, ChevronDown
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -51,6 +51,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
   const [reportesPendientes, setReportesPendientes] = useState(0);
   const [activeRole, setActiveRole] = useState<string>(usuario.rol); // Rol activo del RoleSwitcher
   const [activeVisionId, setActiveVisionId] = useState<number | null>(null); // Visión vigente
+  const [lideratoExpanded, setLideratoExpanded] = useState(false); // Menú Liderato desplegable
   const [iaRecommendation, setIaRecommendation] = useState<{
     message: string;
     emoji: string;
@@ -1311,17 +1312,20 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             <span className="font-semibold">The Vault</span>
           </Link>
 
-          <Link 
-            href="/dashboard/ciclos/guia" 
-            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-              pathname === '/dashboard/ciclos/guia' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
-          >
-            <Compass size={18} className="text-pink-500" />
-            <span>Guía de Inicio</span>
-          </Link>
+          {/* Guía de Inicio - Solo visible para ADMIN */}
+          {usuario.rol === 'ADMIN' && (
+            <Link 
+              href="/dashboard/ciclos/guia" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/ciclos/guia' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Compass size={18} className="text-pink-500" />
+              <span>Guía de Inicio</span>
+            </Link>
+          )}
 
           {/* Carta F.R.U.T.O.S. - Redirección dinámica según estado */}
           <Link 
@@ -1369,51 +1373,6 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             </Link>
           )}
 
-          {/* Mis Sesiones - Solo PARTICIPANTE */}
-          {usuario.rol === 'PARTICIPANTE' && (
-            <Link 
-              href='/dashboard/student/mis-sesiones' 
-              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname === '/dashboard/student/mis-sesiones' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <CheckCircle2 size={18} className="text-blue-400" />
-              <span>Mis Sesiones</span>
-            </Link>
-          )}
-
-          {/* Mis Tickets - Para todos */}
-          <Link 
-            href='/dashboard/my-tickets' 
-            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
-              pathname === '/dashboard/my-tickets' 
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/20' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-cyan-900/30 hover:to-blue-900/30 hover:text-cyan-300'
-            }`}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="18" 
-              height="18" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-              className="text-cyan-400 group-hover:text-cyan-300"
-            >
-              <path d="M2 9a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3" />
-              <path d="M2 9h20" />
-              <path d="M2 15a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3" />
-              <path d="M2 15h20" />
-              <path d="M12 6v12" />
-            </svg>
-            <span className="font-medium">Mis Tickets</span>
-          </Link>
-
           <Link 
             href='/dashboard/ranking' 
             className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
@@ -1424,19 +1383,6 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           >
             <Trophy size={18} />
             <span>Ranking Global</span>
-          </Link>
-
-          {/* Muro de la Excelencia */}
-          <Link 
-            href="/dashboard/muro" 
-            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
-              pathname === '/dashboard/muro' 
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-pink-900/50 hover:text-white'
-            }`}
-          >
-            <Sparkles size={18} className="text-pink-400 group-hover:text-pink-300" />
-            <span className="font-semibold">Muro de la Excelencia</span>
           </Link>
 
           <Link 
@@ -1464,78 +1410,92 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             <span>Membresía</span>
           </Link>
 
-          {/* SECCIÓN LIDERATO */}
-          <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2 mt-4">🚀 Liderato</p>
-
-          {/* Legacy Builder - Donaciones */}
-          <Link 
-            href="/dashboard/legacy-builder" 
-            onClick={handleLinkClick}
-            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
-              pathname.startsWith('/dashboard/legacy-builder')
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/20' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-emerald-900/30 hover:to-teal-900/30 hover:text-emerald-300'
-            }`}
+          {/* SECCIÓN LIDERATO - DESPLEGABLE */}
+          <button
+            onClick={() => setLideratoExpanded(!lideratoExpanded)}
+            className="w-full flex items-center justify-between px-4 py-2 mt-4 text-sm rounded-lg transition-colors hover:bg-slate-800/50 group"
           >
-            <Gift size={18} className="text-emerald-400 group-hover:text-emerald-300" />
-            <span className="font-medium">Legacy Builder</span>
-          </Link>
+            <span className="text-xs font-bold text-slate-400 uppercase">LIDERATO</span>
+            <ChevronDown 
+              size={16} 
+              className={`text-slate-500 transition-transform duration-200 ${lideratoExpanded ? 'rotate-180' : ''}`} 
+            />
+          </button>
 
-          {/* Ver Votaciones */}
-          <Link 
-            href="/dashboard/votaciones" 
-            onClick={handleLinkClick}
-            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
-              pathname.startsWith('/dashboard/votaciones')
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/30 hover:to-indigo-900/30 hover:text-purple-300'
-            }`}
-          >
-            <Vote size={18} className="text-purple-400 group-hover:text-purple-300" />
-            <span className="font-medium">Ver Votaciones</span>
-          </Link>
+          {/* Contenido desplegable de Liderato */}
+          {lideratoExpanded && (
+            <div className="ml-2 pl-2 border-l border-slate-700/50 space-y-1">
+              {/* Legacy Builder - Donaciones */}
+              <Link 
+                href="/dashboard/legacy-builder" 
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+                  pathname.startsWith('/dashboard/legacy-builder')
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/20' 
+                    : 'text-slate-400 hover:bg-gradient-to-r hover:from-emerald-900/30 hover:to-teal-900/30 hover:text-emerald-300'
+                }`}
+              >
+                <Gift size={18} className="text-emerald-400 group-hover:text-emerald-300" />
+                <span className="font-medium">Legacy Builder</span>
+              </Link>
 
-          {/* Legacy Vision Builder - Capitanías */}
-          <Link 
-            href="/dashboard/legacy-vision-builder" 
-            onClick={handleLinkClick}
-            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
-              pathname.startsWith('/dashboard/legacy-vision-builder')
-                ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg shadow-yellow-500/20' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-yellow-900/30 hover:to-amber-900/30 hover:text-yellow-300'
-            }`}
-          >
-            <Crown size={18} className="text-yellow-400 group-hover:text-yellow-300" />
-            <span className="font-medium">Capitanías</span>
-          </Link>
+              {/* Ver Votaciones */}
+              <Link 
+                href="/dashboard/votaciones" 
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+                  pathname.startsWith('/dashboard/votaciones')
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20' 
+                    : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/30 hover:to-indigo-900/30 hover:text-purple-300'
+                }`}
+              >
+                <Vote size={18} className="text-purple-400 group-hover:text-purple-300" />
+                <span className="font-medium">Ver Votaciones</span>
+              </Link>
 
-          {/* Directorio de Talentos - Mercado */}
-          <Link 
-            href="/dashboard/mercado" 
-            onClick={handleLinkClick}
-            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
-              pathname.startsWith('/dashboard/mercado')
-                ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg shadow-orange-500/20' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-orange-900/30 hover:to-amber-900/30 hover:text-orange-300'
-            }`}
-          >
-            <Store size={18} className="text-orange-400 group-hover:text-orange-300" />
-            <span className="font-medium">Directorio Talentos</span>
-          </Link>
+              {/* Legacy Vision Builder - Capitanías */}
+              <Link 
+                href="/dashboard/legacy-vision-builder" 
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+                  pathname.startsWith('/dashboard/legacy-vision-builder')
+                    ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg shadow-yellow-500/20' 
+                    : 'text-slate-400 hover:bg-gradient-to-r hover:from-yellow-900/30 hover:to-amber-900/30 hover:text-yellow-300'
+                }`}
+              >
+                <Crown size={18} className="text-yellow-400 group-hover:text-yellow-300" />
+                <span className="font-medium">Capitanías</span>
+              </Link>
 
-          {/* Mi Negocio - Perfil Empresarial */}
-          <Link 
-            href="/dashboard/mi-negocio" 
-            onClick={handleLinkClick}
-            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
-              pathname === '/dashboard/mi-negocio'
-                ? 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white shadow-lg shadow-yellow-500/20' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-yellow-900/30 hover:to-orange-900/30 hover:text-yellow-300'
-            }`}
-          >
-            <Briefcase size={18} className="text-yellow-400 group-hover:text-yellow-300" />
-            <span className="font-medium">Mi Futuro Imposible</span>
-          </Link>
+              {/* Directorio de Talentos - Mercado */}
+              <Link 
+                href="/dashboard/mercado" 
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+                  pathname.startsWith('/dashboard/mercado')
+                    ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg shadow-orange-500/20' 
+                    : 'text-slate-400 hover:bg-gradient-to-r hover:from-orange-900/30 hover:to-amber-900/30 hover:text-orange-300'
+                }`}
+              >
+                <Store size={18} className="text-orange-400 group-hover:text-orange-300" />
+                <span className="font-medium">Directorio</span>
+              </Link>
+
+              {/* Mi Negocio - Perfil Empresarial */}
+              <Link 
+                href="/dashboard/mi-negocio" 
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+                  pathname === '/dashboard/mi-negocio'
+                    ? 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white shadow-lg shadow-yellow-500/20' 
+                    : 'text-slate-400 hover:bg-gradient-to-r hover:from-yellow-900/30 hover:to-orange-900/30 hover:text-yellow-300'
+                }`}
+              >
+                <Briefcase size={18} className="text-yellow-400 group-hover:text-yellow-300" />
+                <span className="font-medium">Mi Futuro Imposible</span>
+              </Link>
+            </div>
+          )}
 
           {/* Mi QR Personal - Solo para PARTICIPANTE, LIDER, GAMECHANGER */}
           {(usuario.rol === 'PARTICIPANTE' || usuario.rol === 'LIDER' || usuario.rol === 'GAMECHANGER') && (
@@ -1558,6 +1518,42 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
 
       {/* Logout Button */}
       <div className="p-4 border-t border-slate-800 space-y-2">
+        {/* 🎫 MIS TICKETS - Siempre visible con diseño destacado */}
+        <Link
+          href="/dashboard/my-tickets"
+          onClick={handleLinkClick}
+          className={`flex items-center gap-3 px-4 py-3 w-full rounded-xl transition-all ${
+            pathname === '/dashboard/my-tickets'
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30 scale-[1.02]'
+              : 'bg-gradient-to-r from-cyan-900/40 to-blue-900/40 text-cyan-300 hover:from-cyan-800/50 hover:to-blue-800/50 hover:text-white border border-cyan-500/30 hover:border-cyan-400/50'
+          }`}
+        >
+          <div className="p-1.5 bg-cyan-500/20 rounded-lg">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="text-cyan-400"
+            >
+              <path d="M2 9a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3" />
+              <path d="M2 9h20" />
+              <path d="M2 15a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3" />
+              <path d="M2 15h20" />
+              <path d="M12 6v12" />
+            </svg>
+          </div>
+          <div className="flex flex-col">
+            <span className="font-bold text-sm">🎫 Mis Tickets</span>
+            <span className="text-[10px] text-cyan-400/70">Ver mis entradas</span>
+          </div>
+        </Link>
+
         {/* Buzón Anónimo - Solo para PARTICIPANTE */}
         {usuario.rol === 'PARTICIPANTE' && (
           <Link

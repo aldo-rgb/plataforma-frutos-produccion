@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import logger from '@/lib/logger';
 
 /**
  * GET /api/ranking/permissions
@@ -10,234 +9,94 @@ import logger from '@/lib/logger';
  */
 export async function GET() {
   try {
+    console.log('🔍 Iniciando GET /api/ranking/permissions');
+    
     const session = await getServerSession(authOptions);
+    console.log('🔍 Session:', session?.user?.id ? 'Autenticado' : 'No autenticado');
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
     const userId = parseInt(session.user.id);
+    console.log('🔍 User ID:', userId);
     
-    // Obtener información del usuario
+    // Obtener información básica del usuario
     const usuario = await prisma.usuario.findUnique({
       where: { id: userId },
-      include: {
-        Organization: true,
-        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
-          where: {
-            Vision: {
-              isActive: true
-            }
-          },
-          include: {
-            Vision: true
+      select: {
+        id: true,
+        rol: true,
+        organizationId: true,
+        Organization_Usuario_organizationIdToOrganization: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+            brandColor: true
           }
         }
       }
     });
+    console.log('🔍 Usuario encontrado:', usuario ? 'Sí' : 'No');
 
     if (!usuario) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
     const rol = usuario.rol;
-    const organizationId = usuario.organizationId;
+    const org = usuario.Organization_Usuario_organizationIdToOrganization;
+    console.log('🔍 Rol:', rol);
     
-    // Definir permisos según rol
-    let permissions = {
-      role: rol, // Agregar el rol del usuario
-      canViewGlobal: false,
-      canViewSchool: false,
-      canViewSchoolWar: false,
-      canViewVision: false,
-      canViewMentors: false,
-      availableSchools: [] as any[],
+    // Permisos simplificados - todos pueden ver global
+    const permissions: any = {
+      role: rol,
+      canViewGlobal: true,
+      canViewSchool: ['COORDINADOR', 'DIRECTOR', 'ADMIN', 'ADMINISTRADOR', 'SUPER_ADMIN'].includes(rol),
+      canViewSchoolWar: ['ADMIN', 'ADMINISTRADOR', 'SUPER_ADMIN'].includes(rol),
+      canViewVision: true,
+      canViewMentors: true,
+      availableSchools: org ? [{
+        id: org.id,
+        name: org.name,
+        logo: org.logoUrl,
+        brandColor: org.brandColor
+      }] : [],
       availableVisions: [] as any[],
-      userOrganizationId: organizationId,
-      userVisionId: null as number | null
+      userOrganizationId: usuario.organizationId,
+      userVisionId: null
     };
 
-    // PARTICIPANTE y GAME_CHANGER: Solo su escuela (global de su escuela) y su visión
-    if (rol === 'PARTICIPANTE' || rol === 'GAME_CHANGER') {
-      permissions.canViewGlobal = true; // Global filtrado por su escuela
-      permissions.canViewVision = true; // Solo su visión
-      permissions.canViewMentors = true;
-      
-      // Solo puede ver su propia escuela
-      if (usuario.Organization) {
-        permissions.availableSchools = [{
-          id: usuario.Organization.id,
-          name: usuario.Organization.name,
-          logo: usuario.Organization.logoUrl,
-          brandColor: usuario.Organization.brandColor
-        }];
-      }
-      
-      // Solo puede ver sus propias visiones
-      permissions.availableVisions = usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario.map(vp => ({
-        id: vp.Vision.id,
-        nombre: vp.Vision.nombre,
-        descripcion: vp.Vision.descripcion
-      }));
-      
-      // Guardar la visión del usuario (si tiene una activa)
-      if (usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario.length > 0) {
-        permissions.userVisionId = usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario[0].Vision.id;
-      }
-    }
-    
-    // COORDINADOR y DIRECTOR: Todas las visiones de su escuela y global de su escuela
-    else if (rol === 'COORDINADOR' || rol === 'DIRECTOR') {
-      permissions.canViewGlobal = true; // Global filtrado por su escuela
-      permissions.canViewSchool = true; // Puede ver ranking interno de su escuela
-      permissions.canViewVision = true; // Todas las visiones de su escuela
-      permissions.canViewMentors = true;
-      
-      // Solo puede ver su propia escuela
-      if (usuario.Organization) {
-        permissions.availableSchools = [{
-          id: usuario.Organization.id,
-          name: usuario.Organization.name,
-          logo: usuario.Organization.logoUrl,
-          brandColor: usuario.Organization.brandColor
-        }];
-        
-        // Obtener todas las visiones de su escuela
-        const visionesEscuela = await prisma.vision.findMany({
-          where: {
-            organizationId: usuario.Organization.id,
-            isActive: true
-          },
-          select: {
-            id: true,
-            nombre: true,
-            descripcion: true
-          },
-          orderBy: {
-            nombre: 'asc'
-          }
-        });
-        
-        permissions.availableVisions = visionesEscuela;
-      }
-    }
-    
-    // ADMINISTRADOR: Acceso completo a todo
-    else if (rol === 'ADMIN' || rol === 'ADMINISTRADOR') {
-      permissions.canViewGlobal = true;
-      permissions.canViewSchool = true;
-      permissions.canViewSchoolWar = true;
-      permissions.canViewVision = true;
-      permissions.canViewMentors = true;
-      
-      // Puede ver todas las escuelas
+    console.log('🔍 Permisos base creados');
+
+    // Para admins, cargar todas las escuelas
+    if (['ADMIN', 'ADMINISTRADOR', 'SUPER_ADMIN'].includes(rol)) {
+      console.log('🔍 Cargando escuelas para admin...');
       const allSchools = await prisma.organization.findMany({
-        select: {
-          id: true,
-          name: true,
-          logoUrl: true,
-          brandColor: true
-        },
-        orderBy: {
-          name: 'asc'
-        }
+        select: { id: true, name: true, logoUrl: true, brandColor: true },
+        orderBy: { name: 'asc' }
       });
       permissions.availableSchools = allSchools.map(s => ({
-        id: s.id,
-        name: s.name,
-        logo: s.logoUrl,
-        brandColor: s.brandColor
+        id: s.id, name: s.name, logo: s.logoUrl, brandColor: s.brandColor
       }));
-      
-      // Puede ver todas las visiones
-      const allVisions = await prisma.vision.findMany({
-        where: {
-          isActive: true
-        },
-        select: {
-          id: true,
-          nombre: true,
-          descripcion: true
-        },
-        orderBy: {
-          nombre: 'asc'
-        }
-      });
-      permissions.availableVisions = allVisions;
-    }
-    
-    // MENTOR: Puede ver global general y las visiones donde tiene mentorados asignados
-    else if (rol === 'MENTOR') {
-      permissions.canViewGlobal = true; // Global SIN filtrar por escuela
-      permissions.canViewSchool = false; // No necesita ver por escuela específica
-      permissions.canViewVision = true; // Visiones donde tiene mentorados
-      permissions.canViewMentors = true;
-      
-      // No necesita filtro de escuelas ya que ve global general
-      permissions.availableSchools = [];
-      
-      // Obtener visiones donde tiene mentorados asignados
-      // Buscar por ProgramEnrollment donde él es el mentor
-      const enrollmentsAsMentor = await prisma.programEnrollment.findMany({
-        where: {
-          mentorId: userId,
-          status: 'ACTIVE'
-        },
-        include: {
-          Usuario_ProgramEnrollment_userIdToUsuario: {
-            include: {
-              VisionParticipante_VisionParticipante_participanteIdToUsuario: {
-                where: {
-                  Vision: {
-                    isActive: true
-                  }
-                },
-                include: {
-                  Vision: true
-                }
-              }
-            }
-          }
-        }
-      });
-      
-      // Extraer visiones únicas de todos sus mentorados
-      const visionesSet = new Set<number>();
-      const visionesMap = new Map<number, any>();
-      
-      enrollmentsAsMentor.forEach(enrollment => {
-        enrollment.Usuario_ProgramEnrollment_userIdToUsuario.VisionParticipante_VisionParticipante_participanteIdToUsuario.forEach(vp => {
-          if (!visionesSet.has(vp.Vision.id)) {
-            visionesSet.add(vp.Vision.id);
-            visionesMap.set(vp.Vision.id, {
-              id: vp.Vision.id,
-              nombre: vp.Vision.nombre,
-              descripcion: vp.Vision.descripcion
-            });
-          }
-        });
-      });
-      
-      permissions.availableVisions = Array.from(visionesMap.values());
+      console.log('🔍 Escuelas cargadas:', allSchools.length);
     }
 
-    logger.debug('🔐 Permisos de ranking para usuario:', {
-      userId,
-      rol,
-      permissions: {
-        canViewGlobal: permissions.canViewGlobal,
-        canViewSchool: permissions.canViewSchool,
-        canViewSchoolWar: permissions.canViewSchoolWar,
-        canViewVision: permissions.canViewVision,
-        schools: permissions.availableSchools.length,
-        visions: permissions.availableVisions.length
-      }
+    // Cargar visiones disponibles
+    console.log('🔍 Cargando visiones...');
+    const visions = await prisma.vision.findMany({
+      where: { isActive: true },
+      select: { id: true, nombre: true, descripcion: true },
+      orderBy: { nombre: 'asc' }
     });
+    permissions.availableVisions = visions;
+    console.log('🔍 Visiones cargadas:', visions.length);
 
+    console.log('✅ Retornando permisos');
     return NextResponse.json(permissions);
 
   } catch (error) {
-    logger.error('❌ Error obteniendo permisos de ranking:', error);
+    console.error('❌ ERROR en /api/ranking/permissions:', error);
     return NextResponse.json(
       { 
         error: 'Error obteniendo permisos',

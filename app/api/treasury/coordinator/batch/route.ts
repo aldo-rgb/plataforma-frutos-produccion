@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { randomUUID } from 'crypto';
 
 const ALLOWED_ROLES = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
 
@@ -83,11 +84,10 @@ export async function POST(request: Request) {
     const totalExpenses = pendingExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
     const netAmount = totalCollected - totalExpenses;
 
-    // Generar número de batch único
+    // Generar número de batch único (global, no solo por coordinador)
     const year = new Date().getFullYear();
     const lastBatch = await prisma.cashBatch.findFirst({
       where: {
-        coordinatorId: user.id,
         batchNumber: { startsWith: `BATCH-${year}-` }
       },
       orderBy: { batchNumber: 'desc' },
@@ -100,11 +100,12 @@ export async function POST(request: Request) {
       const lastNum = parseInt(parts[2] || '0', 10);
       nextNumber = lastNum + 1;
     }
-    const batchNumber = `BATCH-${year}-${String(nextNumber).padStart(3, '0')}`;
+    const batchNumber = `BATCH-${year}-${String(nextNumber).padStart(4, '0')}`;
 
     // Crear el batch con códigos y gastos
     const batch = await prisma.cashBatch.create({
       data: {
+        id: randomUUID(),
         batchNumber,
         totalCollected,
         totalExpenses,

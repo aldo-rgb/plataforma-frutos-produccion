@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Camera, Filter, Sparkles, Award, TrendingUp, Image as ImageIcon, Info, X, Video, User, Trash2, BookOpen, Zap } from 'lucide-react';
+import { Camera, Filter, Sparkles, Award, TrendingUp, Image as ImageIcon, Info, X, Video, User, Trash2, BookOpen, Zap, Star } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import TimeCapsuleVideoModal from '@/components/vault/TimeCapsuleVideoModal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import QuantumAlbumTab from '@/components/vault/QuantumAlbumTab';
@@ -226,6 +227,16 @@ export default function TheVaultPage() {
             <Zap className="w-5 h-5" />
             <span>Materialización ({checkInPhotos.length})</span>
           </button>
+
+          {/* Muro de la Excelencia - Link externo */}
+          <Link
+            href="/dashboard/muro"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/50 text-pink-300 hover:from-pink-600 hover:to-purple-600 hover:text-white hover:border-pink-400"
+          >
+            <Star className="w-5 h-5 text-yellow-400" />
+            <span>Muro de Excelencia</span>
+            <Sparkles className="w-4 h-4 text-pink-400" />
+          </Link>
         </div>
 
         {activeTab === 'evidencias' && (
