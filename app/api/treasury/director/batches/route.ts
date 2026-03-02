@@ -34,7 +34,7 @@ export async function GET() {
         status: 'PENDING_DELIVERY'
       },
       include: {
-        coordinator: {
+        Usuario_CashBatch_coordinatorIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -43,7 +43,7 @@ export async function GET() {
             profileImage: true
           }
         },
-        paymentCodes: {
+        PaymentCode: {
           select: {
             id: true,
             code: true,
@@ -53,7 +53,7 @@ export async function GET() {
             createdAt: true
           }
         },
-        expenses: {
+        Expense: {
           select: {
             id: true,
             concept: true,
@@ -64,7 +64,7 @@ export async function GET() {
             createdAt: true
           }
         },
-        codeGeneratedBy: {
+        Usuario_CashBatch_codeGeneratedByIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -87,9 +87,9 @@ export async function GET() {
         confirmationCode: b.confirmationCode,
         codeGeneratedAt: b.codeGeneratedAt?.toISOString() || null,
         createdAt: b.createdAt.toISOString(),
-        coordinator: b.coordinator,
-        codeGeneratedBy: b.codeGeneratedBy,
-        paymentCodes: b.paymentCodes.map(c => ({
+        coordinator: b.Usuario_CashBatch_coordinatorIdToUsuario,
+        codeGeneratedBy: b.Usuario_CashBatch_codeGeneratedByIdToUsuario,
+        paymentCodes: b.PaymentCode.map(c => ({
           id: c.id,
           code: c.code,
           amount: Number(c.amount),
@@ -97,7 +97,7 @@ export async function GET() {
           reference: c.reference,
           createdAt: c.createdAt.toISOString()
         })),
-        expenses: b.expenses.map(e => ({
+        expenses: b.Expense.map(e => ({
           id: e.id,
           concept: e.concept,
           amount: Number(e.amount),
