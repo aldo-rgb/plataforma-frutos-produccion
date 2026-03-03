@@ -5,6 +5,15 @@ import { authOptions } from '@/lib/auth';
 import crypto from 'crypto';
 import logger from '@/lib/logger';
 
+// Generar UUID
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 // Generar fingerprint simple del dispositivo
 function generateFingerprint(req: NextRequest): string {
   const userAgent = req.headers.get('user-agent') || '';
@@ -163,6 +172,7 @@ export async function POST(req: NextRequest) {
     // Crear la evaluación
     const review = await prisma.expoReview.create({
       data: {
+        id: generateUUID(),  // REQUERIDO - modelo tiene id String @id sin @default
         exhibitorId: exhibitor.id,
         visitorId,
         expoVisitorId,
