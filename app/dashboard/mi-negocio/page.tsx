@@ -1703,6 +1703,68 @@ export default function QuantumBusinessBuilderPage() {
             visionId={existingProfile.vision?.id}
           />
           <ExpoReviewsSection userId={existingProfile.userId} />
+          
+          {/* Botón Ver Mi Sitio Web */}
+          <div className="bg-gradient-to-r from-blue-900/40 to-cyan-900/40 border border-blue-500/30 rounded-2xl p-5">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                  <Globe className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Mi Sitio Web</h3>
+                  <p className="text-blue-300/80 text-sm">
+                    {hasExistingWebsite ? 'Tu página está publicada' : 'Crea tu página web profesional'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {hasExistingWebsite && existingWebsite?.site ? (
+                  <>
+                    <button
+                      onClick={() => window.open(`/site/${existingWebsite.site.slug}`, '_blank')}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium hover:opacity-90 transition flex items-center gap-2"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Ver mi Sitio Web
+                    </button>
+                    <button
+                      onClick={() => {
+                        const prefillData = {
+                          name: existingWebsite.site.businessName,
+                          description: existingWebsite.site.businessDescription,
+                          category: existingWebsite.site.businessCategory,
+                          phone: existingWebsite.site.phone,
+                          whatsapp: existingWebsite.site.whatsapp,
+                          email: existingWebsite.site.email,
+                          address: existingWebsite.site.address,
+                          schedule: existingWebsite.site.schedule,
+                          instagram: existingWebsite.site.instagram,
+                          facebook: existingWebsite.site.facebook,
+                          editMode: true,
+                          existingSlug: existingWebsite.site.slug
+                        };
+                        localStorage.setItem('quantum_web_prefill', JSON.stringify(prefillData));
+                        router.push('/dashboard/quantum-web');
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-white/10 text-white hover:bg-white/20 transition flex items-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Editar
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => router.push('/dashboard/quantum-web')}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium hover:opacity-90 transition flex items-center gap-2"
+                  >
+                    <Rocket className="w-4 h-4" />
+                    Crear mi Sitio Web
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </motion.div>
       )}
 
