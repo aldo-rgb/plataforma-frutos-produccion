@@ -30,7 +30,7 @@ export async function GET(
             logoUrl: true,
             status: true,
             visionId: true,
-            vision: {
+            Vision: {
               select: {
                 id: true,
                 nombre: true
@@ -56,7 +56,7 @@ export async function GET(
         headline: exhibitor.BusinessProfile?.headline || null
       },
       visionId: exhibitor.BusinessProfile?.visionId || null,
-      visionName: exhibitor.BusinessProfile?.vision?.nombre || null
+      visionName: exhibitor.BusinessProfile?.Vision?.nombre || null
     });
 
   } catch (error) {

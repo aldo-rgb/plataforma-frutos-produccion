@@ -2,7 +2,7 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 2.9  
+**Versión:** 3.0  
 **Fecha:** Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
@@ -1688,6 +1688,209 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
+## v3.0 - 03/03/2026
+
+### 🔑 Patrón Crítico Descubierto: Nombres de Relaciones Prisma
+
+**Descubrimiento principal:** En el schema Prisma de ~6,700 líneas, las relaciones usan nombres en **PascalCase** basados en el nombre del modelo, NO aliases en camelCase.
+
+**Regla de nombrado:**
+| Tipo de Relación | Formato del Nombre | Ejemplo |
+|------------------|-------------------|---------|
+| Relación simple | `NombreModelo` | `Vision`, `Organization`, `BusinessCategory` |
+| Multi-relación (mismo modelo) | `ModeloA_ModeloB_campoToModeloA` | `Usuario_CashBatch_coordinatorIdToUsuario` |
+
+**Cómo diagnosticar:** Cuando Prisma muestra error "Unknown field X", revisar las opciones disponibles marcadas con "?". Ejemplo:
+```
+Unknown field `vision` for select statement on model `BusinessProfile`.
+Available options are marked with ?: Vision?
+```
+
+### Fix: Treasury Coordinator - CashBatch Creation
+
+**Problema:** Error al crear corte de caja: "Argument `id` is missing" y constraint de `batchNumber` único.
+
+**Causa raíz:**
+1. Modelo `CashBatch` tiene `id String @id` SIN `@default(uuid())` - requiere `id` manual
+2. Modelo tiene `updatedAt DateTime` SIN `@default(now())` - requiere valor manual
+3. `batchNumber` buscaba solo por coordinador en lugar de global
+
+**Solución:**
+```typescript
+// Generar batchNumber global (no por coordinador)
+const lastBatch = await prisma.cashBatch.findFirst({
+  orderBy: { createdAt: 'desc' }
+});
+const nextNumber = lastBatch 
+  ? parseInt(lastBatch.batchNumber.replace('BATCH-', '')) + 1 
+  : 1;
+
+// Crear con id y updatedAt manuales
+const batch = await prisma.cashBatch.create({
+  data: {
+    id: randomUUID(),  // REQUERIDO
+    batchNumber: `BATCH-${nextNumber.toString().padStart(5, '0')}`,
+    coordinatorId,
+    status: 'PENDING',
+    updatedAt: new Date(),  // REQUERIDO
+    // ...
+  }
+});
+```
+
+**Archivo modificado:**
+- `app/api/treasury/coordinator/batch/route.ts`
+
+### Fix: Treasury Director - Relaciones de CashBatch
+
+**Problema:** Error 500 al cargar batches pendientes en vista de director.
+
+**Causa raíz:** Nombres de relaciones incorrectos:
+- `coordinator` → `Usuario_CashBatch_coordinatorIdToUsuario`
+- `approvedBy` → `Usuario_CashBatch_approvedByIdToUsuario`
+- `paymentCodes` → `PaymentCode`
+- `expenses` → `Expense`
+
+**Archivo modificado:**
+- `app/api/treasury/director/batches/route.ts`
+
+### Fix: Sidebar para Coordinador en Vista Participante
+
+**Problema:** Coordinadores no veían el menú de navegación cuando usaban la vista de participante (`/dashboard?view=participante`).
+
+**Causa raíz:** El Sidebar retornaba `null` para roles que no eran `PARTICIPANTE`, pero los coordinadores usan esta vista para ver su perspectiva como participante.
+
+**Solución:**
+```typescript
+// Permitir sidebar en vista participante para COORDINADOR
+if (view === 'participante' && (rol === 'PARTICIPANTE' || rol === 'COORDINADOR')) {
+  // Mostrar sidebar de participante
+}
+```
+
+**Archivo modificado:**
+- `components/dashboard/Sidebar.tsx`
+
+### Fix: Legacy Vision Builder - Nombre de Campo en Respuesta
+
+**Problema:** Error al cargar `/dashboard/legado/legacy-vision-builder`.
+
+**Causa raíz:** API retornaba `TribeCaptainAssignment` pero frontend esperaba `assignments`.
+
+**Solución:**
+```typescript
+// API response mapping
+{
+  // ... otros campos
+  assignments: captaincy.TribeCaptainAssignment  // Renombrar para frontend
+}
+```
+
+**Archivo modificado:**
+- `app/api/legacy-vision-builder/route.ts`
+
+### Fix: TribeCaptaincy.create() - Campo updatedAt Requerido
+
+**Problema:** Error al crear TribeCaptaincy: "Argument `updatedAt` is missing".
+
+**Causa raíz:** Modelo `TribeCaptaincy` tiene `updatedAt DateTime` sin `@default(now())`.
+
+**Solución:**
+```typescript
+await prisma.tribeCaptaincy.create({
+  data: {
+    // ... otros campos
+    updatedAt: new Date()  // REQUERIDO
+  }
+});
+```
+
+**Archivo modificado:**
+- `app/api/legacy-vision-builder/route.ts`
+
+### Fix: QuantumWebsite.create() - Campo updatedAt Requerido
+
+**Problema:** Error al publicar sitio web Quantum.
+
+**Causa raíz:** Modelo `QuantumWebsite` tiene `updatedAt DateTime` sin default.
+
+**Archivo modificado:**
+- `app/api/quantum-web/publish/route.ts`
+
+### Fix: BusinessProfile.create() - Campo updatedAt Requerido
+
+**Problema:** Error al crear perfil de negocio en `/dashboard/mi-negocio`.
+
+**Archivo modificado:**
+- `app/api/talent-directory/my-profile/route.ts`
+
+### Fix: Talent Directory My-Profile API - Relaciones Prisma
+
+**Problema:** Error 500 al cargar y guardar perfil de negocio.
+
+**Causa raíz:** Múltiples relaciones con nombres incorrectos:
+- `category` → `BusinessCategory`
+- `organization` → `Organization`
+- `vision` → `Vision`
+- `reviews` → `ServiceReview`
+
+**Solución completa:**
+```typescript
+// GET - Query con relaciones correctas
+const profile = await prisma.businessProfile.findUnique({
+  where: { userId },
+  include: {
+    BusinessCategory: true,  // No 'category'
+    Organization: true,      // No 'organization'
+    Vision: true,            // No 'vision'
+    ServiceReview: true      // No 'reviews'
+  }
+});
+
+// Mapear para compatibilidad con frontend
+return {
+  ...profile,
+  category: profile.BusinessCategory,
+  organization: profile.Organization,
+  vision: profile.Vision,
+  reviews: profile.ServiceReview
+};
+
+// POST - Crear con updatedAt
+await prisma.businessProfile.create({
+  data: {
+    userId,
+    categoryId,
+    // ...
+    updatedAt: new Date()  // REQUERIDO
+  }
+});
+```
+
+**Archivo modificado:**
+- `app/api/talent-directory/my-profile/route.ts`
+
+### Fix: Expo Exhibitor API - Relación Vision
+
+**Problema:** Error "No se pudo cargar la información" en `/expo/votar/[userId]`.
+
+**Causa raíz:** Relación `vision` incorrecta → `Vision`.
+
+**Archivo modificado:**
+- `app/api/expo/exhibitor/[userId]/route.ts`
+
+### 📋 Patrón de Campos Requeridos sin Default
+
+**Modelos afectados que requieren `updatedAt: new Date()` manual:**
+| Modelo | Campo | Requiere en create() |
+|--------|-------|---------------------|
+| `CashBatch` | `id`, `updatedAt` | ✅ Ambos |
+| `TribeCaptaincy` | `updatedAt` | ✅ Sí |
+| `QuantumWebsite` | `updatedAt` | ✅ Sí |
+| `BusinessProfile` | `updatedAt` | ✅ Sí |
+
+**Recomendación:** Al crear registros en modelos con `updatedAt DateTime` (sin `@default`), SIEMPRE incluir `updatedAt: new Date()`.
+
 ## v2.9 - 01/03/2026
 
 ### Fix: TOP FILE API - Relaciones GCCallLog y GCCallAttempt
@@ -2093,5 +2296,5 @@ metas.forEach(meta => {
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 2.9 - Marzo 2026*  
-*Última actualización: 01/03/2026*
+*Versión 3.0 - Marzo 2026*  
+*Última actualización: 03/03/2026*
