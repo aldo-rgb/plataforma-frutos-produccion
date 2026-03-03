@@ -152,6 +152,9 @@ export async function POST(request: Request) {
       
       // Vision
       visionId: enrollment?.visionId || null,
+      
+      // Timestamp de actualización
+      updatedAt: new Date(),
     };
 
     // Upsert del formulario médico
@@ -171,10 +174,11 @@ export async function POST(request: Request) {
       hasAlerts
     });
 
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error saving medical form:', error);
+    logger.error('Error details:', error?.message || 'Unknown error');
     return NextResponse.json(
-      { success: false, error: 'Error al guardar formulario médico' },
+      { success: false, error: 'Error al guardar formulario médico', details: error?.message },
       { status: 500 }
     );
   }

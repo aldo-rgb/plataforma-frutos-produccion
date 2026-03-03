@@ -2444,8 +2444,231 @@ metas.forEach(meta => {
 - Sistema de ledger de comisiones
 - Documentación de errores comunes
 
+## v3.1 - 03/03/2026
+
+### 🔧 Patrón CRÍTICO: Modelos con `id String @id` sin `@default()`
+
+**Problema recurrente:** Algunos modelos tienen `id String @id` sin `@default(uuid())`, lo que significa que Prisma NO genera automáticamente el ID.
+
+**Modelos afectados:**
+- `ExpoVisitor` - Requiere `id: generateUUID()`
+- `ExpoReview` - Requiere `id: generateUUID()`
+- `CashBatch` - Requiere `id: randomUUID()`
+
+**Solución estándar:**
+```typescript
+import { randomUUID } from 'crypto';
+
+// En el create():
+await prisma.expoVisitor.create({
+  data: {
+    id: randomUUID(), // ← REQUERIDO
+    name: 'Juan',
+    // ... otros campos
+  }
+});
+```
+
+### 🔧 Patrón CRÍTICO: Nombres de Relaciones en Prisma
+
+**Regla:** Los nombres de relaciones en `include` deben coincidir EXACTAMENTE con los del schema.
+
+**Ejemplos de correcciones:**
+
+| Incorrecto | Correcto |
+|------------|----------|
+| `user` | `Usuario` |
+| `category` | `BusinessCategory` |
+| `vision` | `Vision` |
+| `products` | `QuantumProduct` |
+| `reviews` | `ServiceReview` o `ExpoReview` |
+| `author` | `Usuario` |
+| `exhibitor` | `Usuario_ExpoReview_exhibitorIdToUsuario` |
+
+**Verificar siempre en schema.prisma:**
+```bash
+grep -A 10 "^model BusinessProfile" prisma/schema.prisma
+```
+
+### Fix: API `/api/talent-directory/search` - Relaciones incorrectas
+
+**Problema:** Error 500 al buscar en Expo de Futuros - "Unknown field `user` for include statement"
+
+**Causa raíz:** La API usaba nombres de relaciones incorrectos:
+- `user` → Debe ser `Usuario`
+- `category` → Debe ser `BusinessCategory`
+- `vision` → Debe ser `Vision`
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+include: {
+  user: { select: { id: true, nombre: true } },
+  category: { select: { name: true } },
+  vision: { select: { nombre: true } }
+}
+
+// DESPUÉS (correcto)
+include: {
+  Usuario: { select: { id: true, nombre: true } },
+  BusinessCategory: { select: { name: true } },
+  Vision: { select: { nombre: true } }
+}
+
+// Y mapear para el frontend:
+return {
+  ...profile,
+  user: profile.Usuario,
+  category: profile.BusinessCategory,
+  vision: profile.Vision
+};
+```
+
+**Archivo modificado:** `app/api/talent-directory/search/route.ts`
+
+### Fix: Expo de Futuros - Filtro por Visión en vez de Organización
+
+**Problema:** En "Expo de Futuros", no aparecían los negocios aunque existían en la base de datos.
+
+**Causa raíz:** La API filtraba por `organizationId` del usuario, pero los negocios de una visión pueden pertenecer a diferentes organizaciones.
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+if (section === 'expo') {
+  where.status = { in: ['HIDDEN', 'ACTIVE'] };
+  where.organizationId = user.organizationId; // ← ESTO EXCLUÍA NEGOCIOS
+  if (visionId) {
+    where.visionId = parseInt(visionId);
+  }
+}
+
+// DESPUÉS (correcto)
+if (section === 'expo') {
+  where.status = { in: ['HIDDEN', 'ACTIVE'] };
+  if (visionId) {
+    where.visionId = parseInt(visionId); // Filtrar SOLO por visión
+  } else {
+    where.organizationId = user.organizationId; // Fallback
+  }
+}
+```
+
+**Archivo modificado:** `app/api/talent-directory/search/route.ts`
+
+### Fix: Frontend Mercado - Auto-seleccionar Visión del Usuario
+
+**Problema:** El dropdown mostraba la visión pero no se enviaba el `visionId` al API.
+
+**Solución:**
+```typescript
+// En fetchVisions():
+const userVisionRes = await fetch('/api/user/vision-level');
+if (userVisionRes.ok) {
+  const data = await userVisionRes.json();
+  if (data.visionId) {
+    setUserActiveVisionId(data.visionId);
+    setSelectedVision(data.visionId); // ← AÑADIDO: Auto-seleccionar
+  }
+}
+
+// En useEffect de fetch:
+if (activeSection === 'expo' && selectedVision) {
+  fetchProfiles(1); // Solo fetch cuando hay visión seleccionada
+}
+```
+
+**Archivo modificado:** `app/dashboard/mercado/page.tsx`
+
+### Fix: Búsqueda de Expositores - Filtrar por Visión
+
+**Problema:** La búsqueda en `/expo/calificar` mostraba expositores de todas las visiones.
+
+**Solución:**
+```typescript
+// API: /api/expo/search-exhibitors
+const visionId = searchParams.get('visionId');
+
+const whereConditions: any[] = [
+  { BusinessProfile: { isNot: null } },
+  { nombre: { contains: query, mode: 'insensitive' } }
+];
+
+if (visionId) {
+  whereConditions.push({ visionId: parseInt(visionId) });
+}
+
+// Frontend: calificar/page.tsx
+const searchExhibitors = async (query: string) => {
+  const params = new URLSearchParams();
+  params.set('q', query);
+  if (currentVisionId) {
+    params.set('visionId', currentVisionId.toString());
+  }
+  const res = await fetch(`/api/expo/search-exhibitors?${params}`);
+};
+```
+
+**Archivos modificados:**
+- `app/api/expo/search-exhibitors/route.ts`
+- `app/expo/calificar/page.tsx`
+
+### Fix: Formulario Médico - Campo updatedAt requerido
+
+**Problema:** Error al guardar formulario médico - el campo `updatedAt` no tiene `@updatedAt` en el schema.
+
+**Solución:**
+```typescript
+const medicalFormData = {
+  // ... otros campos
+  updatedAt: new Date(), // ← AÑADIDO: Prisma no lo genera automáticamente
+};
+```
+
+**Archivo modificado:** `app/api/medical-form/route.ts`
+
+### Fix: Página Calificar - Mejorar UX de Búsqueda
+
+**Problema:** El botón "Buscar" no hacía nada visible al usuario.
+
+**Solución:**
+1. Scroll suave al input de búsqueda
+2. Mover input arriba del botón "Ver Catálogo"
+3. Mensaje cuando no hay resultados
+
+```typescript
+onClick={() => {
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => searchInput.focus(), 300);
+  }
+}}
+```
+
+**Archivo modificado:** `app/expo/calificar/page.tsx`
+
+---
+
+## 📋 Checklist para Nuevos Desarrolladores
+
+### Antes de crear cualquier `.create()`:
+1. ¿El modelo tiene `id String @id` sin `@default()`? → Agregar `id: randomUUID()`
+2. ¿El modelo tiene `updatedAt DateTime` sin `@updatedAt`? → Agregar `updatedAt: new Date()`
+
+### Antes de usar `include`:
+1. Verificar nombre EXACTO de la relación en `schema.prisma`
+2. Usar formato PascalCase: `Usuario`, `Vision`, `BusinessCategory`
+3. Para relaciones múltiples usar nombre completo: `Usuario_ExpoReview_exhibitorIdToUsuario`
+
+### Comando útil para verificar relaciones:
+```bash
+grep -A 20 "^model NombreDelModelo" prisma/schema.prisma
+```
+
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 3.0 - Marzo 2026*  
+*Versión 3.1 - Marzo 2026*  
 *Última actualización: 03/03/2026*
+

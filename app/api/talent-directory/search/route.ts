@@ -39,37 +39,35 @@ export async function GET(request: NextRequest) {
     const section = searchParams.get('section') || 'public'; // 'public' (ACTIVE) o 'expo' (HIDDEN)
     const visionId = searchParams.get('visionId'); // Filtro por visión para Expo
 
+    logger.debug(`[talent-directory] section=${section}, visionId=${visionId}, userOrgId=${user.organizationId}`);
+
     // Construir filtros
     // ACTIVE = Directorio de Servicios (público, TODAS las organizaciones)
-    // HIDDEN o ACTIVE = Expo de Futuros (todos los negocios de la organización)
+    // HIDDEN o ACTIVE = Expo de Futuros (todos los negocios de la visión)
     const where: Record<string, unknown> = {};
 
-    // Expo de Futuros: mostrar TODOS los negocios de la organización (HIDDEN y ACTIVE)
-    // Directorio de Servicios: solo ACTIVE
+    // Expo de Futuros: mostrar TODOS los negocios de la VISIÓN seleccionada (HIDDEN y ACTIVE)
+    // Directorio de Servicios: solo ACTIVE de todas las organizaciones
     if (section === 'expo') {
       // En Expo mostramos todos los negocios (sin importar status)
       where.status = { in: ['HIDDEN', 'ACTIVE'] };
-      // Siempre filtrar por organización del usuario
-      where.organizationId = user.organizationId;
       
-      // Si hay filtro de visión, aplicarlo adicionalmente
+      // Filtrar por visión (NO por organización, ya que una expo puede tener gente de diferentes orgs)
       if (visionId) {
-        where.OR = [
-          { visionId: parseInt(visionId) },
-          { 
-            user: {
-              VisionParticipante_VisionParticipante_participanteIdToUsuario: {
-                some: { visionId: parseInt(visionId) }
-              }
-            }
-          }
-        ];
+        where.visionId = parseInt(visionId);
+        logger.debug(`[talent-directory] Filtering by visionId=${visionId}`);
       }
-      // Si no hay visionId, muestra TODOS los de la organización
+      // Si no hay visionId, mostrar todos los de la organización del usuario como fallback
+      else {
+        where.organizationId = user.organizationId;
+        logger.debug(`[talent-directory] No visionId, using orgId=${user.organizationId}`);
+      }
     } else {
       // Directorio de Servicios: solo perfiles publicados
       where.status = 'ACTIVE';
     }
+
+    logger.debug(`[talent-directory] where=${JSON.stringify(where)}`);
 
     // Búsqueda por texto (debe combinarse con filtros existentes)
     if (query) {
@@ -151,7 +149,7 @@ export async function GET(request: NextRequest) {
         skip: (page - 1) * limit,
         take: limit,
         include: {
-          user: {
+          Usuario: {
             select: {
               id: true,
               nombre: true,
@@ -164,7 +162,7 @@ export async function GET(request: NextRequest) {
               }
             }
           },
-          category: {
+          BusinessCategory: {
             select: {
               id: true,
               name: true,
@@ -172,7 +170,7 @@ export async function GET(request: NextRequest) {
               icon: true,
             }
           },
-          vision: {
+          Vision: {
             select: {
               id: true,
               nombre: true,
@@ -208,7 +206,7 @@ export async function GET(request: NextRequest) {
 
     // Transformar para incluir websiteUrl y nudge info
     const profilesWithWebsite = sortedProfiles.map((profile) => {
-      const website = profile.user.QuantumWebsite;
+      const website = profile.Usuario.QuantumWebsite;
       const websiteUrl = website?.isPublished && website?.slug 
         ? `https://quantummatter.app/site/${website.slug}`
         : null;
@@ -217,11 +215,14 @@ export async function GET(request: NextRequest) {
         ...profile,
         websiteUrl,
         hasNudged: userNudges.includes(profile.id), // Si el usuario ya dio toque
+        // Mapear a los nombres que espera el frontend
         user: {
-          id: profile.user.id,
-          nombre: profile.user.nombre,
-          imagen: profile.user.imagen
-        }
+          id: profile.Usuario.id,
+          nombre: profile.Usuario.nombre,
+          imagen: profile.Usuario.imagen
+        },
+        category: profile.BusinessCategory,
+        vision: profile.Vision
       };
     });
 

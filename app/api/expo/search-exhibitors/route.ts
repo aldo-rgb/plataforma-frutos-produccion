@@ -6,20 +6,29 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
+    const visionId = searchParams.get('visionId');
 
     if (!query || query.length < 2) {
       return NextResponse.json({ exhibitors: [] });
     }
 
+    // Construir condiciones de búsqueda
+    const whereConditions: any[] = [
+      // Tiene perfil de negocio
+      { BusinessProfile: { isNot: null } },
+      // Coincide con el nombre
+      { nombre: { contains: query, mode: 'insensitive' } }
+    ];
+
+    // Si hay visionId, filtrar por esa visión
+    if (visionId) {
+      whereConditions.push({ visionId: parseInt(visionId) });
+    }
+
     // Buscar expositores (usuarios con BusinessProfile)
     const exhibitors = await prisma.usuario.findMany({
       where: {
-        AND: [
-          // Tiene perfil de negocio
-          { BusinessProfile: { isNot: null } },
-          // Coincide con el nombre
-          { nombre: { contains: query, mode: 'insensitive' } }
-        ]
+        AND: whereConditions
       },
       select: {
         id: true,

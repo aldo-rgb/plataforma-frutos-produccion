@@ -187,7 +187,8 @@ export default function MarketplacePage() {
         const data = await userVisionRes.json();
         if (data.visionId) {
           setUserActiveVisionId(data.visionId);
-          // NO seleccionar automáticamente - dejar en null para mostrar "Todas las visiones"
+          // Auto-seleccionar la visión del usuario para Expo
+          setSelectedVision(data.visionId);
         }
       }
     } catch (error) {
@@ -212,9 +213,12 @@ export default function MarketplacePage() {
   // Recargar cuando cambia la sección o la visión seleccionada
   useEffect(() => {
     if (hasAccess === true) {
-      // Para expo, selectedVision puede ser null (todas las visiones) - eso es válido
-      // Solo esperar si estamos en expo y aún no se ha cargado la info inicial
-      fetchProfiles(1);
+      // Para expo, esperar a que selectedVision esté listo (ya no puede ser null)
+      if (activeSection === 'expo' && selectedVision) {
+        fetchProfiles(1);
+      } else if (activeSection === 'public') {
+        fetchProfiles(1);
+      }
     }
   }, [activeSection, selectedVision]);
 

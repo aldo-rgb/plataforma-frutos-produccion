@@ -295,7 +295,7 @@ function CalificarContent() {
     setShowScanner(false);
   };
 
-  // Buscar expositores
+  // Buscar expositores (filtrado por visión si existe)
   const searchExhibitors = async (query: string) => {
     if (query.length < 2) {
       setSearchResults([]);
@@ -304,7 +304,14 @@ function CalificarContent() {
     
     setSearching(true);
     try {
-      const res = await fetch(`/api/expo/search-exhibitors?q=${encodeURIComponent(query)}`);
+      // Construir URL con filtro de visión si existe
+      const params = new URLSearchParams();
+      params.set('q', query);
+      if (currentVisionId) {
+        params.set('visionId', currentVisionId.toString());
+      }
+      
+      const res = await fetch(`/api/expo/search-exhibitors?${params}`);
       if (res.ok) {
         const data = await res.json();
         setSearchResults(data.exhibitors || []);
@@ -558,7 +565,13 @@ function CalificarContent() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => document.getElementById('search-input')?.focus()}
+                  onClick={() => {
+                    const searchInput = document.getElementById('search-input');
+                    if (searchInput) {
+                      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      setTimeout(() => searchInput.focus(), 300);
+                    }
+                  }}
                   className="bg-gradient-to-br from-pink-600 to-pink-700 p-6 rounded-2xl border border-pink-500/30 text-center"
                 >
                   <Search className="w-10 h-10 text-white mx-auto mb-2" />
@@ -567,25 +580,7 @@ function CalificarContent() {
                 </motion.button>
               </div>
 
-              {/* Botón Ver Catálogo */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setMode('select-vision');
-                  loadOrganizations();
-                }}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 p-4 rounded-2xl border border-emerald-500/30 flex items-center justify-center gap-3"
-              >
-                <Grid3X3 className="w-6 h-6 text-white" />
-                <div className="text-left">
-                  <p className="text-white font-medium">Ver Catálogo de Expositores</p>
-                  <p className="text-emerald-200 text-xs">Selecciona una visión para ver sus negocios</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-white ml-auto" />
-              </motion.button>
-
-              {/* Búsqueda manual */}
+              {/* Búsqueda manual - movido arriba del catálogo para mejor UX */}
               <div className="space-y-3">
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -598,10 +593,10 @@ function CalificarContent() {
                       searchExhibitors(e.target.value);
                     }}
                     placeholder="Buscar expositor por nombre..."
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-800 border border-slate-600 text-white placeholder-slate-500 focus:border-purple-500 focus:outline-none"
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-800 border border-slate-600 text-white placeholder-slate-500 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/30 focus:outline-none transition-all"
                   />
                   {searching && (
-                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-400 animate-spin" />
+                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-pink-400 animate-spin" />
                   )}
                 </div>
 
@@ -610,7 +605,7 @@ function CalificarContent() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden"
+                    className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden max-h-64 overflow-y-auto"
                   >
                     {searchResults.map((exhibitor) => {
                       const alreadyRated = ratedExhibitors.some(r => r.exhibitorId === exhibitor.id);
@@ -649,6 +644,13 @@ function CalificarContent() {
                       );
                     })}
                   </motion.div>
+                )}
+
+                {/* Mensaje cuando no hay resultados */}
+                {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+                  <p className="text-slate-400 text-center text-sm py-2">
+                    No se encontraron expositores con "{searchQuery}"
+                  </p>
                 )}
               </div>
 
