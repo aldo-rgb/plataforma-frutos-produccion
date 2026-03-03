@@ -18,9 +18,9 @@ export async function GET(request: NextRequest) {
     const visitor = await prisma.expoVisitor.findUnique({
       where: { token },
       include: {
-        reviews: {
+        ExpoReview: {
           include: {
-            exhibitor: {
+            Usuario_ExpoReview_exhibitorIdToUsuario: {
               select: {
                 id: true,
                 nombre: true,
@@ -41,11 +41,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Formatear ratings
-    const ratings = visitor.reviews.map((review: any) => ({
+    const ratings = visitor.ExpoReview.map((review: any) => ({
       id: review.id,
       exhibitorId: review.exhibitorId,
-      exhibitorName: review.exhibitor.nombre,
-      exhibitorImage: review.exhibitor.imagen,
+      exhibitorName: review.Usuario_ExpoReview_exhibitorIdToUsuario.nombre,
+      exhibitorImage: review.Usuario_ExpoReview_exhibitorIdToUsuario.imagen,
       rating: review.ratingStars,
       ratedAt: review.createdAt.toISOString()
     }));
