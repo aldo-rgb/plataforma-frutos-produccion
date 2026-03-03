@@ -2,8 +2,8 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 3.0  
-**Fecha:** Marzo 2026  
+**Versión:** 3.1  
+**Fecha:** 03 Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
 ---
@@ -1688,7 +1688,158 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
+## v3.1 - 03/03/2026 (Sesión 2)
+
+### 🚨 REGLA CRÍTICA: Modelos con `id` String sin @default
+
+**Descubrimiento:** Varios modelos tienen `id String @id` SIN `@default(uuid())`, lo que significa que el `id` DEBE proporcionarse manualmente en `create()`.
+
+**Modelos afectados que requieren `id` manual:**
+| Modelo | Tipo de ID | Requiere en create() |
+|--------|------------|---------------------|
+| `CashBatch` | `String @id` | ✅ `id: randomUUID()` |
+| `ExpoVisitor` | `String @id` | ✅ `id: generateUUID()` |
+
+### Fix: Quantum Website /site/[slug] - Múltiples Relaciones Prisma
+
+**Problema:** El sitio web publicado mostraba 404 aunque existía en la BD.
+
+**Causa raíz:** Múltiples relaciones con nombres incorrectos en la query:
+- `products` → `QuantumProduct`
+- `user` → `Usuario`
+- `Usuario_ServiceReview_authorIdToUsuario` → `Usuario` (relación simple en ServiceReview)
+
+**Solución:**
+```typescript
+// INCORRECTO
+const website = await prisma.quantumWebsite.findUnique({
+  where: { slug, isPublished: true },
+  include: {
+    products: true,        // ❌ 
+    user: {                // ❌
+      select: {
+        BusinessProfile: {
+          select: {
+            reviews: {     // ❌ (es ServiceReview)
+              include: {
+                author: {} // ❌ (es Usuario)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+});
+
+// CORRECTO
+const website = await prisma.quantumWebsite.findUnique({
+  where: { slug, isPublished: true },
+  include: {
+    QuantumProduct: true,  // ✅
+    Usuario: {             // ✅
+      select: {
+        BusinessProfile: {
+          select: {
+            ServiceReview: {  // ✅
+              include: {
+                Usuario: {}   // ✅ (relación simple)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+});
+```
+
+**Archivos modificados:**
+- `app/site/[slug]/page.tsx`
+
+### Fix: Quantum Web My-Site API - Relación QuantumProduct
+
+**Problema:** API `/api/quantum-web/my-site` devolvía `hasSite: false` con error de Prisma.
+
+**Causa raíz:** `products` → `QuantumProduct`
+
+**Archivo modificado:**
+- `app/api/quantum-web/my-site/route.ts`
+
+### Fix: ExpoVisitor.create() - Campo id Requerido
+
+**Problema:** Error al registrar visitante en la Expo: "Error al registrar visitante".
+
+**Causa raíz:** Modelo `ExpoVisitor` tiene `id String @id` sin `@default()`.
+
+**Solución:**
+```typescript
+// INCORRECTO
+await prisma.expoVisitor.create({
+  data: {
+    token: generateUUID(),
+    name: name.trim(),
+    // ... sin id
+  }
+});
+
+// CORRECTO
+await prisma.expoVisitor.create({
+  data: {
+    id: generateUUID(),      // ✅ REQUERIDO
+    token: generateUUID(),
+    name: name.trim(),
+    // ...
+  }
+});
+```
+
+**Archivo modificado:**
+- `app/api/expo/visitor/register/route.ts`
+
+### Fix: Mi-Negocio Layout - Empalme con Topbar
+
+**Problema:** Botones de Publicar, Editar y Vista se empalmaban con la barra superior.
+
+**Causa raíz:** Uso de `min-h-screen` que ignora el layout del dashboard con Topbar de 64px.
+
+**Solución:**
+```typescript
+// INCORRECTO
+className="min-h-screen flex flex-col items-center justify-center p-6"
+
+// CORRECTO
+className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center p-6"
+```
+
+**Archivo modificado:**
+- `app/dashboard/mi-negocio/page.tsx` (múltiples componentes)
+
+### 📋 Resumen de Relaciones Prisma Corregidas Hoy
+
+| Archivo | Relación Incorrecta | Relación Correcta |
+|---------|--------------------|--------------------|
+| `/site/[slug]/page.tsx` | `products` | `QuantumProduct` |
+| `/site/[slug]/page.tsx` | `user` | `Usuario` |
+| `/site/[slug]/page.tsx` | `reviews` (en BusinessProfile) | `ServiceReview` |
+| `/site/[slug]/page.tsx` | `author` (en ServiceReview) | `Usuario` |
+| `/api/quantum-web/my-site/route.ts` | `products` | `QuantumProduct` |
+| `/api/expo/visitor/register/route.ts` | (faltaba `id`) | `id: generateUUID()` |
+
+### 🔍 Cómo Verificar Relaciones en Prisma Schema
+
+```bash
+# Ver relaciones de un modelo específico
+grep -A 50 "^model QuantumWebsite" prisma/schema.prisma | grep -E "^\s+\w+\s+\w+"
+
+# Ver nombre exacto de relación
+grep -A 30 "^model ServiceReview" prisma/schema.prisma
+```
+
+---
+
 ## v3.0 - 03/03/2026
+
 
 ### 🔑 Patrón Crítico Descubierto: Nombres de Relaciones Prisma
 
