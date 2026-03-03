@@ -69,7 +69,7 @@ export default async function SitePage({ params }: PageProps) {
                   take: 6,
                   orderBy: { createdAt: 'desc' },
                   include: {
-                    Usuario_ServiceReview_authorIdToUsuario: {
+                    Usuario: {
                       select: {
                         nombre: true,
                         imagen: true
@@ -108,10 +108,10 @@ export default async function SitePage({ params }: PageProps) {
     const realReviews = businessProfile?.ServiceReview || [];
     const realTestimonials = realReviews.length > 0 
       ? realReviews.map(review => ({
-          name: review.Usuario_ServiceReview_authorIdToUsuario.nombre,
+          name: review.Usuario.nombre,
           text: review.comment,
           rating: review.rating,
-          avatar: review.Usuario_ServiceReview_authorIdToUsuario.imagen || undefined
+          avatar: review.Usuario.imagen || undefined
         }))
       : null; // Si no hay reseñas reales, no mostrar testimonios
 
