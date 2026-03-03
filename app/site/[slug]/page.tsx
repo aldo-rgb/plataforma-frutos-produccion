@@ -53,23 +53,23 @@ export default async function SitePage({ params }: PageProps) {
     const website = await prisma.quantumWebsite.findUnique({
       where: { slug, isPublished: true },
       include: {
-        products: {
+        QuantumProduct: {
           orderBy: [
             { featured: 'desc' },
             { sortOrder: 'asc' },
             { createdAt: 'desc' }
           ]
         },
-        user: {
+        Usuario: {
           select: {
             BusinessProfile: {
               select: {
-                reviews: {
+                ServiceReview: {
                   where: { isPublic: true },
                   take: 6,
                   orderBy: { createdAt: 'desc' },
                   include: {
-                    author: {
+                    Usuario_ServiceReview_authorIdToUsuario: {
                       select: {
                         nombre: true,
                         imagen: true
@@ -104,13 +104,14 @@ export default async function SitePage({ params }: PageProps) {
 
     // Transformar datos para el componente cliente
     // Usar reseñas reales del BusinessProfile en lugar de testimonios ficticios
-    const realReviews = website.user?.BusinessProfile?.reviews || [];
+    const businessProfile = website.Usuario?.BusinessProfile?.[0];
+    const realReviews = businessProfile?.ServiceReview || [];
     const realTestimonials = realReviews.length > 0 
       ? realReviews.map(review => ({
-          name: review.author.nombre,
+          name: review.Usuario_ServiceReview_authorIdToUsuario.nombre,
           text: review.comment,
           rating: review.rating,
-          avatar: review.author.imagen || undefined
+          avatar: review.Usuario_ServiceReview_authorIdToUsuario.imagen || undefined
         }))
       : null; // Si no hay reseñas reales, no mostrar testimonios
 
@@ -151,7 +152,7 @@ export default async function SitePage({ params }: PageProps) {
       services: website.services as { icon: string; title: string; description: string }[] | null,
       ctaText: website.ctaText,
       testimonials: realTestimonials, // Usar reseñas reales, null si no hay
-      products: website.products.map(p => ({
+      products: website.QuantumProduct.map(p => ({
         id: p.id,
         name: p.name,
         description: p.description,
