@@ -17,25 +17,25 @@ export async function GET() {
     const profile = await prisma.businessProfile.findUnique({
       where: { userId },
       include: {
-        category: true,
-        organization: {
+        BusinessCategory: true,
+        Organization: {
           select: { id: true, name: true, slug: true }
         },
-        vision: {
+        Vision: {
           select: { id: true, nombre: true }
         },
-        reviews: {
+        ServiceReview: {
           where: { isPublic: true },
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {
-            author: {
+            Usuario: {
               select: { id: true, nombre: true, imagen: true }
             }
           }
         },
         _count: {
-          select: { reviews: true }
+          select: { ServiceReview: true }
         }
       }
     });
@@ -48,8 +48,21 @@ export async function GET() {
       }
     });
 
+    // Mapear para compatibilidad con frontend
+    const mappedProfile = profile ? {
+      ...profile,
+      category: profile.BusinessCategory,
+      organization: profile.Organization,
+      vision: profile.Vision,
+      reviews: profile.ServiceReview?.map(r => ({
+        ...r,
+        author: r.Usuario
+      })),
+      _count: { reviews: profile._count?.ServiceReview || 0 }
+    } : null;
+
     return NextResponse.json({ 
-      profile, 
+      profile: mappedProfile, 
       isPLGraduate: !!graduation,
       hasProfile: !!profile 
     });
@@ -213,14 +226,21 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       },
       include: {
-        category: true,
+        BusinessCategory: true,
       }
     });
 
-    return NextResponse.json({ profile }, { status: 201 });
-  } catch (error) {
+    // Mapear para compatibilidad con frontend
+    const profileWithCategory = {
+      ...profile,
+      category: profile.BusinessCategory
+    };
+
+    return NextResponse.json({ profile: profileWithCategory }, { status: 201 });
+  } catch (error: any) {
     logger.error('Error creating profile:', error);
-    return NextResponse.json({ error: 'Error al crear perfil' }, { status: 500 });
+    console.error('❌ Error detallado creando perfil:', JSON.stringify(error, null, 2));
+    return NextResponse.json({ error: 'Error al crear perfil: ' + (error?.message || 'desconocido') }, { status: 500 });
   }
 }
 
