@@ -1608,7 +1608,7 @@ export default function QuantumBusinessBuilderPage() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen flex flex-col items-center justify-center p-6"
+      className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center p-6"
     >
       {/* Fondo con efecto matrix/grid */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1a1a2e_1px,transparent_1px),linear-gradient(to_bottom,#1a1a2e_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20" />
@@ -1817,7 +1817,7 @@ export default function QuantumBusinessBuilderPage() {
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
-      className="min-h-screen flex flex-col items-center justify-center p-6"
+      className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center p-6"
     >
       <div className="max-w-2xl w-full">
         <motion.button
@@ -1899,7 +1899,7 @@ export default function QuantumBusinessBuilderPage() {
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
-      className="min-h-screen flex flex-col items-center justify-center p-6"
+      className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center p-6"
     >
       <div className="max-w-4xl w-full">
         <motion.button
@@ -1997,7 +1997,7 @@ export default function QuantumBusinessBuilderPage() {
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
-      className="min-h-screen py-10 px-6"
+      className="min-h-[calc(100vh-8rem)] py-6 px-6"
     >
       <div className="max-w-5xl mx-auto">
         <motion.button
@@ -2158,7 +2158,7 @@ export default function QuantumBusinessBuilderPage() {
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
-      className="min-h-screen py-10 px-6"
+      className="min-h-[calc(100vh-8rem)] py-6 px-6"
     >
       <div className="max-w-4xl mx-auto">
         <motion.button
@@ -2368,7 +2368,7 @@ export default function QuantumBusinessBuilderPage() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen flex flex-col items-center justify-center p-6 relative"
+      className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center p-6 relative"
     >
       {/* Fondo dramático */}
       <div className="absolute inset-0 bg-gradient-to-b from-black via-slate-900 to-black" />
@@ -2484,7 +2484,7 @@ export default function QuantumBusinessBuilderPage() {
       key="optimizador"
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
-      className="min-h-screen py-10 px-6"
+      className="min-h-[calc(100vh-8rem)] py-6 px-6"
     >
       <div className="max-w-6xl mx-auto">
         <motion.button
@@ -3178,7 +3178,7 @@ export default function QuantumBusinessBuilderPage() {
   // Pantalla de carga mientras verifica acceso
   if (hasAccess === null || checkingWebsite) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+      <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
           <p className="text-slate-400">Cargando tu negocio...</p>
@@ -3190,7 +3190,7 @@ export default function QuantumBusinessBuilderPage() {
   // Pantalla de acceso restringido
   if (hasAccess === false) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
+      <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
         <div className="max-w-md w-full">
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 border border-slate-700/50 text-center">
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
@@ -3228,7 +3228,7 @@ export default function QuantumBusinessBuilderPage() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <AnimatePresence mode="wait">
         {loading && <LoadingOverlay key="loading" />}
       </AnimatePresence>
