@@ -982,13 +982,21 @@ export default function QuantumBusinessBuilderPage() {
   const checkExistingWebsite = async () => {
     setCheckingWebsite(true);
     try {
+      console.log('[mi-negocio] Verificando sitio web existente...');
       const res = await fetch('/api/quantum-web/my-site');
+      console.log('[mi-negocio] Respuesta status:', res.status);
+      
       if (res.ok) {
         const data = await res.json();
+        console.log('[mi-negocio] Datos recibidos:', data);
         setHasExistingWebsite(data.hasSite);
         if (data.site) {
           setExistingWebsite(data);
+          console.log('[mi-negocio] Sitio web encontrado:', data.site.slug);
         }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('[mi-negocio] Error en respuesta:', res.status, errorData);
       }
     } catch (error) {
       console.error('Error checking website:', error);

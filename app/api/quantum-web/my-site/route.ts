@@ -7,6 +7,8 @@ import logger from '@/lib/logger';
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
+    console.log('[my-site] Session email:', session?.user?.email);
+    
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
@@ -16,6 +18,8 @@ export async function GET() {
       where: { email: session.user.email }
     });
 
+    console.log('[my-site] User found:', user?.id, user?.nombre);
+
     if (!user) {
       return NextResponse.json({ hasSite: false });
     }
@@ -24,11 +28,14 @@ export async function GET() {
     const website = await prisma.quantumWebsite.findUnique({
       where: { userId: user.id },
       include: {
-        products: true
+        QuantumProduct: true
       }
     });
 
+    console.log('[my-site] Website found:', website?.id, website?.slug, 'isPublished:', website?.isPublished);
+
     if (!website) {
+      console.log('[my-site] No website found for user', user.id);
       return NextResponse.json({ hasSite: false });
     }
 
@@ -64,7 +71,7 @@ export async function GET() {
         services: website.services,
         ctaText: website.ctaText,
         testimonials: website.testimonials,
-        products: website.products,
+        products: website.QuantumProduct,
         isPublished: website.isPublished,
         publishedAt: website.publishedAt,
         createdAt: website.createdAt,
