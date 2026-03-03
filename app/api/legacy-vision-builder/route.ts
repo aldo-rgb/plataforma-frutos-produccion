@@ -376,7 +376,7 @@ export async function GET(request: NextRequest) {
         ...def,
         captaincyId: existingCaptaincy?.id || null,
         isActive: existingCaptaincy?.isActive ?? true,
-        TribeCaptainAssignment: existingCaptaincy?.TribeCaptainAssignment.map(a => ({
+        assignments: existingCaptaincy?.TribeCaptainAssignment.map(a => ({
           id: a.id,
           userId: a.userId,
           userName: a.Usuario_TribeCaptainAssignment_userIdToUsuario.nombre,
@@ -601,6 +601,7 @@ export async function POST(request: NextRequest) {
             visionId: parseInt(visionId),
             roleType: 'TRIBE_CAPTAIN',
             maxCaptains: 1,
+            updatedAt: new Date(),
           },
           include: { TribeCaptainAssignment: true }
         });
@@ -743,6 +744,7 @@ export async function POST(request: NextRequest) {
             visionId: parseInt(visionId),
             roleType: roleType as TribeCaptaincyRole,
             maxCaptains: roleDef.maxCaptains,
+            updatedAt: new Date(),
           }
         });
       }

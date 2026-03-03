@@ -1622,7 +1622,7 @@ export default function QuantumBusinessBuilderPage() {
         <div className="flex items-center justify-center gap-3 mb-4">
           <Zap className="w-10 h-10 text-yellow-400" />
           <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-purple-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">
-            QUANTUM BUSINESS BUILDER
+            Crea tu Negocio
           </h1>
           <Zap className="w-10 h-10 text-yellow-400" />
         </div>

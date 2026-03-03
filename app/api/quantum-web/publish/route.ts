@@ -149,7 +149,8 @@ export async function POST(req: Request) {
         ctaText: content.ctaText,
         testimonials: content.testimonials,
         isPublished: true,
-        publishedAt: new Date()
+        publishedAt: new Date(),
+        updatedAt: new Date()
       },
       update: {
         slug,
