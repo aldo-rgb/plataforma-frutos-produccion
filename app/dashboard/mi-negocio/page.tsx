@@ -2502,7 +2502,7 @@ export default function QuantumBusinessBuilderPage() {
           </div>
           
           <h2 className="text-3xl font-bold text-white mb-2">
-            Escala tu Imperio 🏰
+            Escala tu Negocio
           </h2>
           <p className="text-slate-400">
             Edita en tiempo real y ve cómo se verá tu perfil en el Mercado

@@ -210,6 +210,7 @@ export async function POST(request: NextRequest) {
         isPLGraduate: !!graduation,
         isVerified: !!graduation, // Tick azul automático si graduó de PL
         status: isDraft ? 'HIDDEN' : 'ACTIVE', // Borrador = HIDDEN
+        updatedAt: new Date(),
       },
       include: {
         category: true,
