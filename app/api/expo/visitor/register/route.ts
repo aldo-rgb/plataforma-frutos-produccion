@@ -71,9 +71,13 @@ export async function POST(request: NextRequest) {
     // Generar fingerprint del dispositivo (simple)
     const deviceFingerprint = `web-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // Generar ID único para el visitante
+    const visitorId = generateUUID();
+
     // Crear visitante
     const visitor = await prisma.expoVisitor.create({
       data: {
+        id: visitorId,
         token: generateUUID(),
         name: name.trim(),
         email: email ? email.trim().toLowerCase() : null,
