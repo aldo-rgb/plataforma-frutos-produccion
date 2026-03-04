@@ -281,9 +281,11 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
 
   // Detectar si el dispositivo es de Mercado Pago Point
   const isMercadoPagoDevice = (deviceId: string) => {
-    // Los dispositivos de MP Point tienen formatos como: "PAX_A910__SMARTPOS1234567890"
-    // o IDs numéricos largos
-    return deviceId.includes('PAX') || deviceId.includes('SMARTPOS') || /^\d{10,}$/.test(deviceId);
+    // Los dispositivos de MP Point tienen formatos como: 
+    // - "PAX_A910__SMARTPOS1234567890"
+    // - "DSPREAD_D20__1209860452112113745" (lectores Bluetooth D20)
+    // - IDs numéricos largos
+    return deviceId.includes('PAX') || deviceId.includes('SMARTPOS') || deviceId.includes('DSPREAD') || /^\d{10,}$/.test(deviceId);
   };
 
   // Enviar cobro a terminal POS (Mercado Pago Point o Stripe)
