@@ -213,11 +213,19 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     const errorMessage = error?.message || 'Error desconocido';
-    logger.error('Error al crear pago de registro', { error: errorMessage, stack: error?.stack });
+    const errorName = error?.name || 'Unknown';
+    const errorStack = error?.stack?.substring(0, 500) || '';
+    logger.error('Error al crear pago de registro', { 
+      error: errorMessage, 
+      name: errorName,
+      stack: errorStack 
+    });
     return NextResponse.json(
       {
         error: `Error al crear el pago: ${errorMessage}`,
-        details: errorMessage
+        details: errorMessage,
+        errorType: errorName,
+        debugInfo: process.env.NODE_ENV === 'development' ? errorStack : undefined
       },
       { status: 500 }
     );
