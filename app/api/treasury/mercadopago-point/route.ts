@@ -202,9 +202,12 @@ export async function POST(request: NextRequest) {
 
     // Crear intención de pago en Mercado Pago Point
     // Documentación: https://www.mercadopago.com.mx/developers/es/reference/integrations_api/_point_integration-api_devices_deviceid_payment-intents/post
-    // NOTA: La API de Point solo acepta 'amount' y 'additional_info', NO acepta 'description' ni 'external_reference' directamente
+    // NOTA: La API de Point espera el monto en CENTAVOS (ej: $500.00 MXN = 50000 centavos)
+    // Mínimo: 500 centavos ($5.00 MXN)
+    const amountInCents = Math.round(amount * 100); // Convertir pesos a centavos
+    
     const paymentIntentPayload = {
-      amount: Math.round(amount * 100) / 100, // Asegurar 2 decimales
+      amount: amountInCents,
       additional_info: {
         external_reference: reference,
         print_on_terminal: true,
