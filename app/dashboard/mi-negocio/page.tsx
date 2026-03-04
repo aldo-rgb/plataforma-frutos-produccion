@@ -478,12 +478,18 @@ function ExpoReviewsSection({ userId }: { userId?: number }) {
 
   const fetchReviews = async () => {
     try {
+      console.log('[ExpoReviewsSection] Fetching reviews...');
       const res = await fetch('/api/expo/my-reviews');
       const data = await res.json();
+      
+      console.log('[ExpoReviewsSection] Response:', data);
       
       if (data.success) {
         setReviews(data.reviews);
         setStats(data.stats);
+        console.log('[ExpoReviewsSection] Stats:', data.stats);
+      } else {
+        console.log('[ExpoReviewsSection] No success:', data.error);
       }
     } catch (error) {
       console.error('Error fetching reviews:', error);
