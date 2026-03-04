@@ -579,8 +579,8 @@ function CheckoutContent() {
       setStep('payment');
     } else if (step === 'payment') {
       const remaining = getRemainingBalance();
-      // Allow to continue if: fully paid OR will pay remaining with card OR transfer
-      if (remaining > 0 && paymentMethod !== 'STRIPE' && paymentMethod !== 'TRANSFER') {
+      // Allow to continue if: fully paid OR will pay remaining with card (Stripe/MercadoPago) OR transfer
+      if (remaining > 0 && paymentMethod !== 'STRIPE' && paymentMethod !== 'MERCADOPAGO' && paymentMethod !== 'TRANSFER') {
         setCodeError(`Falta por pagar $${remaining.toLocaleString()} MXN. Agrega más códigos o selecciona pago con tarjeta/transferencia.`);
         return;
       }
