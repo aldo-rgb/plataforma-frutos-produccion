@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         visitorPhone: true,
         visitorEmail: true,
         createdAt: true,
-        visitor: {
+        Usuario_ExpoReview_visitorIdToUsuario: {
           select: {
             id: true,
             nombre: true
