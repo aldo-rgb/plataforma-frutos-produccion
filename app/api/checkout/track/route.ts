@@ -115,6 +115,7 @@ export async function POST(request: Request) {
         originalPrice: originalPrice,
         status: 'IN_CHECKOUT',
         checkoutStartedAt: new Date(),
+        updatedAt: new Date(), // Campo requerido sin @default
         // Guardar datos de registro para crear usuario después
         registrationData: registrationData || null,
         passwordHash: passwordHash,
