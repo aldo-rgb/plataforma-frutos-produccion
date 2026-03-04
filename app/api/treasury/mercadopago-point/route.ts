@@ -32,7 +32,13 @@ export async function GET(request: NextRequest) {
     // Obtener credenciales de Mercado Pago de la organización
     const usuario = await prisma.usuario.findUnique({
       where: { id: session.user.id },
-      select: { organizationId: true },
+      select: { organizationId: true, nombre: true },
+    });
+
+    logger.debug('[MP Point] Usuario:', { 
+      sessionUserId: session.user.id, 
+      organizationId: usuario?.organizationId,
+      nombre: usuario?.nombre 
     });
 
     if (!usuario?.organizationId) {
@@ -47,10 +53,17 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    logger.debug('[MP Point] Gateway config:', { 
+      found: !!mpConfig, 
+      hasSecretKey: !!mpConfig?.secretKey,
+      orgId: usuario.organizationId
+    });
+
     if (!mpConfig?.secretKey) {
       return NextResponse.json({ 
         error: 'Mercado Pago no está configurado para esta organización',
-        configured: false 
+        configured: false,
+        debug: { orgId: usuario.organizationId, userId: session.user.id }
       }, { status: 400 });
     }
 
