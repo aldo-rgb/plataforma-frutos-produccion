@@ -181,10 +181,9 @@ export async function POST(request: NextRequest) {
 
     // Crear intención de pago en Mercado Pago Point
     // Documentación: https://www.mercadopago.com.mx/developers/es/reference/integrations_api/_point_integration-api_devices_deviceid_payment-intents/post
+    // NOTA: La API de Point solo acepta 'amount' y 'additional_info', NO acepta 'description' ni 'external_reference' directamente
     const paymentIntentPayload = {
       amount: Math.round(amount * 100) / 100, // Asegurar 2 decimales
-      description: description || 'Pago Quantum Matter',
-      external_reference: reference,
       additional_info: {
         external_reference: reference,
         print_on_terminal: true,
