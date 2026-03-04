@@ -54,6 +54,13 @@ export async function POST(request: NextRequest) {
     // Obtener configuración de pasarela de pago de la organización
     logger.debug('🔍 [create-payment] Buscando gateway para orgId:', organizationId, 'preferredProvider:', preferredProvider);
     
+    // Debug: Listar TODOS los gateways de esta organización
+    const allGateways = await prisma.paymentGatewayConfig.findMany({
+      where: { organizationId: organizationId },
+      select: { provider: true, isActive: true, id: true }
+    });
+    logger.debug('🔍 [create-payment] Todos los gateways de la org:', JSON.stringify(allGateways));
+    
     let gatewayConfig;
     if (preferredProvider) {
       // Buscar la pasarela específica que el usuario seleccionó
@@ -64,6 +71,8 @@ export async function POST(request: NextRequest) {
           provider: preferredProvider
         },
       });
+      
+      logger.debug('🔍 [create-payment] Búsqueda con provider específico:', preferredProvider, '- Encontrado:', !!gatewayConfig);
       
       // Si no se encuentra la pasarela preferida, buscar cualquier activa
       if (!gatewayConfig) {
