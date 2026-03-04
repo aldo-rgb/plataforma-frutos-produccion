@@ -358,9 +358,9 @@ function CheckoutContent() {
     return Math.max(0, totalPrice - totalPaid);
   };
 
-  // Check if payment is complete (either fully paid or has pending card payment)
+  // Check if payment is complete (either fully paid or has pending card/transfer payment)
   const isPaymentComplete = () => {
-    return getRemainingBalance() === 0 || (getRemainingBalance() > 0 && paymentMethod === 'STRIPE');
+    return getRemainingBalance() === 0 || (getRemainingBalance() > 0 && (paymentMethod === 'STRIPE' || paymentMethod === 'MERCADOPAGO' || paymentMethod === 'TRANSFER'));
   };
 
   const handlePayment = async () => {
