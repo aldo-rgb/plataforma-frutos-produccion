@@ -288,12 +288,19 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
 
   // Enviar cobro a terminal POS (Mercado Pago Point o Stripe)
   const handleSendToPOS = async () => {
+    console.log('[TreasuryPOS] handleSendToPOS llamado');
+    console.log('[TreasuryPOS] selectedDevice:', selectedDevice);
+    console.log('[TreasuryPOS] cobroForm.amount:', cobroForm.amount);
+    console.log('[TreasuryPOS] selectedParticipante:', selectedParticipante);
+    
     if (!selectedDevice || !cobroForm.amount || parseFloat(cobroForm.amount) <= 0) {
+      console.log('[TreasuryPOS] Validación fallida - dispositivo o monto inválido');
       showNotification('error', 'Selecciona un dispositivo y monto válido');
       return;
     }
 
     if (!selectedParticipante) {
+      console.log('[TreasuryPOS] Validación fallida - sin participante');
       showNotification('error', 'Selecciona un participante para cobrar con tarjeta');
       return;
     }
