@@ -169,6 +169,8 @@ export async function POST(request: NextRequest) {
       select: { organizationId: true },
     });
 
+    console.log('[MP Point POST] Usuario:', { sessionUserId: session.user.id, orgId: usuario?.organizationId });
+
     if (!usuario?.organizationId) {
       return NextResponse.json({ error: 'No perteneces a ninguna organización' }, { status: 404 });
     }
@@ -179,6 +181,12 @@ export async function POST(request: NextRequest) {
         provider: 'MERCADOPAGO',
         isActive: true,
       },
+    });
+
+    console.log('[MP Point POST] Config encontrada:', { 
+      found: !!mpConfig, 
+      hasSecretKey: !!mpConfig?.secretKey,
+      provider: mpConfig?.provider
     });
 
     if (!mpConfig?.secretKey) {
@@ -203,10 +211,9 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    logger.debug('[MP Point] Creando intención de pago:', {
-      deviceId,
-      amount: paymentIntentPayload.amount,
-      reference,
+    console.log('[MP Point POST] Enviando a MP:', {
+      url: `${MP_API_BASE}/point/integration-api/devices/${deviceId}/payment-intents`,
+      payload: paymentIntentPayload
     });
 
     const response = await fetch(
@@ -222,6 +229,12 @@ export async function POST(request: NextRequest) {
     );
 
     const data = await response.json();
+
+    console.log('[MP Point POST] Respuesta de MP:', { 
+      status: response.status, 
+      ok: response.ok,
+      data 
+    });
 
     if (!response.ok) {
       logger.error('[MP Point] Error creando intención de pago:', data);
