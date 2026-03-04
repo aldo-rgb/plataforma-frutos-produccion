@@ -104,6 +104,7 @@ export async function POST(request: Request) {
     // Crear nuevo registro de checkout
     const checkout = await prisma.abandonedCheckout.create({
       data: {
+        id: `chk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         userId: userId,
         email: email,
         phone: phone || null,
