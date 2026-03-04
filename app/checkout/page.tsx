@@ -76,7 +76,7 @@ interface PriceConfig {
 }
 
 type TicketSelection = 'BASIC_ONLY' | 'FULL_VISION';
-type PaymentMethod = 'GIFT_CODE' | 'STRIPE' | 'TRANSFER';
+type PaymentMethod = 'GIFT_CODE' | 'STRIPE' | 'MERCADOPAGO' | 'TRANSFER';
 
 interface BankConfig {
   bankName: string;
@@ -431,15 +431,16 @@ function CheckoutContent() {
         return;
       }
 
-      // If paying with card, redirect to payment gateway FIRST (user will be created after payment)
-      if (remainingBalance > 0 && paymentMethod === 'STRIPE') {
+      // If paying with card (Stripe or MercadoPago), redirect to payment gateway FIRST (user will be created after payment)
+      if (remainingBalance > 0 && (paymentMethod === 'STRIPE' || paymentMethod === 'MERCADOPAGO')) {
         const codesToRedeem = appliedPayments.filter(p => p.type === 'GIFT_CODE' || p.type === 'CASH_PAYMENT');
         
-        console.log('[CHECKOUT] Creando pago con pasarela...');
+        console.log('[CHECKOUT] Creando pago con pasarela:', paymentMethod);
         console.log('[CHECKOUT] Datos:', { 
           orgId: registrationData.organizationId, 
           visionId: registrationData.visionId,
-          amount: remainingBalance 
+          amount: remainingBalance,
+          paymentMethod: paymentMethod
         });
         
         const paymentRes = await fetch('/api/checkout/create-payment', {
@@ -450,6 +451,7 @@ function CheckoutContent() {
             visionId: registrationData.visionId,
             amount: remainingBalance,
             ticketSelection: ticketSelection,
+            paymentMethod: paymentMethod, // 'STRIPE' o 'MERCADOPAGO'
             userData: {
               nombre: registrationData.nombre,
               email: registrationData.email,
@@ -899,7 +901,8 @@ function CheckoutContent() {
               )}
               
               {/* Payment Methods */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {/* Tarjeta (Stripe) */}
                 <button
                   onClick={() => setPaymentMethod('STRIPE')}
                   disabled={getRemainingBalance() === 0}
@@ -922,6 +925,30 @@ function CheckoutContent() {
                   </span>
                 </button>
 
+                {/* Mercado Pago */}
+                <button
+                  onClick={() => setPaymentMethod('MERCADOPAGO')}
+                  disabled={getRemainingBalance() === 0}
+                  className={`p-4 rounded-xl border-2 transition-all relative ${
+                    paymentMethod === 'MERCADOPAGO'
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
+                  } ${getRemainingBalance() === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {getRemainingBalance() > 0 && paymentMethod === 'MERCADOPAGO' && (
+                    <div className="absolute -top-2 -right-2">
+                      <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold">
+                        ${getRemainingBalance().toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  <Wallet className={`mx-auto mb-2 ${paymentMethod === 'MERCADOPAGO' ? 'text-blue-400' : 'text-slate-400'}`} size={24} />
+                  <span className={`text-sm font-medium ${paymentMethod === 'MERCADOPAGO' ? 'text-blue-400' : 'text-slate-300'}`}>
+                    Mercado Pago
+                  </span>
+                </button>
+
+                {/* Pago con Código */}
                 <button
                   onClick={() => setPaymentMethod('GIFT_CODE')}
                   className={`p-4 rounded-xl border-2 transition-all ${
@@ -930,28 +957,11 @@ function CheckoutContent() {
                       : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
                   }`}
                 >
-                  <Banknote className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-400'}`} size={24} />
+                  <QrCode className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-400'}`} size={24} />
                   <span className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-300'}`}>
                     Pago con Código
                   </span>
                 </button>
-
-                {/* TRANSFERENCIA OCULTA - Pendiente desarrollo Pay-Bot
-                <button
-                  onClick={() => setPaymentMethod('TRANSFER')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    paymentMethod === 'TRANSFER'
-                      ? 'border-purple-500 bg-purple-500/10'
-                      : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
-                  }`}
-                >
-                  <Building2 className={`mx-auto mb-2 ${paymentMethod === 'TRANSFER' ? 'text-purple-400' : 'text-slate-400'}`} size={24} />
-                  <span className={`text-sm font-medium ${paymentMethod === 'TRANSFER' ? 'text-purple-400' : 'text-slate-300'}`}>
-                    Transferencia
-                  </span>
-                </button>
-                */}
-
               </div>
 
               {/* Gift Code Input */}

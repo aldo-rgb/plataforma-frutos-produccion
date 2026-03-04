@@ -70,6 +70,7 @@ export const checkoutCreatePaymentSchema = z.object({
   visionId: idSchema.optional().nullable(),
   amount: z.number().positive('Monto debe ser positivo'),
   ticketSelection: z.enum(['BASIC_ONLY', 'FULL_VISION']).optional(),
+  paymentMethod: z.enum(['STRIPE', 'MERCADOPAGO']).optional(), // Método de pago seleccionado
   userData: z.object({
     nombre: z.string().min(1).max(100),
     email: emailSchema,

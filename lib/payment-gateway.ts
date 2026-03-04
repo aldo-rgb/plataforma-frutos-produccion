@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 
-export type PaymentProvider = 'stripe' | 'paypal' | 'mercadopago';
+export type PaymentProvider = 'stripe' | 'mercadopago';
 
 export interface PaymentGatewayCredentials {
   provider: PaymentProvider;
@@ -114,18 +114,6 @@ export async function getPaymentGateway(
       }
     }
 
-    if (preferredProvider === 'paypal' || (!preferredProvider && settings.paypalEnabled)) {
-      if (settings.paypalEnabled && settings.paypalClientSecret) {
-        logger.debug('✅ Usando PayPal de configuración de plataforma');
-        return {
-          provider: 'paypal',
-          publicKey: settings.paypalClientId || null,
-          secretKey: settings.paypalClientSecret,
-          source: 'platform',
-        };
-      }
-    }
-
     if (preferredProvider === 'mercadopago' || (!preferredProvider && settings.mercadoPagoEnabled)) {
       if (settings.mercadoPagoEnabled && settings.mercadoPagoAccessToken) {
         logger.debug('✅ Usando MercadoPago de configuración de plataforma');
@@ -159,15 +147,6 @@ export async function getPaymentGateway(
         provider: 'mercadopago',
         publicKey: settings.mercadoPagoPublicKey || null,
         secretKey: settings.mercadoPagoAccessToken,
-        source: 'platform',
-      };
-    }
-
-    if (settings.paypalEnabled && settings.paypalClientSecret) {
-      return {
-        provider: 'paypal',
-        publicKey: settings.paypalClientId || null,
-        secretKey: settings.paypalClientSecret,
         source: 'platform',
       };
     }

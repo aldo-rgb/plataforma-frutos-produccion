@@ -27,7 +27,7 @@ import Image from 'next/image';
 
 interface PaymentConfig {
   id?: number;
-  provider: 'MERCADOPAGO' | 'STRIPE' | 'PAYPAL' | '';
+  provider: 'MERCADOPAGO' | 'STRIPE' | '';
   publicKey: string;
   secretKey: string;
   webhookSecret: string;
@@ -38,7 +38,6 @@ interface PaymentConfig {
 interface ProviderConfigs {
   MERCADOPAGO: PaymentConfig;
   STRIPE: PaymentConfig;
-  PAYPAL: PaymentConfig;
 }
 
 const DEFAULT_CONFIG: PaymentConfig = {
@@ -52,7 +51,6 @@ const DEFAULT_CONFIG: PaymentConfig = {
 const DEFAULT_PROVIDER_CONFIGS: ProviderConfigs = {
   MERCADOPAGO: { ...DEFAULT_CONFIG, provider: 'MERCADOPAGO' },
   STRIPE: { ...DEFAULT_CONFIG, provider: 'STRIPE' },
-  PAYPAL: { ...DEFAULT_CONFIG, provider: 'PAYPAL' },
 };
 
 const PROVIDERS = [
@@ -80,19 +78,6 @@ const PROVIDERS = [
       publicKey: 'Publishable Key (pk_...)',
       secretKey: 'Secret Key (sk_...)',
       webhookSecret: 'Webhook Signing Secret (whsec_...)',
-    },
-  },
-  {
-    id: 'PAYPAL',
-    name: 'PayPal',
-    logo: '/images/paypal-logo.png',
-    color: 'bg-yellow-500',
-    description: 'Conocido y confiable mundialmente',
-    docsUrl: 'https://developer.paypal.com/api/rest/',
-    fields: {
-      publicKey: 'Client ID',
-      secretKey: 'Client Secret',
-      webhookSecret: 'Webhook ID (Opcional)',
     },
   },
 ];

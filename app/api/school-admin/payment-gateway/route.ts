@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     }));
 
     // Validar provider
-    const validProviders = ['MERCADOPAGO', 'STRIPE', 'PAYPAL'];
+    const validProviders = ['MERCADOPAGO', 'STRIPE'];
     if (!provider || !validProviders.includes(provider)) {
       return NextResponse.json({ 
         error: 'Proveedor inválido. Debe ser MERCADOPAGO, STRIPE o PAYPAL' 

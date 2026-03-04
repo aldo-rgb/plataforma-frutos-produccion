@@ -45,13 +45,39 @@ export async function POST(request: NextRequest) {
       ticketSelection, // 'BASIC_ONLY' | 'FULL_VISION'
       userData, // { nombre, email, apodo, telefono }
       appliedCodes = [],
+      paymentMethod, // 'STRIPE' | 'MERCADOPAGO' (opcional, si no se envía usa la primera activa)
     } = validation.data;
 
+    // Determinar qué pasarela usar basándose en la selección del usuario
+    const preferredProvider = paymentMethod?.toUpperCase() || null;
+    
     // Obtener configuración de pasarela de pago de la organización
-    logger.debug('🔍 [create-payment] Buscando gateway para orgId:', organizationId);
-    const gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
-      where: { organizationId: organizationId, isActive: true },
-    });
+    logger.debug('🔍 [create-payment] Buscando gateway para orgId:', organizationId, 'preferredProvider:', preferredProvider);
+    
+    let gatewayConfig;
+    if (preferredProvider) {
+      // Buscar la pasarela específica que el usuario seleccionó
+      gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+        where: { 
+          organizationId: organizationId, 
+          isActive: true,
+          provider: preferredProvider
+        },
+      });
+      
+      // Si no se encuentra la pasarela preferida, buscar cualquier activa
+      if (!gatewayConfig) {
+        logger.debug('⚠️ [create-payment] Pasarela preferida no encontrada, buscando alternativa');
+        gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+          where: { organizationId: organizationId, isActive: true },
+        });
+      }
+    } else {
+      // Si no hay preferencia, usar la primera activa
+      gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+        where: { organizationId: organizationId, isActive: true },
+      });
+    }
 
     logger.debug('🔍 [create-payment] Gateway encontrado:', gatewayConfig ? {
       provider: gatewayConfig.provider,

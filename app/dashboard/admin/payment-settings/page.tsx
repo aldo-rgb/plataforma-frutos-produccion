@@ -262,55 +262,6 @@ export default function PaymentSettingsPage() {
           </div>
         </div>
 
-        {/* PayPal Settings */}
-        <div className="bg-slate-900/50 backdrop-blur border border-purple-500/20 rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8">
-                <svg viewBox="0 0 124 33" xmlns="http://www.w3.org/2000/svg" className="h-full">
-                  <path d="M46.211 6.749h-6.839a.95.95 0 0 0-.939.802l-2.766 17.537a.57.57 0 0 0 .564.658h3.265a.95.95 0 0 0 .939-.803l.746-4.73a.95.95 0 0 1 .938-.803h2.165c4.505 0 7.105-2.18 7.784-6.5.306-1.89.013-3.375-.872-4.415-.972-1.142-2.696-1.746-4.985-1.746zM47 13.154c-.374 2.454-2.249 2.454-4.062 2.454h-1.032l.724-4.583a.57.57 0 0 1 .563-.481h.473c1.235 0 2.4 0 3.002.704.359.42.469 1.044.332 1.906z" fill="#179BD7"/>
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold text-white">PayPal</h2>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.paypalEnabled}
-                onChange={(e) => setSettings({ ...settings, paypalEnabled: e.target.checked })}
-                className="w-5 h-5 rounded bg-slate-800 border-slate-700 text-purple-600 focus:ring-purple-500"
-              />
-              <span className="text-slate-300">Activado</span>
-            </label>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Client ID
-              </label>
-              <input
-                type="text"
-                value={settings.paypalClientId}
-                onChange={(e) => setSettings({ ...settings, paypalClientId: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white font-mono focus:outline-none focus:border-purple-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Client Secret
-              </label>
-              <input
-                type="password"
-                value={settings.paypalClientSecret}
-                onChange={(e) => setSettings({ ...settings, paypalClientSecret: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white font-mono focus:outline-none focus:border-purple-500"
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Mercado Pago Settings */}
         <div className="bg-slate-900/50 backdrop-blur border border-purple-500/20 rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
