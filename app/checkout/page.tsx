@@ -376,7 +376,7 @@ function CheckoutContent() {
       const giftCodes = appliedPayments.filter(p => p.type === 'GIFT_CODE');
 
       // If there's remaining balance and no card/transfer payment method selected
-      if (remainingBalance > 0 && paymentMethod !== 'STRIPE' && paymentMethod !== 'TRANSFER') {
+      if (remainingBalance > 0 && paymentMethod !== 'STRIPE' && paymentMethod !== 'MERCADOPAGO' && paymentMethod !== 'TRANSFER') {
         setError(`Aún falta por pagar $${remainingBalance.toLocaleString()} MXN. Agrega más códigos o selecciona pago con tarjeta/transferencia.`);
         setProcessing(false);
         return;
