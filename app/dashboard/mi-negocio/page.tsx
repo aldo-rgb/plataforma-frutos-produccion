@@ -1639,64 +1639,6 @@ export default function QuantumBusinessBuilderPage() {
         </p>
       </motion.div>
 
-      {/* Si ya tiene sitio web publicado, mostrar card de acceso directo */}
-      {hasExistingWebsite && existingWebsite?.site && (
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="w-full max-w-4xl mb-10 relative z-10"
-        >
-          <div className="bg-gradient-to-r from-purple-900/60 to-pink-900/60 border border-purple-500/40 rounded-2xl p-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <Globe className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">{existingWebsite.site.businessName}</h3>
-                  <p className="text-purple-300 text-sm">{existingWebsite.url}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => window.open(`/site/${existingWebsite.site.slug}`, '_blank')}
-                  className="px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition flex items-center gap-2"
-                >
-                  <Eye className="w-4 h-4" />
-                  Ver Sitio
-                </button>
-                <button
-                  onClick={() => {
-                    // Guardar datos en localStorage para precargar en Quantum Web
-                    const prefillData = {
-                      name: existingWebsite.site.businessName,
-                      description: existingWebsite.site.businessDescription,
-                      category: existingWebsite.site.businessCategory,
-                      phone: existingWebsite.site.phone,
-                      whatsapp: existingWebsite.site.whatsapp,
-                      email: existingWebsite.site.email,
-                      address: existingWebsite.site.address,
-                      schedule: existingWebsite.site.schedule,
-                      instagram: existingWebsite.site.instagram,
-                      facebook: existingWebsite.site.facebook,
-                      editMode: true,
-                      existingSlug: existingWebsite.site.slug
-                    };
-                    localStorage.setItem('quantum_web_prefill', JSON.stringify(prefillData));
-                    router.push('/dashboard/quantum-web');
-                  }}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium hover:opacity-90 transition flex items-center gap-2"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Editar Página
-                </button>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
       {/* Botón Compartir en la Expo - Visible si tiene perfil de negocio */}
       {hasExistingProfile && existingProfile && (
         <motion.div
@@ -1735,6 +1677,26 @@ export default function QuantumBusinessBuilderPage() {
                     >
                       <Eye className="w-4 h-4" />
                       Ver mi Sitio Web
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const siteUrl = `${window.location.origin}/site/${existingWebsite.site.slug}`;
+                        try {
+                          await navigator.clipboard.writeText(siteUrl);
+                          // Mostrar notificación de copiado
+                          const toast = document.createElement('div');
+                          toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse';
+                          toast.textContent = '¡URL copiada al portapapeles!';
+                          document.body.appendChild(toast);
+                          setTimeout(() => toast.remove(), 2000);
+                        } catch (err) {
+                          console.error('Error al copiar:', err);
+                        }
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-green-600/80 text-white hover:bg-green-600 transition flex items-center gap-2"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Compartir
                     </button>
                     <button
                       onClick={() => {
