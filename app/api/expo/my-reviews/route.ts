@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = Number(session.user.id);
+    
+    console.log('[my-reviews] Buscando reviews para userId:', userId);
 
     // Obtener todas las reviews del usuario como expositor
     const reviews = await prisma.expoReview.findMany({
@@ -44,6 +46,8 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc'
       }
     });
+
+    console.log('[my-reviews] Reviews encontradas:', reviews.length);
 
     // Calcular estadísticas
     const totalReviews = reviews.length;
