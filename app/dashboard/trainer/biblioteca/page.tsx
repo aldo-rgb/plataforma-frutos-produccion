@@ -954,18 +954,13 @@ function TemplateModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={saving || uploadingPdf || uploadingImage}
+            disabled={saving || uploadingImage}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-amber-500/20 transition-all disabled:opacity-50"
           >
             {uploadingImage ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Subiendo imagen...
-              </>
-            ) : uploadingPdf ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Subiendo PDF...
               </>
             ) : saving ? (
               <>
