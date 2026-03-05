@@ -113,7 +113,10 @@ export async function POST(request: NextRequest) {
         // Actualizar existente
         const updated = await prisma.advancedQuestionnaire.update({
           where: { userId },
-          data: updateData,
+          data: {
+            ...updateData,
+            updatedAt: new Date(),
+          },
         });
         return NextResponse.json({ success: true, questionnaire: updated });
       } else {
@@ -123,6 +126,7 @@ export async function POST(request: NextRequest) {
             userId,
             visionId: visionId || null,
             ...updateData,
+            updatedAt: new Date(),
           }
         });
         return NextResponse.json({ success: true, questionnaire: created });
@@ -138,6 +142,7 @@ export async function POST(request: NextRequest) {
           status: 'COMPLETED',
           completedAt: new Date(),
           lastSavedAt: new Date(),
+          updatedAt: new Date(),
           // Verificar flag de suicidio
           suicideRiskFlag: cleanData.hasSuicideAttempt === true,
         },
@@ -148,6 +153,7 @@ export async function POST(request: NextRequest) {
           status: 'COMPLETED',
           completedAt: new Date(),
           lastSavedAt: new Date(),
+          updatedAt: new Date(),
           currentDimension: 5,
           suicideRiskFlag: cleanData.hasSuicideAttempt === true,
         }
