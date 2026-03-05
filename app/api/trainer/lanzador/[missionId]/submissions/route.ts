@@ -33,9 +33,9 @@ export async function GET(
     const mission = await prisma.trainerMission.findUnique({
       where: { id: missionIdNum },
       include: {
-        Template: {
+        TrainerTaskTemplate: {
           include: {
-            Questions: {
+            TrainerTaskQuestion: {
               orderBy: { orderIndex: 'asc' }
             }
           }
@@ -55,7 +55,7 @@ export async function GET(
     const submissions = await prisma.missionSubmission.findMany({
       where: { missionId: missionIdNum },
       include: {
-        User: {
+        Usuario_MissionSubmission_userIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -63,9 +63,9 @@ export async function GET(
             imagen: true
           }
         },
-        QuestionAnswers: {
+        MissionQuestionAnswer: {
           include: {
-            Question: {
+            TrainerTaskQuestion: {
               select: {
                 id: true,
                 questionText: true,
@@ -83,31 +83,34 @@ export async function GET(
     })
 
     // Formatear respuesta
-    const formattedSubmissions = submissions.map(sub => ({
-      id: sub.id,
-      status: sub.status,
-      textResponse: sub.textResponse,
-      evidenceUrl: sub.evidenceUrl,
-      learningNote: sub.learningNote,
-      submittedAt: sub.submittedAt,
-      pointsEarned: sub.pointsEarned,
-      user: {
-        id: sub.User.id,
-        nombre: sub.User.nombre,
-        email: sub.User.email,
-        imagen: sub.User.imagen
-      },
-      answers: sub.QuestionAnswers.map(ans => ({
-        questionId: ans.questionId,
-        questionText: ans.Question.questionText,
-        questionType: ans.Question.questionType,
-        options: ans.Question.options,
-        textAnswer: ans.textAnswer,
-        selectedOptions: ans.selectedOptions,
-        scaleValue: ans.scaleValue,
-        booleanAnswer: ans.booleanAnswer
-      }))
-    }))
+    const formattedSubmissions = submissions.map(sub => {
+      const user = sub.Usuario_MissionSubmission_userIdToUsuario
+      return {
+        id: sub.id,
+        status: sub.status,
+        textResponse: sub.textResponse,
+        evidenceUrl: sub.evidenceUrl,
+        learningNote: sub.learningNote,
+        submittedAt: sub.submittedAt,
+        pointsEarned: sub.pointsEarned,
+        user: {
+          id: user.id,
+          nombre: user.nombre,
+          email: user.email,
+          imagen: user.imagen
+        },
+        answers: sub.MissionQuestionAnswer.map(ans => ({
+          questionId: ans.questionId,
+          questionText: ans.TrainerTaskQuestion.questionText,
+          questionType: ans.TrainerTaskQuestion.questionType,
+          options: ans.TrainerTaskQuestion.options,
+          textAnswer: ans.textAnswer,
+          selectedOptions: ans.selectedOptions,
+          scaleValue: ans.scaleValue,
+          booleanAnswer: ans.booleanAnswer
+        }))
+      }
+    })
 
     // Estadísticas
     const stats = {
@@ -118,18 +121,19 @@ export async function GET(
       rejected: submissions.filter(s => s.status === 'REJECTED').length
     }
 
+    const template = mission.TrainerTaskTemplate
     return NextResponse.json({
       success: true,
       mission: {
         id: mission.id,
-        title: mission.Template.title,
-        type: mission.Template.type,
-        questions: mission.Template.Questions.map(q => ({
+        title: template?.title || 'Sin título',
+        type: template?.type || 'ACTION',
+        questions: template?.TrainerTaskQuestion?.map(q => ({
           id: q.id,
           questionText: q.questionText,
           questionType: q.questionType,
           options: q.options
-        }))
+        })) || []
       },
       submissions: formattedSubmissions,
       stats
