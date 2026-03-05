@@ -217,7 +217,8 @@ export async function POST(request: NextRequest) {
             sessionNumber: 1,
             attended: true,
             attendedAt: new Date(),
-            markedBy: staffId
+            markedBy: staffId,
+            updatedAt: new Date()
           }
         });
       } else if (!existingAttendance.attended) {
@@ -226,7 +227,8 @@ export async function POST(request: NextRequest) {
           data: {
             attended: true,
             attendedAt: new Date(),
-            markedBy: staffId
+            markedBy: staffId,
+            updatedAt: new Date()
           }
         });
       }
