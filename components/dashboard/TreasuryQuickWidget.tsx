@@ -484,12 +484,16 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
       const visionesRes = await fetch('/api/coordinador/visiones');
       if (visionesRes.ok) {
         const data = await visionesRes.json();
+        // La API devuelve { success: true, visiones: [...] }
+        const visionesArray = data.visiones || data || [];
         // Filtrar solo visiones activas
-        const visionesActivas = (data || []).filter((v: any) => v.isActive !== false);
+        const visionesActivas = Array.isArray(visionesArray) 
+          ? visionesArray.filter((v: any) => v.isActive !== false)
+          : [];
         setVisiones(visionesActivas.map((v: any) => ({
           id: v.id,
           nombre: v.nombre,
-          organizationName: v.organizationName
+          organizationName: v.Organization?.name || v.organizationName
         })));
       }
 
