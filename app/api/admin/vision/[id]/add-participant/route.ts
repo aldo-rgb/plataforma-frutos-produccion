@@ -180,6 +180,7 @@ export async function POST(
         paymentStatus: 'GIFT', // Marcado como regalo/cortesía del admin
         isTransferable: false, // No transferible porque es asignación directa
         amountPaid: 0,
+        updatedAt: new Date(),
       }
     });
 
