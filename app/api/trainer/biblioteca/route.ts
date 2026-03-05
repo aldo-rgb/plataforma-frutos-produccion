@@ -185,7 +185,8 @@ export async function POST(request: NextRequest) {
               scaleMin: q.scaleMin || 1,
               scaleMax: q.scaleMax || 10,
               scaleMinLabel: q.scaleMinLabel || null,
-              scaleMaxLabel: q.scaleMaxLabel || null
+              scaleMaxLabel: q.scaleMaxLabel || null,
+              updatedAt: new Date()
             }))
           } : undefined
         },
