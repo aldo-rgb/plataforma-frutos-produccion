@@ -124,7 +124,7 @@ export async function GET(
         isActive: true,
       },
       include: {
-        Trainer: {
+        Usuario_SchoolProduct_trainerIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -134,7 +134,7 @@ export async function GET(
             apodo: true,
           },
         },
-        Coordinator: {
+        Usuario_SchoolProduct_coordinatorIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -171,27 +171,29 @@ export async function GET(
     const participants: Participant[] = [];
     
     // Agregar Trainer primero desde SchoolProduct (si existe)
-    if (schoolProduct?.Trainer && (!userIds || userIds.includes(schoolProduct.Trainer.id))) {
+    const trainer = schoolProduct?.Usuario_SchoolProduct_trainerIdToUsuario;
+    if (trainer && (!userIds || userIds.includes(trainer.id))) {
       participants.push({
-        id: schoolProduct.Trainer.id,
-        nombre: schoolProduct.Trainer.nombre,
-        email: schoolProduct.Trainer.email,
-        referralCode: schoolProduct.Trainer.referralCode,
+        id: trainer.id,
+        nombre: trainer.nombre,
+        email: trainer.email,
+        referralCode: trainer.referralCode,
         rol: 'TRAINER',
-        apodo: schoolProduct.Trainer.apodo,
+        apodo: trainer.apodo,
       });
     }
     
     // Agregar Coordinador desde SchoolProduct (si existe)
-    if (schoolProduct?.Coordinator && (!userIds || userIds.includes(schoolProduct.Coordinator.id))) {
-      if (!participants.find(p => p.id === schoolProduct.Coordinator!.id)) {
+    const coordinator = schoolProduct?.Usuario_SchoolProduct_coordinatorIdToUsuario;
+    if (coordinator && (!userIds || userIds.includes(coordinator.id))) {
+      if (!participants.find(p => p.id === coordinator.id)) {
         participants.push({
-          id: schoolProduct.Coordinator.id,
-          nombre: schoolProduct.Coordinator.nombre,
-          email: schoolProduct.Coordinator.email,
-          referralCode: schoolProduct.Coordinator.referralCode,
+          id: coordinator.id,
+          nombre: coordinator.nombre,
+          email: coordinator.email,
+          referralCode: coordinator.referralCode,
           rol: 'COORDINADOR',
-          apodo: schoolProduct.Coordinator.apodo,
+          apodo: coordinator.apodo,
         });
       }
     }
