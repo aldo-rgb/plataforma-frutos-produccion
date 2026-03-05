@@ -18,18 +18,22 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
+    logger.info(`[CreatePayment] Session: ${JSON.stringify({ userId: session?.user?.id, email: session?.user?.email })}`);
+    
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 });
     }
 
     const userId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
     const body = await request.json();
     
     const { ticketId, amount } = body;
+    
+    logger.info(`[CreatePayment] Request: ticketId=${ticketId}, amount=${amount}, userId=${userId}`);
 
     if (!ticketId || !amount) {
       return NextResponse.json(
-        { error: 'Datos incompletos' },
+        { success: false, error: 'Datos incompletos' },
         { status: 400 }
       );
     }
@@ -48,18 +52,23 @@ export async function POST(request: NextRequest) {
     });
 
     if (!ticket) {
-      return NextResponse.json({ error: 'Ticket no encontrado' }, { status: 404 });
+      logger.warn(`[CreatePayment] Ticket not found: ${ticketId}`);
+      return NextResponse.json({ success: false, error: 'Ticket no encontrado' }, { status: 404 });
     }
+
+    logger.info(`[CreatePayment] Ticket found: ownerId=${ticket.ownerId}, status=${ticket.status}, paymentStatus=${ticket.paymentStatus}, orgId=${ticket.organizationId}`);
 
     // Verificar propiedad
     if (ticket.ownerId !== userId) {
-      return NextResponse.json({ error: 'No tienes acceso a este ticket' }, { status: 403 });
+      logger.warn(`[CreatePayment] Access denied: ticket.ownerId=${ticket.ownerId}, userId=${userId}`);
+      return NextResponse.json({ success: false, error: 'No tienes acceso a este ticket' }, { status: 403 });
     }
 
     // Verificar que el ticket tenga pago pendiente
     if (ticket.status !== 'PENDING_PAYMENT' && ticket.paymentStatus !== 'PENDING' && ticket.paymentStatus !== 'PARTIAL') {
+      logger.warn(`[CreatePayment] No pending payment: status=${ticket.status}, paymentStatus=${ticket.paymentStatus}`);
       return NextResponse.json(
-        { error: 'Este ticket no tiene pagos pendientes' },
+        { success: false, error: 'Este ticket no tiene pagos pendientes' },
         { status: 400 }
       );
     }
@@ -71,7 +80,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+      logger.warn(`[CreatePayment] User not found: ${userId}`);
+      return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 });
     }
 
     // Obtener configuración de pasarela de la organización
@@ -79,16 +89,20 @@ export async function POST(request: NextRequest) {
       where: { organizationId: ticket.organizationId, isActive: true },
     });
 
+    logger.info(`[CreatePayment] Gateway config: ${JSON.stringify({ found: !!gatewayConfig, provider: gatewayConfig?.provider, hasSecretKey: !!gatewayConfig?.secretKey })}`);
+
     if (!gatewayConfig || !gatewayConfig.isActive) {
+      logger.error(`[CreatePayment] No gateway config for org ${ticket.organizationId}`);
       return NextResponse.json(
-        { error: 'La organización no tiene configurada una pasarela de pago' },
+        { success: false, error: 'La organización no tiene configurada una pasarela de pago' },
         { status: 400 }
       );
     }
 
     if (!gatewayConfig.secretKey) {
+      logger.error(`[CreatePayment] Gateway has no secretKey for org ${ticket.organizationId}`);
       return NextResponse.json(
-        { error: 'La pasarela de pago no tiene credenciales configuradas' },
+        { success: false, error: 'La pasarela de pago no tiene credenciales configuradas' },
         { status: 400 }
       );
     }
