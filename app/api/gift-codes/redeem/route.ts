@@ -265,7 +265,7 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
       },
     });
 
-    logger.debug('[REDEEM CASH] Código encontrado:', paymentCode ? { id: paymentCode.id, status: paymentCode.status } : null);
+    logger.debug('[REDEEM CASH] Código encontrado:', paymentCode ? { id: paymentCode.id, status: paymentCode.status, amount: paymentCode.amount, reference: paymentCode.reference } : null);
 
     if (!paymentCode) {
       return NextResponse.json(
@@ -298,12 +298,26 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
       );
     }
 
-    // Determinar la visión a usar:
-    // 1. Si se pasa visionId como parámetro, usarlo
-    // 2. Si el PaymentCode tiene visionId, usarlo
-    // 3. Como fallback, buscar enrollment activo del usuario (visión NO terminada)
+    const amount = Number(paymentCode.amount);
+    const reference = paymentCode.reference?.toLowerCase() || '';
+    
+    // 🎯 DETECTAR NIVEL BASADO EN MONTO Y REFERENCIA
+    // ADVANCED: $7,500 (promo), $9,000 (promo combo), $9,500 (normal), $14,500 (combo)
+    // PL: $7,000 (normal)
+    // BASIC: $2,500 (normal), $1,500 (abono)
+    let targetLevel: 'BASIC' | 'ADVANCED' | 'PL' = 'BASIC';
+    
+    if (reference.includes('avanzado') || reference.includes('advanced') ||
+        amount === 7500 || amount === 9000 || amount === 9500 || amount === 14500) {
+      targetLevel = 'ADVANCED';
+    } else if (reference.includes('liderato') || reference.includes('pl') || amount === 7000) {
+      targetLevel = 'PL';
+    }
+    
+    logger.debug('[REDEEM CASH] Nivel detectado:', targetLevel, 'basado en monto:', amount, 'referencia:', reference);
+
+    // Determinar la visión a usar
     let targetVisionId: number | null = null;
-    let enrollment = null;
 
     if (visionId) {
       targetVisionId = parseInt(String(visionId));
@@ -312,107 +326,93 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
       targetVisionId = paymentCode.visionId;
       logger.debug('[REDEEM CASH] Usando visionId del PaymentCode:', targetVisionId);
     }
-
-    // Si tenemos una visión específica, buscar enrollment en esa visión
-    if (targetVisionId) {
-      // Primero intentar encontrar enrollment activo (no completado)
-      enrollment = await prisma.vision_enrollments.findFirst({
-        where: { 
-          userId: user.id,
-          visionId: targetVisionId,
-          // Buscar enrollments que NO sean ATTENDED (completados)
+    
+    // Si no hay visión, buscar la próxima visión activa de la organización
+    if (!targetVisionId) {
+      const nextVision = await prisma.vision.findFirst({
+        where: {
+          organizationId: paymentCode.organizationId,
           OR: [
-            { attendanceStatus: null },
-            { attendanceStatus: { notIn: ['ATTENDED'] } }
+            { endDate: { gte: new Date() } },
+            { advancedEndDate: { gte: new Date() } },
+            { plWeekend3EndDate: { gte: new Date() } }
           ]
         },
-        include: {
-          Vision: { select: { id: true, endDate: true, advancedEndDate: true, plWeekend3EndDate: true } }
-        },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { startDate: 'asc' }
       });
       
-      // Si no encontramos uno activo, buscar cualquier enrollment en esa visión
-      if (!enrollment) {
-        enrollment = await prisma.vision_enrollments.findFirst({
-          where: { 
-            userId: user.id,
-            visionId: targetVisionId
-          },
-          include: {
-            Vision: { select: { id: true, endDate: true, advancedEndDate: true, plWeekend3EndDate: true } }
-          },
-          orderBy: { createdAt: 'desc' }
-        });
-        logger.debug('[REDEEM CASH] Usando enrollment existente (aunque sea ATTENDED):', enrollment?.id, 'Level:', enrollment?.level);
+      if (nextVision) {
+        targetVisionId = nextVision.id;
+        logger.debug('[REDEEM CASH] Usando próxima visión activa:', targetVisionId);
       }
     }
-
-    // Si no encontramos enrollment en la visión específica, buscar enrollment activo
-    if (!enrollment) {
-      // Buscar cualquier enrollment en una visión que aún no haya terminado completamente
-      // (considerando endDate para básico, advancedEndDate para avanzado, o plWeekend3EndDate para PL)
-      enrollment = await prisma.vision_enrollments.findFirst({
-        where: { 
-          userId: user.id,
-          OR: [
-            { attendanceStatus: null },
-            { attendanceStatus: { notIn: ['ATTENDED', 'BACKLOG'] } }
-          ],
-          Vision: {
-            OR: [
-              { endDate: { gte: new Date() } },
-              { advancedEndDate: { gte: new Date() } },
-              { plWeekend3EndDate: { gte: new Date() } }
-            ]
-          }
-        },
-        include: {
-          Vision: { select: { id: true, endDate: true, advancedEndDate: true, plWeekend3EndDate: true } }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-    }
-
-    if (!enrollment) {
-      // Buscar los enrollments activos del usuario para mostrar en qué visiones está
-      const activeEnrollments = await prisma.vision_enrollments.findMany({
-        where: { 
-          userId: user.id,
-          enrollmentStatus: 'ENROLLED'
-        },
-        include: {
-          Vision: { select: { id: true, nombre: true } }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-      
-      if (activeEnrollments.length > 0) {
-        const visionesActivas = activeEnrollments
-          .map(e => `${e.Vision?.nombre || 'Sin nombre'} (ID: ${e.visionId}, Nivel: ${e.level})`)
-          .join(', ');
-        return NextResponse.json(
-          { success: false, error: `El usuario tiene enrollments en: ${visionesActivas}. Pero no en la visión seleccionada para este pago.` },
-          { status: 400 }
-        );
-      }
-      
+    
+    if (!targetVisionId) {
       return NextResponse.json(
-        { success: false, error: 'El usuario no tiene un enrollment activo en ninguna visión' },
+        { success: false, error: 'No se encontró una visión activa para este pago' },
         { status: 400 }
       );
     }
 
-    const amount = Number(paymentCode.amount);
-    const userVisionId = targetVisionId || enrollment.visionId;
-    
-    logger.debug('[REDEEM CASH] Usando visionId final:', userVisionId, 'Enrollment level:', enrollment.level);
+    // Obtener la visión con datos del coordinador
+    const vision = await prisma.vision.findUnique({
+      where: { id: targetVisionId },
+      select: { 
+        id: true, 
+        coordinadorId: true, 
+        endDate: true, 
+        advancedEndDate: true, 
+        plWeekend3EndDate: true,
+        nombre: true 
+      }
+    });
+
+    if (!vision) {
+      return NextResponse.json(
+        { success: false, error: 'Visión no encontrada' },
+        { status: 400 }
+      );
+    }
+
+    // Buscar enrollment existente para este nivel
+    let enrollment = await prisma.vision_enrollments.findFirst({
+      where: { 
+        userId: user.id,
+        visionId: targetVisionId,
+        level: targetLevel
+      }
+    });
+
+    logger.debug('[REDEEM CASH] Enrollment existente para nivel', targetLevel, ':', enrollment?.id || 'NO EXISTE');
 
     // Transacción para crear todo junto
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Actualizar el código como REDEEMED
-      logger.debug('[REDEEM CASH] Actualizando código a REDEEMED para usuario:', user.id);
-      
+      // 1. Si no existe enrollment para este nivel, CREARLO
+      if (!enrollment) {
+        logger.debug('[REDEEM CASH] 🆕 Creando enrollment', targetLevel, 'para usuario:', user.id);
+        
+        enrollment = await tx.vision_enrollments.create({
+          data: {
+            userId: user.id,
+            visionId: targetVisionId!,
+            coordinatorId: vision.coordinadorId,
+            level: targetLevel,
+            enrollmentStatus: 'ENROLLED',
+            paymentStatus: 'PAID',
+            updatedAt: new Date()
+          }
+        });
+        
+        logger.debug('[REDEEM CASH] ✅ Enrollment', targetLevel, 'creado con ID:', enrollment.id);
+      } else {
+        // Actualizar enrollment existente a PAID
+        await tx.vision_enrollments.update({
+          where: { id: enrollment.id },
+          data: { paymentStatus: 'PAID' }
+        });
+      }
+
+      // 2. Actualizar el código como REDEEMED
       await tx.paymentCode.update({
         where: { id: paymentCode.id },
         data: {
@@ -422,40 +422,45 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
         },
       });
 
-      // 2. Verificar si ya tiene ticket para esta visión y nivel
+      // 3. Verificar si ya tiene ticket para esta visión y nivel
       const existingTicket = await tx.ticket.findFirst({
         where: {
           ownerId: user.id,
-          visionId: userVisionId,
-          level: enrollment.level as 'BASIC' | 'ADVANCED' | 'PL'
+          visionId: targetVisionId!,
+          level: targetLevel
         }
       });
 
       let ticket = existingTicket;
 
-      // 3. Crear ticket si no existe
+      // 4. Crear ticket si no existe
       if (!existingTicket) {
-        logger.debug('[REDEEM CASH] Creando ticket BASIC para usuario:', user.id);
+        logger.debug('[REDEEM CASH] 🎫 Creando ticket', targetLevel, 'para usuario:', user.id);
+        
+        // Determinar fecha de validez según nivel
+        let validUntil = vision.endDate;
+        if (targetLevel === 'ADVANCED') validUntil = vision.advancedEndDate || vision.endDate;
+        if (targetLevel === 'PL') validUntil = vision.plWeekend3EndDate || vision.advancedEndDate || vision.endDate;
         
         ticket = await tx.ticket.create({
           data: {
             id: crypto.randomUUID(),
             ownerId: user.id,
             organizationId: paymentCode.organizationId,
-            visionId: userVisionId,
-            level: (enrollment.level as 'BASIC' | 'ADVANCED' | 'PL') || 'BASIC',
+            visionId: targetVisionId!,
+            level: targetLevel,
             type: 'STANDARD',
             status: 'ACTIVE',
             paymentStatus: 'PAID',
             costAtPurchase: amount,
             amountPaid: amount,
             isTransferable: true,
-            validUntil: enrollment.Vision?.endDate || null,
+            validUntil: validUntil,
             updatedAt: new Date(),
           }
         });
 
-        // 4. Crear transacción del ticket
+        // 5. Crear transacción del ticket
         await tx.ticketTransaction.create({
           data: {
             id: crypto.randomUUID(),
@@ -467,32 +472,37 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
             status: 'SUCCESS',
             metadata: {
               paymentCodeId: paymentCode.id,
-              userId: user.id
+              userId: user.id,
+              level: targetLevel
             }
+          }
+        });
+        
+        logger.debug('[REDEEM CASH] ✅ Ticket', targetLevel, 'creado con ID:', ticket.id);
+      } else {
+        // Actualizar ticket existente
+        await tx.ticket.update({
+          where: { id: existingTicket.id },
+          data: {
+            paymentStatus: 'PAID',
+            amountPaid: { increment: amount },
+            updatedAt: new Date()
           }
         });
       }
 
-      // 5. Crear registro de pago
+      // 6. Crear registro de pago
       await tx.payment.create({
         data: {
           userId: user.id,
           amount: amount,
-          description: `Pago ${enrollment.level || 'BÁSICO'} - Código ${code}`,
+          description: `Pago ${targetLevel} - Código ${code}`,
           status: 'COMPLETED',
           paymentMethod: 'CASH',
           transactionId: code,
           updatedAt: new Date()
         }
       });
-
-      // 6. Actualizar enrollment paymentStatus
-      await tx.vision_enrollments.update({
-        where: { id: enrollment.id },
-        data: { paymentStatus: 'PAID' }
-      });
-
-      logger.debug('[REDEEM CASH] Ticket y pago creados exitosamente');
 
       return ticket;
     });
@@ -508,17 +518,14 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
       });
 
       if (userWithReferrer?.invitedBy && userWithReferrer.invitedByUser?.referralCode && result) {
-        const productType = enrollment.level === 'ADVANCED' ? 'ADVANCED' : 
-                           enrollment.level === 'PL' ? 'PL' : 'BASIC';
-        
         const ambassadorResult = await processAmbassadorCommission({
           referralCode: userWithReferrer.invitedByUser.referralCode,
           referredUserId: user.id,
           ticketId: result.id,
-          productType,
+          productType: targetLevel,
           saleAmount: amount,
           organizationId: paymentCode.organizationId,
-          visionId: userVisionId
+          visionId: targetVisionId!
         });
         
         if (ambassadorResult.success) {
@@ -529,16 +536,21 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
       logger.error('Error procesando comisión ambassador en cash payment:', ambassadorError);
     }
 
-    logger.debug('[REDEEM CASH] Código canjeado y ticket generado:', result?.id);
+    logger.debug('[REDEEM CASH] ✅ Código canjeado exitosamente - Nivel:', targetLevel, 'Ticket:', result?.id);
 
     return NextResponse.json({
       success: true,
-      message: `💵 Código de pago canjeado: $${amount.toLocaleString()} MXN - Ticket generado`,
+      message: `💵 Pago ${targetLevel} registrado: $${amount.toLocaleString()} MXN`,
       paymentCode: {
         id: paymentCode.id,
         code: paymentCode.code,
         amount: amount,
         status: 'REDEEMED',
+      },
+      enrollment: {
+        id: enrollment?.id,
+        level: targetLevel,
+        visionId: targetVisionId
       },
       ticket: result ? {
         id: result.id,
