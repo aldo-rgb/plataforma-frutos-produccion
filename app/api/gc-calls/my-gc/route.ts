@@ -32,9 +32,9 @@ export async function GET(request: Request) {
         isActive: true,
       },
       include: {
-        group: {
+        SmallGroup: {
           include: {
-            leader: {
+            Usuario: {
               select: {
                 id: true,
                 nombre: true,
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
                 email: true,
               },
             },
-            vision: {
+            Vision: {
               select: {
                 id: true,
                 nombre: true,
@@ -65,10 +65,10 @@ export async function GET(request: Request) {
       });
     }
 
-    const gc = membership.group.leader;
-    const vision = membership.group.vision;
-    const squadId = membership.group.id;
-    const squadLevel = membership.group.level; // 'BASIC' o 'ADVANCED'
+    const gc = membership.SmallGroup.Usuario;
+    const vision = membership.SmallGroup.Vision;
+    const squadId = membership.SmallGroup.id;
+    const squadLevel = membership.SmallGroup.level; // 'BASIC' o 'ADVANCED'
 
     // Determinar las fechas de entrenamiento según el nivel del squad
     let trainingStartDate: Date | null = null;
