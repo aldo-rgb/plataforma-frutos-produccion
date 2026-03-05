@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   BarChart3, TrendingUp, TrendingDown, DollarSign, Receipt,
   Calendar, Users, Building2, ArrowUpRight, ArrowDownRight,
-  Wallet, PiggyBank, AlertTriangle, CheckCircle, Clock, Filter
+  Wallet, PiggyBank, AlertTriangle, CheckCircle, Clock, Filter,
+  ChevronDown, ChevronUp, History, CreditCard, Eye, FileText
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -38,6 +39,62 @@ interface DashboardData {
   };
 }
 
+interface CoordinatorDebt {
+  coordinator: {
+    id: number;
+    nombre: string;
+    email: string;
+    profileImage: string | null;
+  };
+  debt: {
+    pendingCodesAmount: number;
+    pendingCodesCount: number;
+    activeCodesAmount: number;
+    activeCodesCount: number;
+    pendingBatchesAmount: number;
+    pendingBatchesCount: number;
+    totalDebt: number;
+  };
+  stats: {
+    confirmedBatchesCount: number;
+  };
+  pendingBatches: {
+    id: string;
+    amount: number;
+    status: string;
+    createdAt: string;
+  }[];
+}
+
+interface BatchHistory {
+  id: string;
+  batchNumber: string;
+  totalCollected: number;
+  totalExpenses: number;
+  netAmount: number;
+  status: string;
+  confirmationCode: string | null;
+  createdAt: string;
+  confirmedAt: string | null;
+  coordinator: { id: number; nombre: string };
+  confirmedBy: { id: number; nombre: string } | null;
+  codesCount: number;
+  expensesCount: number;
+}
+
+interface PaymentCode {
+  id: string;
+  code: string;
+  amount: number;
+  reference: string | null;
+  status: string;
+  createdAt: string;
+  redeemedAt: string | null;
+  createdBy: { id: number; nombre: string };
+  redeemedBy: { id: number; nombre: string; email: string } | null;
+  vision: { id: number; nombre: string } | null;
+}
+
 const EXPENSE_CATEGORIES: Record<string, { label: string; icon: string; color: string }> = {
   SUPPLIES: { label: 'Materiales', icon: '📦', color: 'bg-blue-500' },
   TRANSPORT: { label: 'Transporte', icon: '🚗', color: 'bg-green-500' },
@@ -54,6 +111,16 @@ export default function TreasuryDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
+  
+  // Nuevos estados para las secciones adicionales
+  const [coordinatorDebts, setCoordinatorDebts] = useState<CoordinatorDebt[]>([]);
+  const [batchesHistory, setBatchesHistory] = useState<BatchHistory[]>([]);
+  const [myCodes, setMyCodes] = useState<PaymentCode[]>([]);
+  const [loadingDebts, setLoadingDebts] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingCodes, setLoadingCodes] = useState(false);
+  const [expandedCoordinator, setExpandedCoordinator] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'debts' | 'history' | 'codes'>('overview');
 
   const isAdmin = session?.user?.rol === 'SCHOOL_ADMIN';
 
@@ -89,6 +156,67 @@ export default function TreasuryDashboardPage() {
       setLoading(false);
     }
   };
+
+  // Fetch coordinator debts
+  const fetchCoordinatorDebts = async () => {
+    if (!isAdmin) return;
+    try {
+      setLoadingDebts(true);
+      const res = await fetch('/api/treasury/director/coordinator-debts');
+      const result = await res.json();
+      if (result.success) {
+        setCoordinatorDebts(result.coordinators);
+      }
+    } catch (error) {
+      console.error('Error fetching coordinator debts:', error);
+    } finally {
+      setLoadingDebts(false);
+    }
+  };
+
+  // Fetch batches history
+  const fetchBatchesHistory = async () => {
+    if (!isAdmin) return;
+    try {
+      setLoadingHistory(true);
+      const res = await fetch('/api/treasury/director/batches-history?limit=20');
+      const result = await res.json();
+      if (result.success) {
+        setBatchesHistory(result.batches);
+      }
+    } catch (error) {
+      console.error('Error fetching batches history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // Fetch my codes (for director)
+  const fetchMyCodes = async () => {
+    try {
+      setLoadingCodes(true);
+      const res = await fetch('/api/treasury/payment-codes');
+      const result = await res.json();
+      if (result.success) {
+        setMyCodes(result.paymentCodes);
+      }
+    } catch (error) {
+      console.error('Error fetching my codes:', error);
+    } finally {
+      setLoadingCodes(false);
+    }
+  };
+
+  // Load additional data when tab changes
+  useEffect(() => {
+    if (activeTab === 'debts' && coordinatorDebts.length === 0) {
+      fetchCoordinatorDebts();
+    } else if (activeTab === 'history' && batchesHistory.length === 0) {
+      fetchBatchesHistory();
+    } else if (activeTab === 'codes' && myCodes.length === 0) {
+      fetchMyCodes();
+    }
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -153,6 +281,64 @@ export default function TreasuryDashboardPage() {
           </div>
         </div>
 
+        {/* Tabs de navegación (solo para admin) */}
+        {isAdmin && (
+          <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                activeTab === 'overview'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              Resumen
+            </button>
+            <button
+              onClick={() => setActiveTab('debts')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                activeTab === 'debts'
+                  ? 'bg-yellow-600 text-white'
+                  : 'bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              Deuda por Coordinador
+              {data.cashFlow.pendingDebt > 0 && (
+                <span className="bg-yellow-500 text-black text-xs px-2 py-0.5 rounded-full">
+                  ${(data.cashFlow.pendingDebt / 1000).toFixed(0)}k
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                activeTab === 'history'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700'
+              }`}
+            >
+              <History className="w-4 h-4" />
+              Historial de Cortes
+            </button>
+            <button
+              onClick={() => setActiveTab('codes')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                activeTab === 'codes'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700'
+              }`}
+            >
+              <CreditCard className="w-4 h-4" />
+              Mis Códigos
+            </button>
+          </div>
+        )}
+
+        {/* Contenido según tab activo */}
+        {activeTab === 'overview' && (
+          <>
         {/* Quick Links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Link
@@ -422,6 +608,331 @@ export default function TreasuryDashboardPage() {
             </div>
           )}
         </div>
+          </>
+        )}
+
+        {/* Tab: Deuda por Coordinador */}
+        {activeTab === 'debts' && isAdmin && (
+          <div className="space-y-6">
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  <Users className="w-5 h-5 text-yellow-400" />
+                  Deuda Pendiente por Coordinador
+                </h3>
+                <button
+                  onClick={fetchCoordinatorDebts}
+                  className="text-sm text-indigo-400 hover:text-indigo-300"
+                >
+                  Actualizar
+                </button>
+              </div>
+
+              {loadingDebts ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-yellow-500"></div>
+                </div>
+              ) : coordinatorDebts.length === 0 ? (
+                <div className="text-center py-12">
+                  <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
+                  <p className="text-slate-400">No hay deudas pendientes</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {coordinatorDebts.map((coord) => (
+                    <div
+                      key={coord.coordinator.id}
+                      className={`border rounded-xl overflow-hidden transition-all ${
+                        coord.debt.totalDebt > 0 
+                          ? 'border-yellow-500/30 bg-yellow-500/5' 
+                          : 'border-slate-700 bg-slate-900/50'
+                      }`}
+                    >
+                      <div
+                        className="p-4 cursor-pointer"
+                        onClick={() => setExpandedCoordinator(
+                          expandedCoordinator === coord.coordinator.id ? null : coord.coordinator.id
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                              {coord.coordinator.profileImage ? (
+                                <img
+                                  src={coord.coordinator.profileImage}
+                                  alt=""
+                                  className="w-10 h-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <Users className="w-5 h-5 text-slate-400" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-white font-medium">{coord.coordinator.nombre}</p>
+                              <p className="text-slate-500 text-sm">{coord.coordinator.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className={`text-xl font-bold ${
+                                coord.debt.totalDebt > 0 ? 'text-yellow-400' : 'text-emerald-400'
+                              }`}>
+                                ${coord.debt.totalDebt.toLocaleString()}
+                              </p>
+                              <p className="text-slate-500 text-xs">Deuda total</p>
+                            </div>
+                            {expandedCoordinator === coord.coordinator.id ? (
+                              <ChevronUp className="w-5 h-5 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5 text-slate-400" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Detalles expandidos */}
+                      {expandedCoordinator === coord.coordinator.id && (
+                        <div className="border-t border-slate-700 p-4 space-y-4">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-slate-800/50 rounded-lg p-3">
+                              <p className="text-slate-500 text-xs">Códigos Canjeados</p>
+                              <p className="text-white font-bold">{coord.debt.pendingCodesCount}</p>
+                              <p className="text-yellow-400 text-sm">${coord.debt.pendingCodesAmount.toLocaleString()}</p>
+                            </div>
+                            <div className="bg-slate-800/50 rounded-lg p-3">
+                              <p className="text-slate-500 text-xs">Códigos Activos</p>
+                              <p className="text-white font-bold">{coord.debt.activeCodesCount}</p>
+                              <p className="text-blue-400 text-sm">${coord.debt.activeCodesAmount.toLocaleString()}</p>
+                            </div>
+                            <div className="bg-slate-800/50 rounded-lg p-3">
+                              <p className="text-slate-500 text-xs">Cortes Pendientes</p>
+                              <p className="text-white font-bold">{coord.debt.pendingBatchesCount}</p>
+                              <p className="text-orange-400 text-sm">${coord.debt.pendingBatchesAmount.toLocaleString()}</p>
+                            </div>
+                            <div className="bg-slate-800/50 rounded-lg p-3">
+                              <p className="text-slate-500 text-xs">Cortes Confirmados</p>
+                              <p className="text-emerald-400 font-bold">{coord.stats.confirmedBatchesCount}</p>
+                            </div>
+                          </div>
+
+                          {coord.pendingBatches.length > 0 && (
+                            <div>
+                              <p className="text-slate-400 text-sm mb-2">Cortes pendientes de confirmar:</p>
+                              <div className="space-y-2">
+                                {coord.pendingBatches.map((batch) => (
+                                  <div
+                                    key={batch.id}
+                                    className="flex items-center justify-between bg-slate-800/50 rounded-lg p-3"
+                                  >
+                                    <div>
+                                      <p className="text-white text-sm">Corte #{batch.id.slice(-6)}</p>
+                                      <p className="text-slate-500 text-xs">
+                                        {new Date(batch.createdAt).toLocaleDateString('es-MX')}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className={`px-2 py-1 rounded text-xs ${
+                                        batch.status === 'PENDING_DELIVERY'
+                                          ? 'bg-yellow-500/20 text-yellow-400'
+                                          : 'bg-blue-500/20 text-blue-400'
+                                      }`}>
+                                        {batch.status === 'PENDING_DELIVERY' ? 'Por entregar' : batch.status}
+                                      </span>
+                                      <span className="text-white font-medium">
+                                        ${batch.amount.toLocaleString()}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Historial de Cortes */}
+        {activeTab === 'history' && isAdmin && (
+          <div className="space-y-6">
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  <History className="w-5 h-5 text-blue-400" />
+                  Historial de Cortes de Caja
+                </h3>
+                <button
+                  onClick={fetchBatchesHistory}
+                  className="text-sm text-indigo-400 hover:text-indigo-300"
+                >
+                  Actualizar
+                </button>
+              </div>
+
+              {loadingHistory ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+              ) : batchesHistory.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                  <p className="text-slate-400">No hay historial de cortes</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-slate-400 text-sm border-b border-slate-700">
+                        <th className="pb-3 font-medium">Fecha</th>
+                        <th className="pb-3 font-medium">Coordinador</th>
+                        <th className="pb-3 font-medium">Recaudado</th>
+                        <th className="pb-3 font-medium">Gastos</th>
+                        <th className="pb-3 font-medium">Neto</th>
+                        <th className="pb-3 font-medium">Códigos</th>
+                        <th className="pb-3 font-medium">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700">
+                      {batchesHistory.map((batch) => (
+                        <tr key={batch.id} className="text-sm">
+                          <td className="py-3">
+                            <p className="text-white">
+                              {new Date(batch.createdAt).toLocaleDateString('es-MX')}
+                            </p>
+                            <p className="text-slate-500 text-xs">
+                              {new Date(batch.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </td>
+                          <td className="py-3 text-white">{batch.coordinator?.nombre || 'N/A'}</td>
+                          <td className="py-3 text-emerald-400">${batch.totalCollected.toLocaleString()}</td>
+                          <td className="py-3 text-red-400">${batch.totalExpenses.toLocaleString()}</td>
+                          <td className="py-3 text-white font-medium">${batch.netAmount.toLocaleString()}</td>
+                          <td className="py-3 text-slate-300">{batch.codesCount}</td>
+                          <td className="py-3">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              batch.status === 'CONFIRMED'
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : batch.status === 'PENDING_DELIVERY'
+                                ? 'bg-yellow-500/20 text-yellow-400'
+                                : 'bg-blue-500/20 text-blue-400'
+                            }`}>
+                              {batch.status === 'CONFIRMED' 
+                                ? '✓ Confirmado' 
+                                : batch.status === 'PENDING_DELIVERY'
+                                ? 'Por entregar'
+                                : batch.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Mis Códigos Generados */}
+        {activeTab === 'codes' && (
+          <div className="space-y-6">
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-emerald-400" />
+                  Mis Códigos Generados
+                </h3>
+                <button
+                  onClick={fetchMyCodes}
+                  className="text-sm text-indigo-400 hover:text-indigo-300"
+                >
+                  Actualizar
+                </button>
+              </div>
+
+              {loadingCodes ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500"></div>
+                </div>
+              ) : myCodes.length === 0 ? (
+                <div className="text-center py-12">
+                  <CreditCard className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                  <p className="text-slate-400">No has generado códigos aún</p>
+                  <Link
+                    href="/dashboard/school-admin/treasury/cobro"
+                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    Generar Código
+                  </Link>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-slate-400 text-sm border-b border-slate-700">
+                        <th className="pb-3 font-medium">Código</th>
+                        <th className="pb-3 font-medium">Monto</th>
+                        <th className="pb-3 font-medium">Referencia</th>
+                        <th className="pb-3 font-medium">Estado</th>
+                        <th className="pb-3 font-medium">Canjeado por</th>
+                        <th className="pb-3 font-medium">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700">
+                      {myCodes.map((code) => (
+                        <tr key={code.id} className="text-sm">
+                          <td className="py-3">
+                            <span className="font-mono text-white bg-slate-900 px-2 py-1 rounded">
+                              {code.code}
+                            </span>
+                          </td>
+                          <td className="py-3 text-emerald-400 font-medium">
+                            ${code.amount.toLocaleString()}
+                          </td>
+                          <td className="py-3 text-slate-300">
+                            {code.reference || '-'}
+                          </td>
+                          <td className="py-3">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              code.status === 'REDEEMED'
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : code.status === 'ACTIVE'
+                                ? 'bg-blue-500/20 text-blue-400'
+                                : 'bg-red-500/20 text-red-400'
+                            }`}>
+                              {code.status === 'REDEEMED' 
+                                ? '✓ Canjeado' 
+                                : code.status === 'ACTIVE'
+                                ? 'Activo'
+                                : 'Cancelado'}
+                            </span>
+                          </td>
+                          <td className="py-3 text-slate-300">
+                            {code.redeemedBy ? (
+                              <div>
+                                <p className="text-white">{code.redeemedBy.nombre}</p>
+                                <p className="text-slate-500 text-xs">{code.redeemedBy.email}</p>
+                              </div>
+                            ) : '-'}
+                          </td>
+                          <td className="py-3 text-slate-400">
+                            {new Date(code.createdAt).toLocaleDateString('es-MX')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

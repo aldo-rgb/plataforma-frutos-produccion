@@ -224,13 +224,13 @@ export async function GET(request: Request) {
     const paymentCodes = await prisma.paymentCode.findMany({
       where,
       include: {
-        createdBy: {
+        Usuario_PaymentCode_createdByIdToUsuario: {
           select: { id: true, nombre: true },
         },
-        redeemedBy: {
+        Usuario_PaymentCode_redeemedByIdToUsuario: {
           select: { id: true, nombre: true, email: true },
         },
-        vision: {
+        Vision: {
           select: { id: true, nombre: true },
         },
       },
@@ -259,9 +259,9 @@ export async function GET(request: Request) {
         status: code.status,
         createdAt: code.createdAt,
         redeemedAt: code.redeemedAt,
-        createdBy: code.createdBy,
-        redeemedBy: code.redeemedBy,
-        vision: code.vision,
+        createdBy: code.Usuario_PaymentCode_createdByIdToUsuario,
+        redeemedBy: code.Usuario_PaymentCode_redeemedByIdToUsuario,
+        vision: code.Vision,
         batchId: code.batchId,
       })),
       summary: {
