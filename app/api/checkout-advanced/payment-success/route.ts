@@ -321,6 +321,7 @@ export async function GET(request: NextRequest) {
         // Create PL ticket
         await tx.ticket.create({
           data: {
+            id: `TKT-PL-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
             ownerId: userId,
             organizationId: effectiveOrgId,
             visionId: effectiveVisionId,
@@ -332,6 +333,7 @@ export async function GET(request: NextRequest) {
             amountPaid: amount,
             isTransferable: false,
             validUntil: advancedEnrollment.Vision?.plWeekend3EndDate || null,
+            updatedAt: new Date(),
           },
         });
 
@@ -354,6 +356,7 @@ export async function GET(request: NextRequest) {
         // Create ADVANCED ticket
         await tx.ticket.create({
           data: {
+            id: `TKT-ADV-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
             ownerId: userId,
             organizationId: organizationId,
             visionId: visionId,
@@ -365,6 +368,7 @@ export async function GET(request: NextRequest) {
             amountPaid: amount,
             isTransferable: false,
             validUntil: vision.advancedEndDate || null,
+            updatedAt: new Date(),
           },
         });
 
@@ -391,6 +395,7 @@ export async function GET(request: NextRequest) {
 
           await tx.ticket.create({
             data: {
+              id: `TKT-PL-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
               ownerId: userId,
               organizationId: organizationId,
               visionId: visionId,
@@ -402,6 +407,7 @@ export async function GET(request: NextRequest) {
               amountPaid: packageType === 'COMBO' ? (prices?.PL || 9000) : (pendingDebt ? amount - (prices?.APARTADO || 2500) : 0),
               isTransferable: false,
               validUntil: vision.plWeekend3EndDate || null,
+              updatedAt: new Date(),
             },
           });
 
@@ -432,6 +438,7 @@ export async function GET(request: NextRequest) {
 
           await tx.ticket.create({
             data: {
+              id: `TKT-PL-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
               ownerId: userId,
               organizationId: organizationId,
               visionId: visionId,
@@ -443,6 +450,7 @@ export async function GET(request: NextRequest) {
               amountPaid: 0,
               isTransferable: false,
               validUntil: depositDeadline, // Válido hasta el final del avanzado
+              updatedAt: new Date(),
             },
           });
 
