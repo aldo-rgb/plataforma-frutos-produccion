@@ -53,9 +53,19 @@ export async function GET(
       );
     }
 
+    // Roles que NO pueden ser Game Changers
+    const ROLES_NO_PERMITIDOS_GC = ['TRAINER', 'SCHOOL_ADMIN', 'ADMINISTRADOR'];
+
     const gameChangers = await prisma.visionGameChanger.findMany({
       where: {
         visionId: visionId,
+        // Excluir trainers y admins de la lista de GCs
+        Usuario_VisionGameChanger_gameChangerIdToUsuario: {
+          AND: [
+            { rol: { notIn: ROLES_NO_PERMITIDOS_GC } },
+            { esEntrenador: { not: true } }
+          ]
+        }
       },
       include: {
         Usuario_VisionGameChanger_gameChangerIdToUsuario: {
@@ -65,6 +75,8 @@ export async function GET(
             email: true,
             telefono: true,
             profileImage: true,
+            rol: true,
+            esEntrenador: true,
           },
         },
       },

@@ -88,13 +88,22 @@ export async function POST(
     // Verificar que el Game Changer existe y está asignado a esta visión
     const gcUser = await prisma.usuario.findUnique({
       where: { id: gameChangerId },
-      select: { id: true, nombre: true, email: true }
+      select: { id: true, nombre: true, email: true, rol: true, esEntrenador: true }
     });
 
     if (!gcUser) {
       return NextResponse.json(
         { success: false, error: 'Game Changer no encontrado' },
         { status: 404 }
+      );
+    }
+
+    // Validar que NO sea trainer o admin
+    const ROLES_NO_PERMITIDOS_GC = ['TRAINER', 'SCHOOL_ADMIN', 'ADMINISTRADOR'];
+    if (ROLES_NO_PERMITIDOS_GC.includes(gcUser.rol) || gcUser.esEntrenador) {
+      return NextResponse.json(
+        { success: false, error: `${gcUser.nombre} es ${gcUser.rol === 'TRAINER' || gcUser.esEntrenador ? 'Entrenador' : gcUser.rol} y no puede ser asignado como Game Changer` },
+        { status: 400 }
       );
     }
 
