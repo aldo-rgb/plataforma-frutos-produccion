@@ -60,6 +60,8 @@ interface ParticipantInfo {
   };
   progression: {
     completedLevels: string[];
+    currentLevel?: string;
+    currentLevelName?: string;
     nextLevel: string;
     nextLevelName: string;
     isGraduate: boolean;
@@ -77,6 +79,19 @@ interface ParticipantInfo {
     suggestedPrice: number;
     promoPrice: number | null;
   };
+}
+
+interface PriceOption {
+  label: string;
+  amount: number;
+  description: string;
+  type: string;
+}
+
+interface OrganizationPrices {
+  BASIC: PriceOption[];
+  ADVANCED: PriceOption[];
+  PL: PriceOption[];
 }
 
 interface POSDevice {
@@ -151,6 +166,12 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
   const [searchParticipante, setSearchParticipante] = useState('');
   const [selectedParticipante, setSelectedParticipante] = useState<Participante | null>(null);
   
+  // Nuevo flujo de cobro: Nivel y opciones de precio
+  const [selectedLevel, setSelectedLevel] = useState<'BASIC' | 'ADVANCED' | 'PL' | ''>('');
+  const [organizationPrices, setOrganizationPrices] = useState<OrganizationPrices | null>(null);
+  const [selectedPriceOption, setSelectedPriceOption] = useState<PriceOption | null>(null);
+  const [loadingPrices, setLoadingPrices] = useState(false);
+  
   // Form gasto
   const [gastoForm, setGastoForm] = useState({
     concept: '',
@@ -183,16 +204,24 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
     fetchInitialData();
     // Cargar dispositivos POS al inicio
     fetchPOSDevices();
+    // Cargar precios de la organización
+    fetchOrganizationPrices();
   }, []);
 
   // Cargar participantes cuando se selecciona una visión
   useEffect(() => {
     if (cobroForm.visionId) {
       fetchParticipantes(cobroForm.visionId);
+      // Resetear selección de nivel y precio al cambiar visión
+      setSelectedLevel('');
+      setSelectedPriceOption(null);
+      setCobroForm(prev => ({ ...prev, amount: '', reference: '' }));
     } else {
       setParticipantes([]);
       setSelectedParticipante(null);
       setSearchParticipante('');
+      setSelectedLevel('');
+      setSelectedPriceOption(null);
     }
   }, [cobroForm.visionId]);
 
@@ -204,6 +233,38 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
       setParticipantInfo(null);
     }
   }, [selectedParticipante]);
+
+  // Actualizar monto cuando se selecciona una opción de precio
+  useEffect(() => {
+    if (selectedPriceOption) {
+      const levelName = selectedLevel === 'BASIC' ? 'Básico' : selectedLevel === 'ADVANCED' ? 'Avanzado' : 'Liderato';
+      setCobroForm(prev => ({
+        ...prev,
+        amount: selectedPriceOption.amount.toString(),
+        reference: selectedParticipante 
+          ? `${selectedPriceOption.description} - ${selectedParticipante.nombre}`
+          : `${selectedPriceOption.description}`
+      }));
+    }
+  }, [selectedPriceOption, selectedParticipante, selectedLevel]);
+
+  // Cargar precios de la organización
+  const fetchOrganizationPrices = async () => {
+    setLoadingPrices(true);
+    try {
+      const res = await fetch('/api/treasury/organization-prices');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.priceOptions) {
+          setOrganizationPrices(data.priceOptions);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching organization prices:', error);
+    } finally {
+      setLoadingPrices(false);
+    }
+  };
 
   const fetchParticipantes = async (visionId: string) => {
     setLoadingParticipantes(true);
@@ -419,17 +480,24 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
 
   const fetchInitialData = async () => {
     try {
+      // Fetch visiones asignadas al coordinador (más específico que products)
+      const visionesRes = await fetch('/api/coordinador/visiones');
+      if (visionesRes.ok) {
+        const data = await visionesRes.json();
+        // Filtrar solo visiones activas
+        const visionesActivas = (data || []).filter((v: any) => v.isActive !== false);
+        setVisiones(visionesActivas.map((v: any) => ({
+          id: v.id,
+          nombre: v.nombre,
+          organizationName: v.organizationName
+        })));
+      }
+
       // Fetch products from all organizations in the same Master Organization
       const productsRes = await fetch('/api/treasury/products');
       if (productsRes.ok) {
         const data = await productsRes.json();
         setProducts(data.products || []);
-        // También actualizar visiones para compatibilidad
-        setVisiones(data.visiones?.map((v: any) => ({
-          id: v.id,
-          nombre: v.nombre,
-          organizationName: v.organizationName
-        })) || []);
       }
 
       // Fetch recent codes
@@ -715,6 +783,11 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
     });
   };
 
+  // Formatear número con separador de miles
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString('es-MX');
+  };
+
   return (
     <>
     <div className="bg-gradient-to-br from-indigo-900/40 via-slate-900 to-purple-900/30 border border-indigo-500/30 rounded-2xl overflow-hidden">
@@ -909,58 +982,35 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               </div>
             )}
 
-            {/* Cobro Form */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-slate-400 mb-1 block">Monto *</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={cobroForm.amount}
-                    onChange={(e) => setCobroForm({ ...cobroForm, amount: e.target.value })}
-                    className="w-full pl-8 pr-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-green-500/50 focus:outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 mb-1 block">Producto</label>
-                <select
-                  value={cobroForm.visionId}
-                  onChange={(e) => {
-                    setCobroForm({ ...cobroForm, visionId: e.target.value, participanteId: '' });
-                    setSelectedParticipante(null);
-                    setSearchParticipante('');
-                  }}
-                  className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:border-green-500/50 focus:outline-none"
-                >
-                  <option value="">General</option>
-                  {/* Agrupar productos por organización */}
-                  {Object.entries(
-                    products.reduce((acc, p) => {
-                      if (!acc[p.organizationName]) acc[p.organizationName] = [];
-                      acc[p.organizationName].push(p);
-                      return acc;
-                    }, {} as Record<string, Product[]>)
-                  ).map(([orgName, orgProducts]) => (
-                    <optgroup key={orgName} label={`📍 ${orgName}`}>
-                      {orgProducts.map(p => (
-                        <option key={p.id} value={p.visionId || ''}>
-                          {p.type === 'VISION' ? '🎯 ' : p.type === 'TRAINING' ? '🏋️ ' : p.type === 'WORKSHOP' ? '🛠️ ' : '📚 '}
-                          {p.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
+            {/* NUEVO FLUJO DE COBRO ESTRUCTURADO */}
+            
+            {/* PASO 1: Selector de Visión */}
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">1️⃣ Visión *</label>
+              <select
+                value={cobroForm.visionId}
+                onChange={(e) => {
+                  setCobroForm({ ...cobroForm, visionId: e.target.value, participanteId: '', amount: '', reference: '' });
+                  setSelectedParticipante(null);
+                  setSearchParticipante('');
+                  setSelectedLevel('');
+                  setSelectedPriceOption(null);
+                }}
+                className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:border-green-500/50 focus:outline-none"
+              >
+                <option value="">Selecciona una visión...</option>
+                {visiones.map(v => (
+                  <option key={v.id} value={v.id}>
+                    🎯 {v.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Selector de Participante - Solo cuando hay visión seleccionada */}
+            {/* PASO 2: Selector de Participante - Solo cuando hay visión seleccionada */}
             {cobroForm.visionId && (
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Participante (opcional)</label>
+                <label className="text-xs text-slate-400 mb-1 block">2️⃣ Participante *</label>
                 {selectedParticipante ? (
                   <div className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                     <div className="flex items-center gap-3">
@@ -970,16 +1020,15 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                       <div>
                         <p className="text-white font-medium text-sm">{selectedParticipante.nombre}</p>
                         <p className="text-xs text-slate-400">{selectedParticipante.email}</p>
-                        {selectedParticipante.saldoPendiente !== undefined && selectedParticipante.saldoPendiente > 0 && (
-                          <p className="text-xs text-yellow-400">Saldo pendiente: {formatMoney(selectedParticipante.saldoPendiente)}</p>
-                        )}
                       </div>
                     </div>
                     <button
                       onClick={() => {
                         setSelectedParticipante(null);
-                        setCobroForm({ ...cobroForm, participanteId: '' });
+                        setCobroForm({ ...cobroForm, participanteId: '', amount: '', reference: '' });
                         setSearchParticipante('');
+                        setSelectedLevel('');
+                        setSelectedPriceOption(null);
                       }}
                       className="p-1 text-slate-400 hover:text-red-400 transition-colors"
                     >
@@ -1016,7 +1065,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                               type="button"
                               onClick={() => {
                                 setSelectedParticipante(p);
-                                setCobroForm({ ...cobroForm, participanteId: p.id.toString(), reference: `Pago ${p.nombre}` });
+                                setCobroForm({ ...cobroForm, participanteId: p.id.toString() });
                                 setSearchParticipante('');
                               }}
                               className="w-full px-3 py-2 text-left hover:bg-slate-800 transition-colors border-b border-slate-800 last:border-b-0 flex items-center gap-3"
@@ -1028,11 +1077,6 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                                 <p className="text-white text-sm font-medium truncate">{p.nombre}</p>
                                 <p className="text-xs text-slate-400 truncate">{p.email}</p>
                               </div>
-                              {p.saldoPendiente !== undefined && p.saldoPendiente > 0 && (
-                                <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded">
-                                  {formatMoney(p.saldoPendiente)}
-                                </span>
-                              )}
                             </button>
                           ))}
                         {participantes.filter(p => 
@@ -1051,6 +1095,143 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* PASO 3: Selector de Nivel - Solo cuando hay participante */}
+            {selectedParticipante && (
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">3️⃣ Nivel de Entrenamiento *</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedLevel('BASIC');
+                      setSelectedPriceOption(null);
+                    }}
+                    className={`p-3 rounded-lg border transition-all flex flex-col items-center gap-1 ${
+                      selectedLevel === 'BASIC'
+                        ? 'bg-green-500/20 border-green-500 text-green-400'
+                        : 'bg-slate-800/50 border-slate-600/50 text-slate-400 hover:border-green-500/50'
+                    }`}
+                  >
+                    <span className="text-xl">🌱</span>
+                    <span className="text-xs font-semibold">Básico</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedLevel('ADVANCED');
+                      setSelectedPriceOption(null);
+                    }}
+                    className={`p-3 rounded-lg border transition-all flex flex-col items-center gap-1 ${
+                      selectedLevel === 'ADVANCED'
+                        ? 'bg-orange-500/20 border-orange-500 text-orange-400'
+                        : 'bg-slate-800/50 border-slate-600/50 text-slate-400 hover:border-orange-500/50'
+                    }`}
+                  >
+                    <span className="text-xl">🔥</span>
+                    <span className="text-xs font-semibold">Avanzado</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedLevel('PL');
+                      setSelectedPriceOption(null);
+                    }}
+                    className={`p-3 rounded-lg border transition-all flex flex-col items-center gap-1 ${
+                      selectedLevel === 'PL'
+                        ? 'bg-purple-500/20 border-purple-500 text-purple-400'
+                        : 'bg-slate-800/50 border-slate-600/50 text-slate-400 hover:border-purple-500/50'
+                    }`}
+                  >
+                    <span className="text-xl">👑</span>
+                    <span className="text-xs font-semibold">Liderato</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASO 4: Opciones de Precio - Solo cuando hay nivel seleccionado */}
+            {selectedLevel && organizationPrices && (
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">4️⃣ Selecciona el Monto *</label>
+                <div className="space-y-2">
+                  {(organizationPrices[selectedLevel] || []).map((option, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedPriceOption(option)}
+                      className={`w-full p-3 rounded-lg border transition-all text-left ${
+                        selectedPriceOption?.type === option.type
+                          ? selectedLevel === 'BASIC' 
+                            ? 'bg-green-500/20 border-green-500' 
+                            : selectedLevel === 'ADVANCED'
+                              ? 'bg-orange-500/20 border-orange-500'
+                              : 'bg-purple-500/20 border-purple-500'
+                          : 'bg-slate-800/50 border-slate-600/50 hover:border-slate-500'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className={`font-bold text-lg ${
+                            selectedPriceOption?.type === option.type ? 'text-white' : 'text-slate-300'
+                          }`}>
+                            ${formatNumber(option.amount)}
+                          </span>
+                          <span className="text-slate-400 text-sm ml-2">
+                            {option.type.includes('PROMO') ? '✨ Promoción' : 
+                             option.type.includes('COMBO') ? '📦 Combo' :
+                             option.type.includes('PARTIAL') ? '💳 Abono' :
+                             option.type.includes('UPGRADE') ? '⬆️ Upgrade' : ''}
+                          </span>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          selectedPriceOption?.type === option.type
+                            ? selectedLevel === 'BASIC' 
+                              ? 'border-green-500 bg-green-500' 
+                              : selectedLevel === 'ADVANCED'
+                                ? 'border-orange-500 bg-orange-500'
+                                : 'border-purple-500 bg-purple-500'
+                            : 'border-slate-500'
+                        }`}>
+                          {selectedPriceOption?.type === option.type && (
+                            <CheckCircle size={12} className="text-white" />
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">{option.description}</p>
+                    </button>
+                  ))}
+                  {(!organizationPrices[selectedLevel] || organizationPrices[selectedLevel].length === 0) && (
+                    <p className="text-slate-500 text-sm text-center py-4">
+                      No hay precios configurados para este nivel. 
+                      <br />
+                      <span className="text-xs">Configura los precios en el panel de administración.</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Campo de Monto (readonly, se llena automático) */}
+            {selectedPriceOption && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Monto</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={cobroForm.amount}
+                      readOnly
+                      className="w-full pl-8 pr-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 cursor-not-allowed opacity-75"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Tipo</label>
+                  <div className="px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-slate-300 text-sm">
+                    {selectedPriceOption.description.split(' - ')[0]}
+                  </div>
+                </div>
               </div>
             )}
 
