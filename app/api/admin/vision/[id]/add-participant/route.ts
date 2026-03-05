@@ -164,8 +164,13 @@ export async function POST(
     });
 
     // Crear el ticket de BASIC con la estructura correcta del modelo
+    // Generar ID único para el ticket
+    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const ticketId = `TKT-BASIC-${Date.now()}-${randomPart}`;
+    
     const ticket = await prisma.ticket.create({
       data: {
+        id: ticketId,
         ownerId: user.id,
         organizationId: vision.organizationId!,
         visionId: visionId,
