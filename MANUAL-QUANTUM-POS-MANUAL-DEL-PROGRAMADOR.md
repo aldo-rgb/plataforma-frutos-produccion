@@ -2,8 +2,8 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 3.1  
-**Fecha:** 03 Marzo 2026  
+**Versión:** 3.2  
+**Fecha:** 05 Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
 ---
@@ -1688,6 +1688,146 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
+## v3.2 - 05/03/2026
+
+### 🎯 Tesorería Express - Nuevo Flujo Estructurado de Cobros
+
+**Problema:** El flujo de cobros de Tesorería Express era confuso y no diferenciaba correctamente entre niveles.
+
+**Solución Implementada:** Flujo estructurado en pasos:
+
+```
+PASO 1: Seleccionar Visión
+PASO 2: Buscar Participante (Padrino para Básico)
+PASO 3: Seleccionar Nivel (BASIC, ADVANCED, PL)
+PASO 3.5: [Solo BASIC] Formulario de Nuevo Usuario
+PASO 4: Seleccionar Precio
+PASO 5: Generar Código / Enviar a Terminal
+```
+
+**Lógica de Padrino para Básico:**
+- El participante seleccionado es el **PADRINO** (quien invita/paga)
+- Se registra un **NUEVO USUARIO** con los datos del formulario
+- El nuevo usuario queda vinculado al padrino via `invitedBy`
+- Se incrementa `invitedCount` del padrino
+
+**Auto-selección de Visión Básico:**
+- NO se usa la visión seleccionada en el dropdown
+- La API busca automáticamente la **próxima visión Básico vigente**
+- Criterios: `enabledLevels: { has: 'BASIC' }`, `startDate > today`, orden por `startDate asc`
+
+**Archivos modificados:**
+- `components/dashboard/TreasuryQuickWidget.tsx` - Nuevo flujo UI
+- `app/api/treasury/register-basic/route.ts` - Lógica de registro con padrino
+
+### 📦 Soporte FULL (Combo Completo $27,000)
+
+**Funcionalidad:** Cuando se selecciona el precio de $27,000 (Combo Completo):
+
+1. **Detección:** `priceType === 'COMBO'` o `type.includes('COMBO')`
+2. **Creación de Tickets:** 3 tickets (BASIC, ADVANCED, PL)
+3. **Enrollments:** 3 registros en `vision_enrollments`
+4. **Código de Confirmación:** Prefijo `FULL-` en lugar de `BASIC-`
+
+```typescript
+// API: register-basic/route.ts
+const isCombo = priceType === 'COMBO' || priceType === 'BASIC_COMBO';
+const ticketLevels = isCombo 
+  ? ['BASIC', 'ADVANCED', 'PL']  // 3 niveles
+  : ['BASIC'];                    // Solo básico
+
+// Crear ticket para cada nivel
+for (const level of ticketLevels) {
+  await tx.ticket.create({
+    data: { userId: newUser.id, level, status: 'VALID', visionId: vision.id }
+  });
+  await tx.vision_enrollments.create({
+    data: { usuarioId: newUser.id, visionId: vision.id, level, status: 'ACTIVE' }
+  });
+}
+
+// Código con prefijo correcto
+const codePrefix = isCombo ? 'FULL' : 'BASIC';
+```
+
+**Archivos modificados:**
+- `app/api/treasury/register-basic/route.ts`
+- `components/dashboard/TreasuryQuickWidget.tsx`
+
+### 💳 Modal de Estado para Pagos con Tarjeta (POS)
+
+**Problema:** Al pagar con tarjeta, no había feedback visual del estado y el usuario no se registraba.
+
+**Solución:** Nuevo modal con estados progresivos:
+
+| Stage | Icono | Mensaje |
+|-------|-------|---------|
+| `sending` | 📱 | "Enviando a Terminal..." |
+| `waiting` | 💳 | "Esperando pago en terminal..." |
+| `processing` | ⏳ | "Procesando..." |
+| `approved` | ✅ | "¡Pago recibido!" |
+| `registering` | 👥 | "Registrando participante..." |
+| `completed` | 🎉 | "¡Completado!" + Código de confirmación |
+| `error` | ⚠️ | Mensaje de error |
+| `cancelled` | ❌ | "Pago cancelado" |
+
+**Flujo para Básico con Tarjeta:**
+1. Enviar cobro a terminal POS
+2. Esperar aprobación del pago
+3. **Si APROBADO:** Registrar usuario automáticamente
+4. **Si RECHAZADO/CANCELADO:** NO registrar usuario, mostrar error
+5. Mostrar código de confirmación para compartir
+
+**Estado del Modal:**
+```typescript
+const [posPaymentStatus, setPosPaymentStatus] = useState<{
+  stage: 'sending' | 'waiting' | 'processing' | 'approved' | 'registering' | 'completed' | 'error' | 'cancelled';
+  message: string;
+  paymentIntentId?: string;
+  error?: string;
+  confirmationCode?: string;  // Código para compartir
+  amount?: number;
+  participantName?: string;
+  visionName?: string;
+  isCombo?: boolean;
+}>({ stage: 'sending', message: 'Enviando a terminal...' });
+```
+
+**Archivos modificados:**
+- `components/dashboard/TreasuryQuickWidget.tsx`
+
+### ✅ PaymentCode como REDEEMED Inmediato
+
+**Cambio:** Para pagos de Tesorería Express (Básico/Full), el `PaymentCode` se crea con estado `REDEEMED` directamente:
+
+```typescript
+const paymentCode = await tx.paymentCode.create({
+  data: {
+    id: paymentCodeId,
+    code: `${codePrefix}-${timestamp}-${randomSuffix}`,
+    amount: parseFloat(amount),
+    reference: referenceText,
+    status: 'REDEEMED',        // ← Ya confirmado
+    redeemedById: newUser.id,
+    redeemedAt: new Date(),
+    // ...
+  },
+});
+```
+
+**Razón:** El pago ya fue recibido (efectivo o tarjeta), por lo que el código es de **confirmación**, no de cobro pendiente.
+
+### 🛡️ Permisos: SCHOOL_ADMIN agregado
+
+**Archivos actualizados para incluir rol `SCHOOL_ADMIN`:**
+- `app/api/treasury/register-basic/route.ts`
+
+```typescript
+const ALLOWED_ROLES = ['ADMIN', 'SUPER_ADMIN', 'COORDINADOR', 'TESORERO', 'DIRECTOR', 'SUBDIRECTOR', 'SCHOOL_ADMIN'];
+```
+
+---
+
 ## v3.1 - 03/03/2026 (Sesión 2)
 
 ### 🚨 REGLA CRÍTICA: Modelos con `id` String sin @default
@@ -2669,6 +2809,6 @@ grep -A 20 "^model NombreDelModelo" prisma/schema.prisma
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 3.1 - Marzo 2026*  
-*Última actualización: 03/03/2026*
+*Versión 3.2 - Marzo 2026*  
+*Última actualización: 05/03/2026*
 

@@ -134,12 +134,25 @@ async function processPointNotification(notification: any) {
   console.log(`📊 Payment Intent status: ${status}`);
 
   // Mapear status de MP a nuestro enum
+  // IMPORTANTE: 'FINISHED' solo significa que la intención terminó
+  // Debemos verificar payment.status para saber si fue aprobado o rechazado
   let newStatus: 'PENDING' | 'PROCESSING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'ERROR';
+  const paymentStatus = paymentIntent.payment?.status; // 'approved', 'rejected', etc.
   
   switch (status) {
     case 'FINISHED':
     case 'CONFIRMED':
-      newStatus = 'APPROVED';
+      // Solo es APPROVED si el payment.status es 'approved'
+      if (paymentStatus === 'approved') {
+        newStatus = 'APPROVED';
+      } else if (paymentStatus === 'rejected') {
+        newStatus = 'REJECTED';
+        console.log(`❌ Pago rechazado: ${paymentIntent.payment?.status_detail}`);
+      } else {
+        // Otro estado (pending, in_process, etc.)
+        newStatus = 'ERROR';
+        console.log(`⚠️ Pago con estado inesperado: ${paymentStatus}`);
+      }
       break;
     case 'CANCELLED':
       newStatus = 'CANCELLED';

@@ -172,6 +172,14 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
   const [selectedPriceOption, setSelectedPriceOption] = useState<PriceOption | null>(null);
   const [loadingPrices, setLoadingPrices] = useState(false);
   
+  // Form para nuevo usuario (pago Básico - el padrino invita a alguien nuevo)
+  const [newUserForm, setNewUserForm] = useState({
+    nombre: '',
+    fechaNacimiento: '',
+    email: '',
+    telefono: ''
+  });
+  
   // Form gasto
   const [gastoForm, setGastoForm] = useState({
     concept: '',
@@ -199,6 +207,20 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
   const [activePOSTransaction, setActivePOSTransaction] = useState<POSTransaction | null>(null);
   const [participantInfo, setParticipantInfo] = useState<ParticipantInfo | null>(null);
   const [showReceiverPaymentModal, setShowReceiverPaymentModal] = useState(false);
+  
+  // Modal de estado del pago con tarjeta
+  const [showPOSStatusModal, setShowPOSStatusModal] = useState(false);
+  const [posPaymentStatus, setPosPaymentStatus] = useState<{
+    stage: 'sending' | 'waiting' | 'processing' | 'approved' | 'registering' | 'completed' | 'error' | 'cancelled';
+    message: string;
+    paymentIntentId?: string;
+    error?: string;
+    confirmationCode?: string;
+    amount?: number;
+    participantName?: string;
+    visionName?: string;
+    isCombo?: boolean;
+  }>({ stage: 'sending', message: 'Enviando a terminal...' });
 
   useEffect(() => {
     fetchInitialData();
@@ -238,15 +260,25 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
   useEffect(() => {
     if (selectedPriceOption) {
       const levelName = selectedLevel === 'BASIC' ? 'Básico' : selectedLevel === 'ADVANCED' ? 'Avanzado' : 'Liderato';
+      
+      // Para Básico: usar nombre del nuevo usuario (invitado)
+      // Para otros niveles: usar nombre del participante seleccionado
+      let personName = '';
+      if (selectedLevel === 'BASIC' && newUserForm.nombre) {
+        personName = newUserForm.nombre;
+      } else if (selectedParticipante) {
+        personName = selectedParticipante.nombre;
+      }
+      
       setCobroForm(prev => ({
         ...prev,
         amount: selectedPriceOption.amount.toString(),
-        reference: selectedParticipante 
-          ? `${selectedPriceOption.description} - ${selectedParticipante.nombre}`
+        reference: personName 
+          ? `${selectedPriceOption.description} - ${personName}`
           : `${selectedPriceOption.description}`
       }));
     }
-  }, [selectedPriceOption, selectedParticipante, selectedLevel]);
+  }, [selectedPriceOption, selectedParticipante, selectedLevel, newUserForm.nombre]);
 
   // Cargar precios de la organización
   const fetchOrganizationPrices = async () => {
@@ -368,6 +400,18 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
       return;
     }
 
+    // Para BÁSICO: validar datos del nuevo usuario
+    if (selectedLevel === 'BASIC') {
+      if (!newUserForm.nombre || !newUserForm.email || !newUserForm.telefono) {
+        showNotification('error', 'Completa los datos del nuevo participante');
+        return;
+      }
+    }
+
+    // Mostrar modal de estado
+    setShowPOSStatusModal(true);
+    setPosPaymentStatus({ stage: 'sending', message: 'Enviando cobro a terminal...' });
+
     setLoadingPOS(true);
     try {
       // Determinar qué API usar basado en el tipo de dispositivo
@@ -400,23 +444,130 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
           amount: parseFloat(cobroForm.amount),
           reference: data.paymentIntent.reference
         });
-        showNotification('success', useMercadoPago 
-          ? '📲 Cobro enviado a terminal Point. Esperando pago...'
-          : '📲 Cobro enviado a terminal. Esperando pago...'
-        );
+        
+        // Actualizar modal a estado "esperando"
+        setPosPaymentStatus({ 
+          stage: 'waiting', 
+          message: 'Esperando pago en terminal...', 
+          paymentIntentId: data.paymentIntent.id 
+        });
         
         // Iniciar polling para verificar estado del pago
         if (useMercadoPago) {
           startPaymentStatusPolling(data.paymentIntent.id);
         }
       } else {
+        setPosPaymentStatus({ stage: 'error', message: 'Error al enviar a terminal', error: data.error });
         showNotification('error', data.error || 'Error al enviar a terminal');
       }
     } catch (error) {
+      setPosPaymentStatus({ stage: 'error', message: 'Error de conexión', error: 'Error de conexión con terminal' });
       showNotification('error', 'Error de conexión con terminal');
     } finally {
       setLoadingPOS(false);
     }
+  };
+
+  // Función para registrar usuario después de pago aprobado (BÁSICO)
+  const registerUserAfterPayment = async (): Promise<{ 
+    success: boolean; 
+    visionName?: string; 
+    isCombo?: boolean; 
+    isApartado?: boolean;
+    pendingDebt?: number;
+    ticketsCreated?: number; 
+    paymentCode?: { code: string; amount: number; reference: string };
+    error?: string 
+  }> => {
+    // Si es AVANZADO, registrar con la API de avanzado
+    if (selectedLevel === 'ADVANCED') {
+      if (!selectedParticipante || !cobroForm.visionId) {
+        return { success: false, error: 'Faltan datos del participante o visión' };
+      }
+      
+      const priceType = selectedPriceOption?.type || 'ADVANCED';
+      
+      try {
+        const registerRes = await fetch('/api/treasury/register-advanced', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participantId: selectedParticipante.userId || selectedParticipante.id,
+            visionId: parseInt(cobroForm.visionId),
+            amount: parseFloat(cobroForm.amount),
+            priceType: priceType,
+            paymentMethod: 'CARD'
+          })
+        });
+        
+        const registerData = await registerRes.json();
+        
+        if (!registerData.success) {
+          return { success: false, error: registerData.error || 'Error al registrar pago de Avanzado' };
+        }
+        
+        return {
+          success: true,
+          visionName: registerData.enrollment?.visionName || 'Avanzado',
+          isCombo: registerData.isCombo,
+          isApartado: registerData.isApartado,
+          pendingDebt: registerData.pendingDebt,
+          ticketsCreated: registerData.ticketsCreated || 1,
+          paymentCode: registerData.paymentCode ? {
+            code: registerData.paymentCode.code,
+            amount: registerData.paymentCode.amount,
+            reference: registerData.paymentCode.reference
+          } : undefined
+        };
+      } catch (error) {
+        return { success: false, error: 'Error de conexión al registrar Avanzado' };
+      }
+    }
+    
+    // Si es BÁSICO, registrar con la API existente
+    if (selectedLevel === 'BASIC') {
+      const isCombo = selectedPriceOption?.type?.includes('COMBO') || false;
+      
+      try {
+        const registerRes = await fetch('/api/treasury/register-basic', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: newUserForm.nombre,
+            email: newUserForm.email,
+            telefono: newUserForm.telefono,
+            fechaNacimiento: newUserForm.fechaNacimiento || null,
+            padrinoId: selectedParticipante?.userId || selectedParticipante?.id,
+            amount: parseFloat(cobroForm.amount),
+            priceType: isCombo ? 'COMBO' : 'BASIC',
+            paymentMethod: 'CARD'
+          })
+        });
+        
+        const registerData = await registerRes.json();
+        
+        if (!registerData.success) {
+          return { success: false, error: registerData.error || 'Error al registrar participante' };
+        }
+        
+        return { 
+          success: true, 
+          visionName: registerData.enrollment?.visionName || 'Básico',
+          isCombo: registerData.isCombo,
+          ticketsCreated: registerData.ticketsCreated || 1,
+          paymentCode: registerData.paymentCode ? {
+            code: registerData.paymentCode.code,
+            amount: registerData.paymentCode.amount,
+            reference: registerData.paymentCode.reference
+          } : undefined
+        };
+      } catch (error) {
+        return { success: false, error: 'Error de conexión al registrar' };
+      }
+    }
+    
+    // Para otros niveles (PL, etc.), no hay que registrar aún
+    return { success: true };
   };
 
   // Polling para verificar estado del pago en Mercado Pago Point
@@ -427,23 +578,137 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
         if (res.ok) {
           const data = await res.json();
           const state = data.paymentIntent?.state;
+          const paymentStatus = data.paymentIntent?.payment?.status; // Estado real del pago
           
+          // IMPORTANTE: FINISHED solo significa que la intención terminó
+          // Debemos verificar payment.status para saber si fue aprobado o rechazado
           if (state === 'FINISHED') {
             clearInterval(pollInterval);
-            setActivePOSTransaction(prev => prev ? { ...prev, status: 'APPROVED' } : null);
-            showNotification('success', '✅ ¡Pago aprobado!');
-            // Limpiar después de 3 segundos
+            
+            // Verificar si el pago fue realmente aprobado
+            if (paymentStatus === 'approved') {
+              // Pago APROBADO - proceder con registro
+              setPosPaymentStatus({ stage: 'approved', message: '¡Pago recibido!' });
+              setActivePOSTransaction(prev => prev ? { ...prev, status: 'APPROVED' } : null);
+            
+            // Si es BÁSICO, registrar al nuevo usuario
+            if (selectedLevel === 'BASIC') {
+              setPosPaymentStatus({ stage: 'registering', message: 'Registrando participante...' });
+              
+              const registerResult = await registerUserAfterPayment();
+              
+              if (registerResult.success) {
+                const successMsg = registerResult.isCombo 
+                  ? `¡${newUserForm.nombre} registrado FULL!`
+                  : `¡${newUserForm.nombre} registrado!`;
+                
+                setPosPaymentStatus({ 
+                  stage: 'completed', 
+                  message: successMsg,
+                  confirmationCode: registerResult.paymentCode?.code,
+                  amount: registerResult.paymentCode?.amount || parseFloat(cobroForm.amount),
+                  participantName: newUserForm.nombre,
+                  visionName: registerResult.visionName,
+                  isCombo: registerResult.isCombo
+                });
+                
+                showNotification('success', successMsg);
+              } else {
+                setPosPaymentStatus({ 
+                  stage: 'error', 
+                  message: 'Pago recibido pero error al registrar', 
+                  error: registerResult.error 
+                });
+                showNotification('error', `Pago OK pero error al registrar: ${registerResult.error}`);
+              }
+            } 
+            // Si es AVANZADO, registrar pago con la nueva API
+            else if (selectedLevel === 'ADVANCED') {
+              setPosPaymentStatus({ stage: 'registering', message: 'Registrando inscripción...' });
+              
+              const registerResult = await registerUserAfterPayment();
+              
+              if (registerResult.success) {
+                let successMsg = `¡${selectedParticipante?.nombre} inscrito en Avanzado!`;
+                if (registerResult.isApartado) {
+                  successMsg = `¡Apartado registrado! Deuda: $${registerResult.pendingDebt?.toLocaleString()}`;
+                } else if (registerResult.isCombo) {
+                  successMsg = `¡${selectedParticipante?.nombre} inscrito Combo Avanzado+PL!`;
+                }
+                
+                setPosPaymentStatus({ 
+                  stage: 'completed', 
+                  message: successMsg,
+                  confirmationCode: registerResult.paymentCode?.code,
+                  amount: registerResult.paymentCode?.amount || parseFloat(cobroForm.amount),
+                  participantName: selectedParticipante?.nombre || '',
+                  visionName: registerResult.visionName,
+                  isCombo: registerResult.isCombo
+                });
+                
+                showNotification('success', successMsg);
+              } else {
+                setPosPaymentStatus({ 
+                  stage: 'error', 
+                  message: 'Pago recibido pero error al registrar', 
+                  error: registerResult.error 
+                });
+                showNotification('error', `Pago OK pero error al registrar: ${registerResult.error}`);
+              }
+            } else {
+              // Otros niveles: solo mostrar éxito del pago
+              setPosPaymentStatus({ stage: 'completed', message: '¡Pago completado exitosamente!' });
+              showNotification('success', '✅ ¡Pago aprobado!');
+            }
+            
+            // Limpiar después de 4 segundos
             setTimeout(() => {
               setActivePOSTransaction(null);
               setCobroForm({ amount: '', reference: '', visionId: '', participanteId: '' });
               setSelectedParticipante(null);
+              setSearchParticipante('');
+              setSelectedLevel('');
+              setSelectedPriceOption(null);
+              setNewUserForm({ nombre: '', fechaNacimiento: '', email: '', telefono: '' });
               fetchInitialData();
-            }, 3000);
-          } else if (state === 'CANCELED' || state === 'ERROR') {
+              // No cerrar modal automáticamente - usuario lo cierra
+            }, 4000);
+            
+            } else {
+              // FINISHED pero payment.status NO es 'approved' = RECHAZADO
+              const rejectReason = data.paymentIntent?.payment?.status_detail || 'Tarjeta rechazada';
+              setPosPaymentStatus({ 
+                stage: 'error', 
+                message: 'Pago Rechazado',
+                error: `El pago fue rechazado: ${rejectReason}`
+              });
+              setActivePOSTransaction(prev => prev ? { ...prev, status: 'ERROR' } : null);
+              showNotification('error', `Pago rechazado: ${rejectReason}`);
+            }
+            
+          } else if (state === 'CANCELED' || state === 'ERROR' || state === 'REJECTED') {
             clearInterval(pollInterval);
+            let errorMsg = 'Error en el pago';
+            let errorDetail = '';
+            
+            if (state === 'CANCELED') {
+              errorMsg = 'Pago Cancelado';
+              errorDetail = 'El pago fue cancelado en la terminal';
+            } else if (state === 'REJECTED') {
+              errorMsg = 'Pago Rechazado';
+              errorDetail = 'La tarjeta fue rechazada. Intenta con otra tarjeta.';
+            } else {
+              errorMsg = 'Error en el Pago';
+              errorDetail = 'Ocurrió un error al procesar el pago';
+            }
+            
+            setPosPaymentStatus({ 
+              stage: state === 'CANCELED' ? 'cancelled' : 'error', 
+              message: errorMsg,
+              error: errorDetail
+            });
             setActivePOSTransaction(prev => prev ? { ...prev, status: state === 'CANCELED' ? 'CANCELLED' : 'ERROR' } : null);
-            showNotification('error', state === 'CANCELED' ? 'Pago cancelado' : 'Error en el pago');
-            setTimeout(() => setActivePOSTransaction(null), 3000);
+            showNotification('error', `${errorMsg}: ${errorDetail}`);
           }
         }
       } catch (error) {
@@ -454,6 +719,10 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
     // Detener polling después de 5 minutos
     setTimeout(() => {
       clearInterval(pollInterval);
+      // Si aún está esperando, mostrar timeout
+      if (posPaymentStatus.stage === 'waiting') {
+        setPosPaymentStatus({ stage: 'error', message: 'Tiempo de espera agotado', error: 'No se recibió respuesta de la terminal' });
+      }
     }, 5 * 60 * 1000);
   };
 
@@ -532,6 +801,10 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
     setTimeout(() => setNotification({ show: false, type: 'success', message: '' }), 3000);
   };
 
+  // Función para generar código de pago
+  // Para BASIC: primero registra nuevo usuario con padrino, luego genera código
+  // Para ADVANCED: registra pago de avanzado con ticket y enrollment
+  // Para otros niveles: genera código de pago directamente
   const handleGenerarCodigo = async () => {
     if (!cobroForm.amount || parseFloat(cobroForm.amount) <= 0) {
       showNotification('error', 'Ingresa un monto válido');
@@ -540,14 +813,178 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
 
     setLoading(true);
     try {
+      let participanteId = cobroForm.participanteId || null;
+      let reference = cobroForm.reference;
+      
+      // Si es pago BÁSICO, primero registrar al nuevo usuario
+      if (selectedLevel === 'BASIC') {
+        // Validar datos del nuevo usuario
+        if (!newUserForm.nombre || !newUserForm.email || !newUserForm.telefono) {
+          showNotification('error', 'Completa los datos del nuevo participante');
+          setLoading(false);
+          return;
+        }
+        
+        // Determinar si es COMBO basado en el tipo de precio seleccionado
+        const isCombo = selectedPriceOption?.type?.includes('COMBO') || false;
+        
+        // Registrar nuevo usuario con padrino
+        const registerRes = await fetch('/api/treasury/register-basic', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: newUserForm.nombre,
+            email: newUserForm.email,
+            telefono: newUserForm.telefono,
+            fechaNacimiento: newUserForm.fechaNacimiento || null,
+            // NO enviamos visionId - la API busca automáticamente la próxima visión Básico vigente
+            padrinoId: selectedParticipante?.userId || selectedParticipante?.id, // El participante seleccionado es el padrino
+            amount: parseFloat(cobroForm.amount),
+            priceType: isCombo ? 'COMBO' : 'BASIC' // Indicar si es combo para crear los 3 niveles
+          })
+        });
+        
+        const registerData = await registerRes.json();
+        
+        if (!registerData.success) {
+          showNotification('error', registerData.error || 'Error al registrar nuevo participante');
+          setLoading(false);
+          return;
+        }
+        
+        // Usar el ID del nuevo usuario para el pago
+        participanteId = registerData.usuario?.id || registerData.enrollment?.userId || null;
+        const visionRegistrada = registerData.enrollment?.visionName || 'Básico';
+        const isComboRegistro = registerData.isCombo || false;
+        const ticketsCreated = registerData.ticketsCreated || 1;
+        
+        // Para BÁSICO/COMBO: El registro ya está completo y el PaymentCode ya está REDEEMED
+        // Mostrar modal de confirmación directamente sin crear otro código
+        const paymentCodeInfo = registerData.paymentCode;
+        
+        // Referencia según tipo de registro
+        const referenceText = isComboRegistro 
+          ? `Full (B+A+L) - ${newUserForm.nombre}`
+          : `Inscripción Básico - ${newUserForm.nombre}`;
+        
+        setGeneratedCode({ 
+          id: paymentCodeInfo?.id || 'confirmed',
+          code: paymentCodeInfo?.code || 'REGISTRO-COMPLETADO',
+          amount: Number(paymentCodeInfo?.amount) || parseFloat(cobroForm.amount),
+          reference: referenceText,
+          status: 'REDEEMED', // Ya confirmado
+          createdAt: new Date().toISOString(),
+          visionName: visionRegistrada
+        });
+        
+        setShowCodeModal(true);
+        
+        // Mensaje según tipo
+        const successMsg = isComboRegistro
+          ? `¡${newUserForm.nombre} registrado FULL (${ticketsCreated} tickets) en ${visionRegistrada}!`
+          : `¡${newUserForm.nombre} registrado en ${visionRegistrada}!`;
+        showNotification('success', successMsg);
+        
+        // Limpiar formularios
+        setCobroForm({ amount: '', reference: '', visionId: '', participanteId: '' });
+        setSelectedParticipante(null);
+        setSearchParticipante('');
+        setSelectedLevel('');
+        setSelectedPriceOption(null);
+        setNewUserForm({ nombre: '', fechaNacimiento: '', email: '', telefono: '' });
+        
+        fetchInitialData();
+        setLoading(false);
+        return; // 🛑 SALIR - No generar otro código
+      }
+      
+      // Si es pago AVANZADO, registrar con la nueva API
+      if (selectedLevel === 'ADVANCED') {
+        if (!selectedParticipante) {
+          showNotification('error', 'Selecciona un participante');
+          setLoading(false);
+          return;
+        }
+        
+        if (!cobroForm.visionId) {
+          showNotification('error', 'Selecciona una visión');
+          setLoading(false);
+          return;
+        }
+        
+        const priceType = selectedPriceOption?.type || 'ADVANCED';
+        
+        const registerRes = await fetch('/api/treasury/register-advanced', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participantId: selectedParticipante.userId || selectedParticipante.id,
+            visionId: parseInt(cobroForm.visionId),
+            amount: parseFloat(cobroForm.amount),
+            priceType: priceType,
+            paymentMethod: 'CASH'
+          })
+        });
+        
+        const registerData = await registerRes.json();
+        
+        if (!registerData.success) {
+          showNotification('error', registerData.error || 'Error al registrar pago de Avanzado');
+          setLoading(false);
+          return;
+        }
+        
+        const paymentCodeInfo = registerData.paymentCode;
+        const isComboRegistro = registerData.isCombo || false;
+        const isApartado = registerData.isApartado || false;
+        const pendingDebt = registerData.pendingDebt || 0;
+        const visionRegistrada = registerData.enrollment?.visionName || 'Avanzado';
+        
+        setGeneratedCode({ 
+          id: paymentCodeInfo?.id || 'confirmed',
+          code: paymentCodeInfo?.code || 'REGISTRO-COMPLETADO',
+          amount: Number(paymentCodeInfo?.amount) || parseFloat(cobroForm.amount),
+          reference: paymentCodeInfo?.reference || `Avanzado - ${selectedParticipante.nombre}`,
+          status: 'REDEEMED',
+          createdAt: new Date().toISOString(),
+          visionName: visionRegistrada
+        });
+        
+        setShowCodeModal(true);
+        
+        // Mensaje según tipo
+        let successMsg = `¡${selectedParticipante.nombre} inscrito en Avanzado - ${visionRegistrada}!`;
+        if (isApartado) {
+          successMsg = `¡Apartado registrado para ${selectedParticipante.nombre}! Deuda pendiente: $${pendingDebt.toLocaleString()}`;
+        } else if (isComboRegistro) {
+          successMsg = `¡${selectedParticipante.nombre} inscrito en Combo Avanzado+PL - ${visionRegistrada}!`;
+        }
+        showNotification('success', successMsg);
+        
+        // Limpiar formularios
+        setCobroForm({ amount: '', reference: '', visionId: '', participanteId: '' });
+        setSelectedParticipante(null);
+        setSearchParticipante('');
+        setSelectedLevel('');
+        setSelectedPriceOption(null);
+        
+        fetchInitialData();
+        setLoading(false);
+        return; // 🛑 SALIR
+      }
+      
+      // Para otros niveles (PL, etc.), usar el participante seleccionado
+      reference = reference || (selectedParticipante ? `Pago ${selectedParticipante.nombre}` : `Cobro $${cobroForm.amount}`);
+      
+      // Generar código de pago
       const res = await fetch('/api/treasury/payment-codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: parseFloat(cobroForm.amount),
-          reference: cobroForm.reference || (selectedParticipante ? `Pago ${selectedParticipante.nombre}` : `Cobro $${cobroForm.amount}`),
+          reference,
           visionId: cobroForm.visionId || null,
-          participanteId: cobroForm.participanteId || null
+          participanteId
         })
       });
 
@@ -579,9 +1016,15 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
           visionName 
         });
         setShowCodeModal(true);
+        
+        // Limpiar todos los formularios
         setCobroForm({ amount: '', reference: '', visionId: '', participanteId: '' });
         setSelectedParticipante(null);
         setSearchParticipante('');
+        setSelectedLevel('');
+        setSelectedPriceOption(null);
+        setNewUserForm({ nombre: '', fechaNacimiento: '', email: '', telefono: '' });
+        
         fetchInitialData();
       } else {
         showNotification('error', data.error || 'Error al generar código');
@@ -1014,7 +1457,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
             {/* PASO 2: Selector de Participante - Solo cuando hay visión seleccionada */}
             {cobroForm.visionId && (
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">2️⃣ Participante *</label>
+                <label className="text-xs text-slate-400 mb-1 block">2️⃣ Participante (quien paga/invita)</label>
                 {selectedParticipante ? (
                   <div className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                     <div className="flex items-center gap-3">
@@ -1111,6 +1554,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                     onClick={() => {
                       setSelectedLevel('BASIC');
                       setSelectedPriceOption(null);
+                      setNewUserForm({ nombre: '', fechaNacimiento: '', email: '', telefono: '' });
                     }}
                     className={`p-3 rounded-lg border transition-all flex flex-col items-center gap-1 ${
                       selectedLevel === 'BASIC'
@@ -1125,6 +1569,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                     onClick={() => {
                       setSelectedLevel('ADVANCED');
                       setSelectedPriceOption(null);
+                      setNewUserForm({ nombre: '', fechaNacimiento: '', email: '', telefono: '' });
                     }}
                     className={`p-3 rounded-lg border transition-all flex flex-col items-center gap-1 ${
                       selectedLevel === 'ADVANCED'
@@ -1139,6 +1584,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                     onClick={() => {
                       setSelectedLevel('PL');
                       setSelectedPriceOption(null);
+                      setNewUserForm({ nombre: '', fechaNacimiento: '', email: '', telefono: '' });
                     }}
                     className={`p-3 rounded-lg border transition-all flex flex-col items-center gap-1 ${
                       selectedLevel === 'PL'
@@ -1153,10 +1599,69 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               </div>
             )}
 
-            {/* PASO 4: Opciones de Precio - Solo cuando hay nivel seleccionado */}
+            {/* PASO 3.5: Formulario Nuevo Usuario (Solo para Básico) */}
+            {selectedLevel === 'BASIC' && selectedParticipante && (
+              <div className="space-y-3 p-4 bg-green-500/5 border border-green-500/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-green-400">👤</span>
+                  <label className="text-xs text-green-400 font-medium">Datos del Nuevo Participante</label>
+                </div>
+                <p className="text-xs text-slate-400 mb-3">
+                  <span className="font-semibold text-blue-400">{selectedParticipante.nombre}</span> está invitando a esta persona
+                </p>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Nombre Completo *</label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Juan Pérez García"
+                      value={newUserForm.nombre}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, nombre: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-green-500/50 focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Fecha de Nacimiento *</label>
+                    <input
+                      type="date"
+                      value={newUserForm.fechaNacimiento}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, fechaNacimiento: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-green-500/50 focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Correo Electrónico *</label>
+                    <input
+                      type="email"
+                      placeholder="correo@ejemplo.com"
+                      value={newUserForm.email}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-green-500/50 focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Teléfono *</label>
+                    <input
+                      type="tel"
+                      placeholder="Ej: 5512345678"
+                      value={newUserForm.telefono}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, telefono: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-green-500/50 focus:outline-none text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* PASO 4: Opciones de Precio - Solo cuando hay nivel seleccionado Y (para básico: tiene datos de usuario / para otros: directamente) */}
             {selectedLevel && organizationPrices && (
+              (selectedLevel === 'BASIC' && newUserForm.nombre && newUserForm.email) ||
+              (selectedLevel !== 'BASIC')
+            ) && (
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">4️⃣ Selecciona el Monto *</label>
+                <label className="text-xs text-slate-400 mb-1 block">
+                  {selectedLevel === 'BASIC' ? '4️⃣' : '4️⃣'} Selecciona el Monto *
+                </label>
                 <div className="space-y-2">
                   {(organizationPrices[selectedLevel] || []).map((option, idx) => (
                     <button
@@ -1181,7 +1686,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                           </span>
                           <span className="text-slate-400 text-sm ml-2">
                             {option.type.includes('PROMO') ? '✨ Promoción' : 
-                             option.type.includes('COMBO') ? '📦 Combo' :
+                             option.type.includes('COMBO') ? '📦 Full' :
                              option.type.includes('PARTIAL') ? '💳 Abono' :
                              option.type.includes('UPGRADE') ? '⬆️ Upgrade' : ''}
                           </span>
@@ -1262,7 +1767,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                 ) : (
                   <>
                     <QrCode size={20} />
-                    Generar Código de Cobro
+                    {selectedLevel === 'BASIC' ? '✨ Registrar Nuevo Participante' : 'Generar Código de Cobro'}
                   </>
                 )}
               </button>
@@ -1517,9 +2022,11 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               )}
               <div>
                 <h3 className="text-xl font-black" style={{ color: orgInfo.brandColor }}>
-                  Codigo de Referencia
+                  {generatedCode.status === 'REDEEMED' ? 'Código de Confirmación' : 'Codigo de Referencia'}
                 </h3>
-                <p className="text-xs text-slate-400">Comprobante de cobro generado</p>
+                <p className="text-xs text-slate-400">
+                  {generatedCode.status === 'REDEEMED' ? 'Registro completado exitosamente' : 'Comprobante de cobro generado'}
+                </p>
               </div>
             </div>
             <button
@@ -1550,7 +2057,9 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                 ) : (
                   <div className="text-3xl mb-1">💰</div>
                 )}
-                <h4 className="text-white font-bold text-lg">CODIGO DE REFERENCIA</h4>
+                <h4 className="text-white font-bold text-lg">
+                  {generatedCode.status === 'REDEEMED' ? 'CÓDIGO DE CONFIRMACIÓN' : 'CODIGO DE REFERENCIA'}
+                </h4>
                 <p className="text-white/80 text-xs">{orgInfo.nombre}</p>
               </div>
 
@@ -1595,7 +2104,9 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                     borderColor: `${orgInfo.brandColor}30`
                   }}
                 >
-                  <p className="text-xs text-slate-400 mb-1">MONTO A REDIMIR</p>
+                  <p className="text-xs text-slate-400 mb-1">
+                    {generatedCode.status === 'REDEEMED' ? 'MONTO REGISTRADO' : 'MONTO A REDIMIR'}
+                  </p>
                   <p className="text-4xl font-black text-white">
                     {formatMoney(generatedCode.amount)}
                   </p>
@@ -1623,9 +2134,15 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                   </div>
                   <div className="flex justify-between items-center py-2">
                     <span className="text-slate-400 text-sm">📊 Estado</span>
-                    <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-bold rounded-full border border-yellow-500/30">
-                      PENDIENTE
-                    </span>
+                    {generatedCode.status === 'REDEEMED' ? (
+                      <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-bold rounded-full border border-green-500/30">
+                        ✓ CONFIRMADO
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-bold rounded-full border border-yellow-500/30">
+                        PENDIENTE
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1636,7 +2153,9 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                 style={{ backgroundColor: `${orgInfo.brandColor}10` }}
               >
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">
-                  Presente esta referencia al momento del pago
+                  {generatedCode.status === 'REDEEMED' 
+                    ? '✓ Pago registrado correctamente en el sistema' 
+                    : 'Presente esta referencia al momento del pago'}
                 </p>
               </div>
             </div>
@@ -1672,9 +2191,249 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               }}
             >
               <p className="text-slate-300/80 text-xs text-center">
-                💡 La referencia será válida hasta que sea canjeada o cancelada
+                {generatedCode.status === 'REDEEMED' 
+                  ? generatedCode.reference?.includes('Full') 
+                    ? '🎉 Participante registrado FULL (Básico + Avanzado + Liderato). Contraseña: Quantum123' 
+                    : '🎉 El nuevo participante ha sido registrado exitosamente. Contraseña inicial: Quantum123'
+                  : '💡 La referencia será válida hasta que sea canjeada o cancelada'}
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* MODAL DE ESTADO DEL PAGO CON TARJETA */}
+    {showPOSStatusModal && (
+      <div 
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+        onClick={(e) => {
+          // Solo cerrar si el pago está completado o hay error
+          if (['completed', 'error', 'cancelled'].includes(posPaymentStatus.stage)) {
+            setShowPOSStatusModal(false);
+          }
+        }}
+      >
+        <div 
+          className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+          style={{ borderColor: `${orgInfo.brandColor}40` }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div 
+            className="p-6 border-b text-center"
+            style={{ 
+              background: `linear-gradient(to right, ${orgInfo.brandColor}20, transparent)`,
+              borderColor: `${orgInfo.brandColor}20`
+            }}
+          >
+            <div className="flex justify-center mb-3">
+              {posPaymentStatus.stage === 'sending' && (
+                <div className="p-4 bg-blue-500/20 rounded-full animate-pulse">
+                  <Smartphone className="text-blue-400" size={32} />
+                </div>
+              )}
+              {posPaymentStatus.stage === 'waiting' && (
+                <div className="p-4 bg-yellow-500/20 rounded-full">
+                  <CreditCard className="text-yellow-400 animate-pulse" size={32} />
+                </div>
+              )}
+              {posPaymentStatus.stage === 'processing' && (
+                <div className="p-4 bg-blue-500/20 rounded-full">
+                  <Loader2 className="text-blue-400 animate-spin" size={32} />
+                </div>
+              )}
+              {posPaymentStatus.stage === 'approved' && (
+                <div className="p-4 bg-green-500/20 rounded-full animate-bounce">
+                  <CheckCircle className="text-green-400" size={32} />
+                </div>
+              )}
+              {posPaymentStatus.stage === 'registering' && (
+                <div className="p-4 bg-blue-500/20 rounded-full">
+                  <Users className="text-blue-400 animate-pulse" size={32} />
+                </div>
+              )}
+              {posPaymentStatus.stage === 'completed' && (
+                <div className="p-4 bg-green-500/20 rounded-full">
+                  <CheckCircle className="text-green-400" size={32} />
+                </div>
+              )}
+              {(posPaymentStatus.stage === 'error' || posPaymentStatus.stage === 'cancelled') && (
+                <div className="p-4 bg-red-500/20 rounded-full">
+                  <AlertTriangle className="text-red-400" size={32} />
+                </div>
+              )}
+            </div>
+            <h3 className="text-xl font-bold text-white">
+              {posPaymentStatus.stage === 'sending' && 'Enviando a Terminal'}
+              {posPaymentStatus.stage === 'waiting' && 'Esperando Pago'}
+              {posPaymentStatus.stage === 'processing' && 'Procesando'}
+              {posPaymentStatus.stage === 'approved' && '¡Pago Recibido!'}
+              {posPaymentStatus.stage === 'registering' && 'Registrando...'}
+              {posPaymentStatus.stage === 'completed' && '¡Completado!'}
+              {posPaymentStatus.stage === 'error' && 'Error'}
+              {posPaymentStatus.stage === 'cancelled' && 'Cancelado'}
+            </h3>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 text-center">
+            {/* Mensaje de estado */}
+            <p className={`text-lg font-medium mb-4 ${
+              posPaymentStatus.stage === 'completed' ? 'text-green-400' :
+              posPaymentStatus.stage === 'error' || posPaymentStatus.stage === 'cancelled' ? 'text-red-400' :
+              'text-slate-300'
+            }`}>
+              {posPaymentStatus.message}
+            </p>
+
+            {/* Monto */}
+            {cobroForm.amount && (
+              <div 
+                className="p-4 rounded-xl border mb-4"
+                style={{ 
+                  background: `linear-gradient(to right, ${orgInfo.brandColor}20, ${orgInfo.brandColor}10)`,
+                  borderColor: `${orgInfo.brandColor}30`
+                }}
+              >
+                <p className="text-xs text-slate-400 mb-1">MONTO</p>
+                <p className="text-3xl font-black text-white">
+                  ${parseFloat(cobroForm.amount).toLocaleString('es-MX')}
+                </p>
+              </div>
+            )}
+
+            {/* Barra de progreso animada para estados de espera */}
+            {['sending', 'waiting', 'processing', 'registering'].includes(posPaymentStatus.stage) && (
+              <div className="relative h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div 
+                  className="absolute inset-y-0 left-0 rounded-full animate-pulse"
+                  style={{ 
+                    backgroundColor: orgInfo.brandColor,
+                    width: posPaymentStatus.stage === 'sending' ? '25%' : 
+                           posPaymentStatus.stage === 'waiting' ? '50%' : 
+                           posPaymentStatus.stage === 'processing' ? '75%' : 
+                           '90%',
+                    transition: 'width 0.5s ease-in-out'
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Estado completado: mostrar código de confirmación */}
+            {posPaymentStatus.stage === 'completed' && posPaymentStatus.confirmationCode && (
+              <>
+                {/* Código de Confirmación */}
+                <div 
+                  className="mt-4 p-4 rounded-xl border-2 border-dashed"
+                  style={{ 
+                    backgroundColor: `${orgInfo.brandColor}15`,
+                    borderColor: `${orgInfo.brandColor}40`
+                  }}
+                >
+                  <p className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Código de Confirmación</p>
+                  <code 
+                    className="text-2xl font-mono font-black tracking-wider block"
+                    style={{ color: orgInfo.brandColor }}
+                  >
+                    {posPaymentStatus.confirmationCode}
+                  </code>
+                </div>
+
+                {/* Info del participante */}
+                <div className="mt-4 space-y-2 text-left">
+                  {posPaymentStatus.participantName && (
+                    <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
+                      <span className="text-slate-400 text-sm">👤 Participante</span>
+                      <span className="text-white font-medium text-sm">{posPaymentStatus.participantName}</span>
+                    </div>
+                  )}
+                  {posPaymentStatus.visionName && (
+                    <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
+                      <span className="text-slate-400 text-sm">🎯 Visión</span>
+                      <span className="text-white font-medium text-sm">{posPaymentStatus.visionName}</span>
+                    </div>
+                  )}
+                  {posPaymentStatus.isCombo && (
+                    <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
+                      <span className="text-slate-400 text-sm">📦 Tipo</span>
+                      <span className="text-green-400 font-bold text-sm">FULL (Básico + Avanzado + Liderato)</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Contraseña */}
+                <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+                  <p className="text-green-400 text-sm">
+                    🔑 Contraseña inicial: <strong>Quantum123</strong>
+                  </p>
+                </div>
+
+                {/* Botón copiar código */}
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(posPaymentStatus.confirmationCode || '');
+                    showNotification('success', '¡Código copiado!');
+                  }}
+                  className="mt-4 w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Copy size={16} />
+                  Copiar Código
+                </button>
+              </>
+            )}
+
+            {/* Estado completado sin código (otros niveles) */}
+            {posPaymentStatus.stage === 'completed' && !posPaymentStatus.confirmationCode && (
+              <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+                <p className="text-green-400 text-sm">
+                  ✅ Pago registrado correctamente
+                </p>
+              </div>
+            )}
+
+            {/* Error message */}
+            {posPaymentStatus.error && (
+              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+                <p className="text-red-400 text-sm">{posPaymentStatus.error}</p>
+              </div>
+            )}
+
+            {/* Tip para estado de espera */}
+            {posPaymentStatus.stage === 'waiting' && (
+              <p className="text-slate-500 text-xs mt-4">
+                💳 El cliente debe pasar o acercar su tarjeta en la terminal
+              </p>
+            )}
+          </div>
+
+          {/* Footer con botones */}
+          <div className="p-4 border-t border-slate-700/50">
+            {['completed', 'error', 'cancelled'].includes(posPaymentStatus.stage) ? (
+              <button
+                onClick={() => setShowPOSStatusModal(false)}
+                className="w-full px-4 py-3 font-bold rounded-xl transition-all"
+                style={{ 
+                  background: posPaymentStatus.stage === 'completed' 
+                    ? `linear-gradient(to right, ${orgInfo.brandColor}, ${orgInfo.brandColor}CC)`
+                    : 'linear-gradient(to right, #475569, #334155)',
+                  color: 'white'
+                }}
+              >
+                {posPaymentStatus.stage === 'completed' ? 'Cerrar' : 'Entendido'}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  handleCancelPOS();
+                  setShowPOSStatusModal(false);
+                  setPosPaymentStatus({ stage: 'cancelled', message: 'Pago cancelado' });
+                }}
+                className="w-full px-4 py-3 bg-red-600/20 hover:bg-red-600/30 text-red-400 font-bold rounded-xl transition-all border border-red-500/30"
+              >
+                Cancelar Pago
+              </button>
+            )}
           </div>
         </div>
       </div>

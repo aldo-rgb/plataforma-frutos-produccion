@@ -62,7 +62,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No tienes acceso a esta visión' }, { status: 403 });
     }
 
-    // Obtener participantes de la visión con información del usuario
+    // Obtener participantes de vision_enrollments (tabla nueva/principal)
+    const visionEnrollments = await prisma.vision_enrollments.findMany({
+      where: {
+        visionId: parseInt(visionId),
+        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+      },
+      select: {
+        id: true,
+        userId: true,
+        level: true,
+        enrollmentStatus: true,
+        Usuario_vision_enrollments_userIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            telefono: true
+          }
+        }
+      }
+    });
+
+    // También buscar en VisionParticipante (tabla legacy) para compatibilidad
     const visionParticipantes = await prisma.visionParticipante.findMany({
       where: {
         visionId: parseInt(visionId)
@@ -95,22 +117,51 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Mapear participantes con su saldo
-    const participantesConSaldo = visionParticipantes.map(vp => {
-      const user = vp.Usuario_VisionParticipante_participanteIdToUsuario;
-      if (!user) return null;
+    // Crear un Set para evitar duplicados por ID de usuario
+    const userIdsProcessed = new Set<number>();
+    const participantesConSaldo: any[] = [];
 
-      // Buscar ticket del usuario
+    // Procesar enrollments (prioridad)
+    for (const enrollment of visionEnrollments) {
+      const user = enrollment.Usuario_vision_enrollments_userIdToUsuario;
+      if (!user || userIdsProcessed.has(user.id)) continue;
+      
+      userIdsProcessed.add(user.id);
+      
       const ticket = tickets.find(t => t.ownerId === user.id);
       const purchasePrice = ticket?.purchasePrice ? Number(ticket.purchasePrice) : 0;
       const amountPaid = ticket?.amountPaid ? Number(ticket.amountPaid) : 0;
-      
-      // Calcular saldo pendiente basado en el paymentStatus
       const saldoPendiente = ticket?.paymentStatus === 'PAID' || ticket?.paymentStatus === 'GIFT'
         ? 0 
         : purchasePrice - amountPaid;
 
-      return {
+      participantesConSaldo.push({
+        id: user.id,
+        nombre: user.nombre,
+        email: user.email,
+        telefono: user.telefono,
+        totalPagado: amountPaid,
+        saldoPendiente: Math.max(0, saldoPendiente),
+        ticketStatus: ticket?.paymentStatus || 'NONE',
+        level: enrollment.level
+      });
+    }
+
+    // Procesar VisionParticipante (legacy) para usuarios que no estén en enrollments
+    for (const vp of visionParticipantes) {
+      const user = vp.Usuario_VisionParticipante_participanteIdToUsuario;
+      if (!user || userIdsProcessed.has(user.id)) continue;
+      
+      userIdsProcessed.add(user.id);
+      
+      const ticket = tickets.find(t => t.ownerId === user.id);
+      const purchasePrice = ticket?.purchasePrice ? Number(ticket.purchasePrice) : 0;
+      const amountPaid = ticket?.amountPaid ? Number(ticket.amountPaid) : 0;
+      const saldoPendiente = ticket?.paymentStatus === 'PAID' || ticket?.paymentStatus === 'GIFT'
+        ? 0 
+        : purchasePrice - amountPaid;
+
+      participantesConSaldo.push({
         id: user.id,
         nombre: user.nombre,
         email: user.email,
@@ -118,11 +169,11 @@ export async function GET(request: NextRequest) {
         totalPagado: amountPaid,
         saldoPendiente: Math.max(0, saldoPendiente),
         ticketStatus: ticket?.paymentStatus || 'NONE'
-      };
-    }).filter(p => p !== null);
+      });
+    }
 
     // Ordenar por nombre
-    participantesConSaldo.sort((a, b) => a!.nombre.localeCompare(b!.nombre));
+    participantesConSaldo.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
     return NextResponse.json({
       success: true,

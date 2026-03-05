@@ -172,14 +172,14 @@ function generateAdvancedOptions(prices: Record<string, any>) {
       type: 'ADVANCED'
     });
 
-    // Opción de pago parcial - MONTO FIJO $1,500 para dividir en 2 pagos
-    // El primer pago es $1,500, el segundo sería el resto ($7,500 - $1,500 = $6,000 o $9,000 - $1,500 = $7,500)
-    const PARTIAL_AMOUNT = 1500;
+    // Opción de upgrade a Liderato - MONTO FIJO $1,500
+    // Para quien ya pagó Avanzado y quiere agregar Liderato
+    const UPGRADE_AMOUNT = 1500;
     options.push({
-      label: `$${formatNumber(PARTIAL_AMOUNT)} - Avanzado (Abono)`,
-      amount: PARTIAL_AMOUNT,
-      description: 'Primer pago para dividir en 2 (abono $1,500)',
-      type: 'ADVANCED_PARTIAL'
+      label: `$${formatNumber(UPGRADE_AMOUNT)} - Upgrade a Liderato`,
+      amount: UPGRADE_AMOUNT,
+      description: 'Para quien ya pagó Avanzado (Upgrade a Liderato)',
+      type: 'ADVANCED_UPGRADE_PL'
     });
   }
 
