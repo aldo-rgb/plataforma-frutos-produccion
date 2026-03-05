@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.usuario.findUnique({
       where: { id: parseInt(userId) },
       include: {
-        MedicalForm: true,
+        MedicalForm_MedicalForm_userIdToUsuario: true,
         vision_enrollments_vision_enrollments_userIdToUsuario: {
           where: {
             visionId: parseInt(visionId)
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    if (user.MedicalForm) {
+    if (user.MedicalForm_MedicalForm_userIdToUsuario) {
       return NextResponse.json({ error: 'Este usuario ya tiene un formulario médico registrado' }, { status: 400 });
     }
 
