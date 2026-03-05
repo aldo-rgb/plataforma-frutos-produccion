@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     const missions = await prisma.trainerMission.findMany({
       where,
       include: {
-        Template: {
+        TrainerTaskTemplate: {
           select: {
             id: true,
             title: true,
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
             nombre: true
           }
         },
-        Product: {
+        SchoolProduct: {
           select: {
             id: true,
             name: true,
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
         },
         _count: {
           select: {
-            Submissions: true
+            MissionSubmission: true
           }
         }
       },
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       })
 
       const stats = {
-        total: mission._count.Submissions,
+        total: mission._count.MissionSubmission,
         pending: 0,
         submitted: 0,
         approved: 0,
@@ -103,16 +103,16 @@ export async function GET(request: NextRequest) {
 
       return {
         id: mission.id,
-        title: mission.Template?.title || 'Sin título',
+        title: mission.TrainerTaskTemplate?.title || 'Sin título',
         description: mission.trainerMessage,
-        type: mission.Template?.type || 'ACTION',
+        type: mission.TrainerTaskTemplate?.type || 'ACTION',
         status: mission.status,
         releaseAt: mission.releaseAt,
         dueAt: mission.deadlineAt,
         bonusPoints: mission.bonusPoints || 0,
-        template: mission.Template ? {
-          title: mission.Template.title,
-          type: mission.Template.type
+        template: mission.TrainerTaskTemplate ? {
+          title: mission.TrainerTaskTemplate.title,
+          type: mission.TrainerTaskTemplate.type
         } : null,
         vision: mission.Vision ? {
           name: mission.Vision.nombre
@@ -234,12 +234,13 @@ export async function POST(request: NextRequest) {
         status: finalStatus,
         trainerMessage: trainerMessage || null,
         bonusPoints: bonusPoints || null,
-        bonusDeadline: bonusDeadline ? new Date(bonusDeadline) : null
+        bonusDeadline: bonusDeadline ? new Date(bonusDeadline) : null,
+        updatedAt: new Date()
       },
       include: {
-        Template: true,
+        TrainerTaskTemplate: true,
         Vision: true,
-        Product: true
+        SchoolProduct: true
       }
     })
 
@@ -318,13 +319,13 @@ async function createSubmissionsForMission(
       // Filtrar solo los que tienen asistencia en el nivel del trainer
       const group = await prisma.smallGroup.findUnique({
         where: { id: squadId },
-        select: { productId: true, Product: { select: { visionId: true } } }
+        select: { productId: true, SchoolProduct: { select: { visionId: true } } }
       })
       
-      if (group?.Product && trainerLevel) {
+      if (group?.SchoolProduct && trainerLevel) {
         const attendedUsers = await prisma.vision_enrollments.findMany({
           where: {
-            visionId: group.Product.visionId,
+            visionId: group.SchoolProduct.visionId,
             level: trainerLevel,
             attendanceStatus: 'ATTENDED',
             userId: { in: members.map(m => m.userId) }
