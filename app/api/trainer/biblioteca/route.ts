@@ -211,8 +211,13 @@ export async function POST(request: NextRequest) {
       throw prismaError
     }
 
-  } catch (error) {
+  } catch (error: any) {
     logger.error("Error al crear plantilla:", error)
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+    logger.error("Error message:", error?.message)
+    logger.error("Error stack:", error?.stack)
+    return NextResponse.json({ 
+      error: "Error interno", 
+      details: error?.message || 'Unknown error'
+    }, { status: 500 })
   }
 }

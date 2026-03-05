@@ -66,7 +66,7 @@ export async function GET() {
         status: { in: ['PENDING', 'MATCHED'] }
       },
       include: {
-        initiator: {
+        Usuario_BuddyPair_initiatorIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -75,7 +75,7 @@ export async function GET() {
             telefono: true,
           }
         },
-        receiver: {
+        Usuario_BuddyPair_receiverIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -87,12 +87,19 @@ export async function GET() {
       }
     });
 
+    // Mapear para compatibilidad
+    const mappedPairs = buddyPairs.map(p => ({
+      ...p,
+      initiator: p.Usuario_BuddyPair_initiatorIdToUsuario,
+      receiver: p.Usuario_BuddyPair_receiverIdToUsuario
+    }));
+
     // Procesar todos los buddy pairs
     const matchedBuddies: any[] = [];
     const pendingRequests: any[] = [];
     const pendingToAccept: any[] = [];
 
-    for (const pair of buddyPairs) {
+    for (const pair of mappedPairs) {
       const isInitiator = pair.initiatorId === userId;
       const buddy = isInitiator ? pair.receiver : pair.initiator;
 
@@ -294,18 +301,20 @@ export async function POST(request: Request) {
           matchedAt: new Date()
         },
         include: {
-          initiator: {
+          Usuario_BuddyPair_initiatorIdToUsuario: {
             select: { nombre: true, apodo: true }
           }
         }
       });
+
+      const initiator = updatedPair.Usuario_BuddyPair_initiatorIdToUsuario;
 
       // TODO: Enviar notificación al initiator
 
       return NextResponse.json({
         success: true,
         status: 'MATCHED',
-        message: `¡Compromiso sellado con ${updatedPair.initiator.apodo || updatedPair.initiator.nombre}!`
+        message: `¡Compromiso sellado con ${initiator.apodo || initiator.nombre}!`
       });
     }
 
