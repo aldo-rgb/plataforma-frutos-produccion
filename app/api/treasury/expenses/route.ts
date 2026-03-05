@@ -75,8 +75,10 @@ export async function POST(request: Request) {
     }
 
     // Crear el gasto
+    const expenseId = `EXP-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const expense = await prisma.expense.create({
       data: {
+        id: expenseId,
         concept,
         amount,
         category,
@@ -172,13 +174,13 @@ export async function GET(request: Request) {
     const expenses = await prisma.expense.findMany({
       where,
       include: {
-        user: {
+        Usuario_Expense_userIdToUsuario: {
           select: { id: true, nombre: true },
         },
-        approvedBy: {
+        Usuario_Expense_approvedByIdToUsuario: {
           select: { id: true, nombre: true },
         },
-        vision: {
+        Vision: {
           select: { id: true, nombre: true },
         },
       },
@@ -217,9 +219,9 @@ export async function GET(request: Request) {
         approvedAt: expense.approvedAt,
         rejectedAt: expense.rejectedAt,
         rejectionReason: expense.rejectionReason,
-        user: expense.user,
-        approvedBy: expense.approvedBy,
-        vision: expense.vision,
+        user: expense.Usuario_Expense_userIdToUsuario,
+        approvedBy: expense.Usuario_Expense_approvedByIdToUsuario,
+        vision: expense.Vision,
         batchId: expense.batchId,
       })),
       summary: {
