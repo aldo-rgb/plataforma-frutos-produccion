@@ -1688,6 +1688,176 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
+## v3.3 - 05/03/2026 (Sesión Actual)
+
+### 🔧 Fixes de Relaciones Prisma y Campos Requeridos
+
+Esta sesión se enfocó en corregir múltiples errores de Prisma relacionados con nombres de relaciones incorrectos y campos faltantes en operaciones `create()` y `upsert()`.
+
+---
+
+### Fix: API `/api/gc-calls/my-gc` - Relaciones SmallGroup
+
+**Problema:** Error "Unknown field `group` for include statement on model `SmallGroupMember`"
+
+**Causa raíz:** Nombres de relaciones incorrectos en el query:
+- `group` → `SmallGroup`
+- `leader` → `Usuario`
+- `vision` → `Vision`
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+const membership = await prisma.smallGroupMember.findFirst({
+  include: {
+    group: {
+      include: {
+        leader: { select: { id: true, nombre: true, imagen: true, email: true } },
+        vision: { select: { id: true, nombre: true, startDate: true } }
+      }
+    }
+  }
+});
+const gc = membership.group.leader;
+const vision = membership.group.vision;
+
+// DESPUÉS (correcto)
+const membership = await prisma.smallGroupMember.findFirst({
+  include: {
+    SmallGroup: {
+      include: {
+        Usuario: { select: { id: true, nombre: true, imagen: true, email: true } },
+        Vision: { select: { id: true, nombre: true, startDate: true } }
+      }
+    }
+  }
+});
+const gc = membership.SmallGroup.Usuario;
+const vision = membership.SmallGroup.Vision;
+```
+
+**Archivo modificado:** `app/api/gc-calls/my-gc/route.ts`
+
+---
+
+### Fix: API `/api/bitacora` - Campo updatedAt requerido en AdvancedQuestionnaire
+
+**Problema:** Error "Argument `updatedAt` is missing" al guardar bitácora
+
+**Causa raíz:** El modelo `AdvancedQuestionnaire` tiene `updatedAt DateTime` SIN `@default(now())` ni `@updatedAt`, por lo que Prisma requiere el valor manual.
+
+**Schema del modelo:**
+```prisma
+model AdvancedQuestionnaire {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique
+  // ... otros campos
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  // ← SIN @default() - REQUIERE VALOR MANUAL
+}
+```
+
+**Solución:**
+```typescript
+// En create()
+await prisma.advancedQuestionnaire.create({
+  data: {
+    userId,
+    visionId: visionId || null,
+    ...updateData,
+    updatedAt: new Date(), // ← AÑADIDO
+  }
+});
+
+// En update()
+await prisma.advancedQuestionnaire.update({
+  where: { userId },
+  data: {
+    ...updateData,
+    updatedAt: new Date(), // ← AÑADIDO
+  }
+});
+
+// En upsert()
+await prisma.advancedQuestionnaire.upsert({
+  where: { userId },
+  update: {
+    ...cleanData,
+    updatedAt: new Date(), // ← AÑADIDO
+  },
+  create: {
+    userId,
+    ...cleanData,
+    updatedAt: new Date(), // ← AÑADIDO
+  }
+});
+```
+
+**Archivo modificado:** `app/api/bitacora/route.ts`
+
+---
+
+### 📋 Resumen de Relaciones Prisma Corregidas - Sesión 05/03/2026
+
+| Archivo | Relación Incorrecta | Relación Correcta |
+|---------|--------------------|--------------------|
+| `/api/gc-calls/my-gc/route.ts` | `group` | `SmallGroup` |
+| `/api/gc-calls/my-gc/route.ts` | `leader` | `Usuario` |
+| `/api/gc-calls/my-gc/route.ts` | `vision` | `Vision` |
+
+### 📋 Campos updatedAt Agregados - Sesión 05/03/2026
+
+| Archivo | Modelo | Operación |
+|---------|--------|-----------|
+| `/api/bitacora/route.ts` | `AdvancedQuestionnaire` | create, update, upsert |
+
+---
+
+### 🔍 Referencia Rápida: Modelo SmallGroup y SmallGroupMember
+
+```prisma
+model SmallGroup {
+  id               String             @id
+  visionId         Int
+  leaderId         Int
+  // Relaciones
+  Usuario          Usuario            @relation(fields: [leaderId])  // ← Líder del grupo
+  Vision           Vision             @relation(fields: [visionId])
+  SmallGroupMember SmallGroupMember[]
+}
+
+model SmallGroupMember {
+  id        String     @id
+  groupId   String
+  userId    Int
+  // Relaciones
+  SmallGroup SmallGroup @relation(fields: [groupId])  // ← NO 'group'
+  Usuario_SmallGroupMember_userIdToUsuario Usuario @relation(...)
+}
+```
+
+---
+
+### 🔍 Referencia Rápida: Modelo AdvancedQuestionnaire
+
+```prisma
+model AdvancedQuestionnaire {
+  id                Int                 @id @default(autoincrement())
+  userId            Int                 @unique
+  visionId          Int?
+  status            QuestionnaireStatus @default(NOT_STARTED)
+  currentDimension  Int                 @default(0)
+  lastSavedAt       DateTime?
+  completedAt       DateTime?
+  // Campos del cuestionario...
+  suicideRiskFlag   Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            // ← SIN DEFAULT - SIEMPRE PROPORCIONAR
+}
+```
+
+---
+
 ## v3.2 - 05/03/2026
 
 ### 🎯 Tesorería Express - Nuevo Flujo Estructurado de Cobros
