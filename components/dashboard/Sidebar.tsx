@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, Drama, Theater,
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket, Plane, Archive, Printer, Phone, Wallet, ChevronDown
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket, Plane, Archive, Printer, Phone, Wallet, ChevronDown,
+  Bird
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -800,7 +801,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         {/* Herramientas de Ceremonia - COORDINADOR, TRAINER, ADMINISTRADOR o activeRole TRAINER */}
         {!isParticipanteView && (usuario.rol === 'COORDINADOR' || usuario.rol === 'TRAINER' || usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR' || activeRole === 'TRAINER') && (
           <div className="pt-6 mt-6 border-t border-slate-800">
-            <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">✨ Herramientas de Ceremonia</p>
+            <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">✨ 3er Fin</p>
             
             <Link 
               href="/dashboard/time-capsule"
@@ -824,7 +825,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
                   : 'text-slate-400 hover:text-white hover:bg-cyan-900/20'
               }`}
             >
-              <Plane size={18} className="text-cyan-400" />
+              <Bird size={18} className="text-cyan-400" />
               <span>Vuelos 3er Fin</span>
             </Link>
 
