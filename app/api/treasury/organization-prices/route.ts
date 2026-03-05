@@ -237,38 +237,33 @@ function generatePLOptions(prices: Record<string, any>) {
   }
 
   // Opción para completar combo Avanzado+PL
-  // Monto fijo: $7,500 para quien ya pagó Avanzado y quiere agregar PL
-  // Cálculo: Combo Avanzado+PL ($9,000 promo) - Avanzado ($7,500 promo) = $1,500 NO
-  // En realidad es: El precio de PL con descuento por ya tener Avanzado
-  // Según requerimiento: $7,500 fijo
+  // Precios según estructura del sistema:
+  // - Combo Avanzado+PL base = $14,500
+  // - Solo Avanzado pagado = $7,500
+  // - Completar Combo = $14,500 - $7,500 = $7,000
   const comboAdvPL = prices.COMBO_ADV_PL;
-  if (comboAdvPL) {
-    // Calcular upgrade: Combo promo - Avanzado promo OR usar valor fijo si no hay datos
-    const advancedPrice = prices.ADVANCED;
-    let upgradePrice = 7500; // Valor por defecto según requerimiento
+  const advancedPrice = prices.ADVANCED;
+  
+  if (comboAdvPL && advancedPrice) {
+    // El combo base es $14,500
+    const comboBasePrice = comboAdvPL.basePrice || 14500;
+    // El avanzado promo es $7,500 (lo que ya pagaron)
+    const advancedPaidPrice = advancedPrice.isPromoActive && advancedPrice.promoPrice 
+      ? advancedPrice.promoPrice 
+      : 7500;
     
-    if (advancedPrice) {
-      // Si hay combo promo y avanzado promo, calcular diferencia
-      const comboPromoOrBase = comboAdvPL.isPromoActive && comboAdvPL.promoPrice 
-        ? comboAdvPL.promoPrice 
-        : comboAdvPL.basePrice;
-      const advPromoOrBase = advancedPrice.isPromoActive && advancedPrice.promoPrice 
-        ? advancedPrice.promoPrice 
-        : advancedPrice.basePrice;
-      
-      const calculatedUpgrade = comboPromoOrBase - advPromoOrBase;
-      // Solo usar el calculado si es positivo, si no, usar el fijo
-      if (calculatedUpgrade > 0) {
-        upgradePrice = calculatedUpgrade;
-      }
+    // Upgrade = Combo completo - Lo que ya pagaron de Avanzado
+    // $14,500 - $7,500 = $7,000
+    const upgradePrice = comboBasePrice - advancedPaidPrice;
+    
+    if (upgradePrice > 0) {
+      options.push({
+        label: `$${formatNumber(upgradePrice)} - Completar Combo Avanzado+PL`,
+        amount: upgradePrice,
+        description: 'Para quien ya pagó Avanzado (upgrade a combo)',
+        type: 'PL_UPGRADE'
+      });
     }
-    
-    options.push({
-      label: `$${formatNumber(upgradePrice)} - Completar Combo Avanzado+PL`,
-      amount: upgradePrice,
-      description: 'Para quien ya pagó Avanzado (upgrade a combo)',
-      type: 'PL_UPGRADE'
-    });
   }
 
   return options;

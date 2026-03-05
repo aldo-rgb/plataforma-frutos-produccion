@@ -19,10 +19,12 @@ export async function GET(
     }
 
     const { ticketId } = await params;
+    
+    logger.info(`[Tickets] Fetching ticket: ${ticketId} for user: ${session.user.email}`);
 
     const user = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true },
+      select: { id: true, rol: true },
     });
 
     if (!user) {
@@ -52,19 +54,24 @@ export async function GET(
     });
 
     if (!ticket) {
+      logger.warn(`[Tickets] Ticket not found: ${ticketId}`);
       return NextResponse.json(
         { success: false, error: 'Ticket no encontrado' },
         { status: 404 }
       );
     }
 
-    // Verify ownership
-    if (ticket.ownerId !== user.id) {
+    // Verify ownership - but allow admins to see any ticket
+    const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'COORDINADOR', 'TESORERO', 'DIRECTOR', 'SCHOOL_ADMIN'].includes(user.rol);
+    if (ticket.ownerId !== user.id && !isAdmin) {
+      logger.warn(`[Tickets] Access denied: user ${user.id} trying to access ticket owned by ${ticket.ownerId}`);
       return NextResponse.json(
         { success: false, error: 'No tienes acceso a este ticket' },
         { status: 403 }
       );
     }
+
+    logger.info(`[Tickets] Successfully fetched ticket ${ticketId} - Level: ${ticket.level}, Status: ${ticket.paymentStatus}`);
 
     return NextResponse.json({
       success: true,
@@ -76,20 +83,20 @@ export async function GET(
         costAtPurchase: ticket.costAtPurchase ? parseFloat(ticket.costAtPurchase.toString()) : 0,
         amountPaid: ticket.amountPaid ? parseFloat(ticket.amountPaid.toString()) : 0,
         vision: {
-          id: ticket.vision?.id,
+          id: ticket.vision?.id || null,
           nombre: ticket.vision?.nombre || 'Sin visión',
           advancedStartDate: ticket.vision?.advancedStartDate?.toISOString() || null,
         },
         organization: {
-          id: ticket.organization?.id,
+          id: ticket.organization?.id || null,
           name: ticket.organization?.name || 'Sin organización',
         },
       },
     });
-  } catch (error) {
-    logger.error('Error fetching ticket:', error);
+  } catch (error: any) {
+    logger.error('[Tickets] Error fetching ticket:', error);
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
+      { success: false, error: 'Error interno del servidor', details: error.message },
       { status: 500 }
     );
   }

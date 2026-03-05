@@ -524,6 +524,49 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
       }
     }
     
+    // Si es PL (Liderato), registrar con la API de PL
+    if (selectedLevel === 'PL') {
+      if (!selectedParticipante || !cobroForm.visionId) {
+        return { success: false, error: 'Faltan datos del participante o visión' };
+      }
+      
+      const priceType = selectedPriceOption?.type || 'PL';
+      
+      try {
+        const registerRes = await fetch('/api/treasury/register-pl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participantId: selectedParticipante.userId || selectedParticipante.id,
+            visionId: parseInt(cobroForm.visionId),
+            amount: parseFloat(cobroForm.amount),
+            priceType: priceType,
+            paymentMethod: 'CARD'
+          })
+        });
+        
+        const registerData = await registerRes.json();
+        
+        if (!registerData.success) {
+          return { success: false, error: registerData.error || 'Error al registrar pago de Liderato' };
+        }
+        
+        return {
+          success: true,
+          visionName: registerData.enrollment?.visionName || 'Liderato',
+          isUpgrade: registerData.isUpgrade,
+          ticketsCreated: registerData.ticketsCreated || 1,
+          paymentCode: registerData.paymentCode ? {
+            code: registerData.paymentCode.code,
+            amount: registerData.paymentCode.amount,
+            reference: registerData.paymentCode.reference
+          } : undefined
+        };
+      } catch (error) {
+        return { success: false, error: 'Error de conexión al registrar Liderato' };
+      }
+    }
+    
     // Si es BÁSICO, registrar con la API existente
     if (selectedLevel === 'BASIC') {
       const isCombo = selectedPriceOption?.type?.includes('COMBO') || false;
@@ -566,7 +609,7 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
       }
     }
     
-    // Para otros niveles (PL, etc.), no hay que registrar aún
+    // Para otros niveles, no hay que registrar aún
     return { success: true };
   };
 
@@ -655,6 +698,38 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
                 });
                 showNotification('error', `Pago OK pero error al registrar: ${registerResult.error}`);
               }
+            }
+            // Si es PL (Liderato), registrar pago
+            else if (selectedLevel === 'PL') {
+              setPosPaymentStatus({ stage: 'registering', message: 'Registrando inscripción...' });
+              
+              const registerResult = await registerUserAfterPayment();
+              
+              if (registerResult.success) {
+                let successMsg = `¡${selectedParticipante?.nombre} inscrito en Liderato!`;
+                if (registerResult.isUpgrade) {
+                  successMsg = `¡Upgrade a Combo completado para ${selectedParticipante?.nombre}!`;
+                }
+                
+                setPosPaymentStatus({ 
+                  stage: 'completed', 
+                  message: successMsg,
+                  confirmationCode: registerResult.paymentCode?.code,
+                  amount: registerResult.paymentCode?.amount || parseFloat(cobroForm.amount),
+                  participantName: selectedParticipante?.nombre || '',
+                  visionName: registerResult.visionName,
+                  isCombo: false
+                });
+                
+                showNotification('success', successMsg);
+              } else {
+                setPosPaymentStatus({ 
+                  stage: 'error', 
+                  message: 'Pago recibido pero error al registrar', 
+                  error: registerResult.error 
+                });
+                showNotification('error', `Pago OK pero error al registrar: ${registerResult.error}`);
+              }
             } else {
               // Otros niveles: solo mostrar éxito del pago
               setPosPaymentStatus({ stage: 'completed', message: '¡Pago completado exitosamente!' });
@@ -684,6 +759,13 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
               });
               setActivePOSTransaction(prev => prev ? { ...prev, status: 'ERROR' } : null);
               showNotification('error', `Pago rechazado: ${rejectReason}`);
+              
+              // Limpiar después de 5 segundos para permitir reintentar
+              setTimeout(() => {
+                setActivePOSTransaction(null);
+                setShowPOSStatusModal(false);
+                setPosPaymentStatus({ stage: 'idle', message: '' });
+              }, 5000);
             }
             
           } else if (state === 'CANCELED' || state === 'ERROR' || state === 'REJECTED') {
@@ -709,6 +791,13 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
             });
             setActivePOSTransaction(prev => prev ? { ...prev, status: state === 'CANCELED' ? 'CANCELLED' : 'ERROR' } : null);
             showNotification('error', `${errorMsg}: ${errorDetail}`);
+            
+            // Limpiar después de 5 segundos para permitir reintentar
+            setTimeout(() => {
+              setActivePOSTransaction(null);
+              setShowPOSStatusModal(false);
+              setPosPaymentStatus({ stage: 'idle', message: '' });
+            }, 5000);
           }
         }
       } catch (error) {
@@ -973,7 +1062,78 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
         return; // 🛑 SALIR
       }
       
-      // Para otros niveles (PL, etc.), usar el participante seleccionado
+      // Si es pago PL (Liderato), registrar con la nueva API
+      if (selectedLevel === 'PL') {
+        if (!selectedParticipante) {
+          showNotification('error', 'Selecciona un participante');
+          setLoading(false);
+          return;
+        }
+        
+        if (!cobroForm.visionId) {
+          showNotification('error', 'Selecciona una visión');
+          setLoading(false);
+          return;
+        }
+        
+        const priceType = selectedPriceOption?.type || 'PL';
+        
+        const registerRes = await fetch('/api/treasury/register-pl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participantId: selectedParticipante.userId || selectedParticipante.id,
+            visionId: parseInt(cobroForm.visionId),
+            amount: parseFloat(cobroForm.amount),
+            priceType: priceType,
+            paymentMethod: 'CASH'
+          })
+        });
+        
+        const registerData = await registerRes.json();
+        
+        if (!registerData.success) {
+          showNotification('error', registerData.error || 'Error al registrar pago de Liderato');
+          setLoading(false);
+          return;
+        }
+        
+        const paymentCodeInfo = registerData.paymentCode;
+        const isUpgrade = registerData.isUpgrade || false;
+        const visionRegistrada = registerData.enrollment?.visionName || 'Liderato';
+        
+        setGeneratedCode({ 
+          id: paymentCodeInfo?.id || 'confirmed',
+          code: paymentCodeInfo?.code || 'REGISTRO-COMPLETADO',
+          amount: Number(paymentCodeInfo?.amount) || parseFloat(cobroForm.amount),
+          reference: paymentCodeInfo?.reference || `Liderato - ${selectedParticipante.nombre}`,
+          status: 'REDEEMED',
+          createdAt: new Date().toISOString(),
+          visionName: visionRegistrada
+        });
+        
+        setShowCodeModal(true);
+        
+        // Mensaje según tipo
+        let successMsg = `¡${selectedParticipante.nombre} inscrito en Programa de Liderato - ${visionRegistrada}!`;
+        if (isUpgrade) {
+          successMsg = `¡Upgrade a Combo completado para ${selectedParticipante.nombre}!`;
+        }
+        showNotification('success', successMsg);
+        
+        // Limpiar formularios
+        setCobroForm({ amount: '', reference: '', visionId: '', participanteId: '' });
+        setSelectedParticipante(null);
+        setSearchParticipante('');
+        setSelectedLevel('');
+        setSelectedPriceOption(null);
+        
+        fetchInitialData();
+        setLoading(false);
+        return; // 🛑 SALIR
+      }
+      
+      // Para otros niveles, usar el participante seleccionado
       reference = reference || (selectedParticipante ? `Pago ${selectedParticipante.nombre}` : `Cobro $${cobroForm.amount}`);
       
       // Generar código de pago
