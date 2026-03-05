@@ -140,8 +140,13 @@ export async function POST(request: NextRequest) {
       const validUntil = new Date();
       validUntil.setMonth(validUntil.getMonth() + 3); // Válido por 3 meses
       
+      // Generar ID único para el ticket
+      const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const ticketId = `TKT-${nextLevel}-${Date.now()}-${randomPart}`;
+      
       await prisma.ticket.create({
         data: {
+          id: ticketId,
           ownerId: userId,
           organizationId: user.organizationId,
           visionId,
@@ -152,7 +157,8 @@ export async function POST(request: NextRequest) {
           validUntil,
           paymentStatus: 'PAID',
           amountPaid: 0, // Regalo/promoción del admin
-          isAnticipo: false
+          isAnticipo: false,
+          updatedAt: new Date()
         }
       });
       ticketAction = 'created';
