@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
       include: {
-        organization: {
+        Organization: {
           select: { id: true, name: true },
         },
-        vision: {
+        Vision: {
           select: { id: true, nombre: true },
         },
       },
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     };
     
     const productTitle = `Pago de Ticket - ${levelLabels[ticket.level] || ticket.level}`;
-    const productDescription = `Pago pendiente de ${levelLabels[ticket.level]} - ${ticket.organization.name}`;
+    const productDescription = `Pago pendiente de ${levelLabels[ticket.level]} - ${ticket.Organization?.name || 'Organización'}`;
 
     const orderData = {
       ticketId,

@@ -37,14 +37,14 @@ export async function GET(
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
       include: {
-        vision: {
+        Vision: {
           select: {
             id: true,
             nombre: true,
             advancedStartDate: true,
           },
         },
-        organization: {
+        Organization: {
           select: {
             id: true,
             name: true,
@@ -83,13 +83,13 @@ export async function GET(
         costAtPurchase: ticket.costAtPurchase ? parseFloat(ticket.costAtPurchase.toString()) : 0,
         amountPaid: ticket.amountPaid ? parseFloat(ticket.amountPaid.toString()) : 0,
         vision: {
-          id: ticket.vision?.id || null,
-          nombre: ticket.vision?.nombre || 'Sin visión',
-          advancedStartDate: ticket.vision?.advancedStartDate?.toISOString() || null,
+          id: ticket.Vision?.id || null,
+          nombre: ticket.Vision?.nombre || 'Sin visión',
+          advancedStartDate: ticket.Vision?.advancedStartDate?.toISOString() || null,
         },
         organization: {
-          id: ticket.organization?.id || null,
-          name: ticket.organization?.name || 'Sin organización',
+          id: ticket.Organization?.id || null,
+          name: ticket.Organization?.name || 'Sin organización',
         },
       },
     });
