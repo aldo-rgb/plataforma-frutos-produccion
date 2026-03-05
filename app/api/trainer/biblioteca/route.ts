@@ -65,11 +65,11 @@ export async function GET(request: NextRequest) {
     const templates = await prisma.trainerTaskTemplate.findMany({
       where,
       include: {
-        Questions: {
+        TrainerTaskQuestion: {
           orderBy: { orderIndex: 'asc' }
         },
         _count: {
-          select: { Missions: true }
+          select: { TrainerMission: true }
         }
       },
       orderBy: { updatedAt: 'desc' }
@@ -86,7 +86,8 @@ export async function GET(request: NextRequest) {
       success: true,
       templates: templates.map(t => ({
         ...t,
-        usageCount: t._count.Missions
+        Questions: t.TrainerTaskQuestion, // Mapear para compatibilidad
+        usageCount: t._count.TrainerMission
       })),
       filters: {
         tags: allTags,
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest) {
           pointsReward: typeof pointsReward === 'number' ? pointsReward : 0,
           estimatedMinutes: typeof estimatedMinutes === 'number' ? estimatedMinutes : null,
           updatedAt: new Date(),
-          Questions: type === 'QUESTIONNAIRE' && questions?.length > 0 ? {
+          TrainerTaskQuestion: type === 'QUESTIONNAIRE' && questions?.length > 0 ? {
             create: questions.map((q: any, index: number) => ({
               questionText: q.questionText,
               questionType: q.questionType || 'OPEN',
@@ -189,7 +190,7 @@ export async function POST(request: NextRequest) {
           } : undefined
         },
         include: {
-          Questions: {
+          TrainerTaskQuestion: {
             orderBy: { orderIndex: 'asc' }
           }
         }
@@ -199,7 +200,10 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        template
+        template: {
+          ...template,
+          Questions: template.TrainerTaskQuestion // Mapear para compatibilidad con frontend
+        }
       })
     } catch (prismaError) {
       logger.error('📚 Error de Prisma al crear plantilla:', prismaError)

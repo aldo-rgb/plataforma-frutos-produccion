@@ -24,11 +24,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const template = await prisma.trainerTaskTemplate.findUnique({
       where: { id: templateId },
       include: {
-        Questions: {
+        TrainerTaskQuestion: {
           orderBy: { orderIndex: 'asc' }
         },
         _count: {
-          select: { Missions: true }
+          select: { TrainerMission: true }
         }
       }
     })
@@ -46,7 +46,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       success: true,
       template: {
         ...template,
-        usageCount: template._count.Missions
+        Questions: template.TrainerTaskQuestion,
+        usageCount: template._count.TrainerMission
       }
     })
 
@@ -126,7 +127,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             scaleMin: q.scaleMin || 1,
             scaleMax: q.scaleMax || 10,
             scaleMinLabel: q.scaleMinLabel || null,
-            scaleMaxLabel: q.scaleMaxLabel || null
+            scaleMaxLabel: q.scaleMaxLabel || null,
+            updatedAt: new Date()
           }))
         })
       }
@@ -136,7 +138,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const updated = await prisma.trainerTaskTemplate.findUnique({
       where: { id: templateId },
       include: {
-        Questions: {
+        TrainerTaskQuestion: {
           orderBy: { orderIndex: 'asc' }
         }
       }
@@ -144,7 +146,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       success: true,
-      template: updated
+      template: {
+        ...updated,
+        Questions: updated?.TrainerTaskQuestion
+      }
     })
 
   } catch (error) {
