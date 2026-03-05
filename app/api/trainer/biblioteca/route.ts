@@ -173,6 +173,7 @@ export async function POST(request: NextRequest) {
           contentTitle: contentTitle || null,
           pointsReward: typeof pointsReward === 'number' ? pointsReward : 0,
           estimatedMinutes: typeof estimatedMinutes === 'number' ? estimatedMinutes : null,
+          updatedAt: new Date(),
           Questions: type === 'QUESTIONNAIRE' && questions?.length > 0 ? {
             create: questions.map((q: any, index: number) => ({
               questionText: q.questionText,
