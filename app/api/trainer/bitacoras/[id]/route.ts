@@ -194,7 +194,7 @@ export async function GET(
         status: true,
         isVerified: true,
         isPLGraduate: true,
-        category: {
+        BusinessCategory: {
           select: {
             id: true,
             name: true,
@@ -382,7 +382,7 @@ export async function GET(
         status: businessProfile.status,
         isVerified: businessProfile.isVerified,
         isPLGraduate: businessProfile.isPLGraduate,
-        category: businessProfile.category,
+        category: businessProfile.BusinessCategory,
       } : null,
 
       // QUIÉN LO INVITÓ
