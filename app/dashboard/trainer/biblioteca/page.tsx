@@ -533,9 +533,6 @@ function TemplateModal({
   const [newTag, setNewTag] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [pdfFile, setPdfFile] = useState<File | null>(null)
-  const [pdfUrl, setPdfUrl] = useState(template?.contentUrl || '')
-  const [uploadingPdf, setUploadingPdf] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState(template?.type === 'CONTENT' ? template?.contentUrl || '' : '')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -586,33 +583,7 @@ function TemplateModal({
     setError('')
 
     try {
-      let finalPdfUrl = pdfUrl
       let finalImageUrl = imageUrl || formData.contentUrl
-
-      // Si hay un archivo PDF nuevo, subirlo primero (para REFLECTION)
-      if (pdfFile && formData.type === 'REFLECTION') {
-        setUploadingPdf(true)
-        const pdfFormData = new FormData()
-        pdfFormData.append('file', pdfFile)
-        pdfFormData.append('folder', 'templates')
-
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: pdfFormData
-        })
-
-        const uploadData = await uploadRes.json()
-        
-        if (uploadData.url) {
-          finalPdfUrl = uploadData.url
-        } else {
-          setError('Error al subir el PDF')
-          setUploadingPdf(false)
-          setSaving(false)
-          return
-        }
-        setUploadingPdf(false)
-      }
 
       // Si hay una imagen nueva, subirla (para CONTENT)
       if (imageFile && formData.type === 'CONTENT') {
@@ -645,9 +616,7 @@ function TemplateModal({
 
       // Determinar el contentUrl final según el tipo
       let finalContentUrl = formData.contentUrl
-      if (formData.type === 'REFLECTION') {
-        finalContentUrl = finalPdfUrl
-      } else if (formData.type === 'CONTENT' && finalImageUrl) {
+      if (formData.type === 'CONTENT' && finalImageUrl) {
         // Si hay imagen, guardar la URL de la imagen; si también hay URL manual, usar ambas
         finalContentUrl = finalImageUrl || formData.contentUrl
       }
@@ -866,83 +835,6 @@ function TemplateModal({
                 />
               </div>
             </>
-          )}
-
-          {/* Sección de PDF para Reflexión */}
-          {formData.type === 'REFLECTION' && (
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Documento PDF (opcional)
-              </label>
-              <p className="text-xs text-slate-500 mb-3">
-                Puedes adjuntar un PDF con material de apoyo para la reflexión
-              </p>
-              
-              {pdfUrl && !pdfFile && (
-                <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl border border-slate-700">
-                  <FileText className="w-8 h-8 text-red-400" />
-                  <div className="flex-1">
-                    <p className="text-sm text-white">PDF adjunto</p>
-                    <a 
-                      href={pdfUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-xs text-amber-400 hover:underline"
-                    >
-                      Ver documento
-                    </a>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setPdfUrl('')}
-                    className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {pdfFile && (
-                <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-xl border border-green-500/30">
-                  <FileText className="w-8 h-8 text-green-400" />
-                  <div className="flex-1">
-                    <p className="text-sm text-white">{pdfFile.name}</p>
-                    <p className="text-xs text-slate-400">{(pdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setPdfFile(null)}
-                    className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {!pdfFile && !pdfUrl && (
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-amber-500/50 hover:bg-slate-800/50 transition-colors">
-                  <Upload className="w-8 h-8 text-slate-500 mb-2" />
-                  <span className="text-sm text-slate-400">Haz clic para subir un PDF</span>
-                  <span className="text-xs text-slate-500 mt-1">Máximo 10 MB</span>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        if (file.size > 10 * 1024 * 1024) {
-                          setError('El archivo PDF no puede superar los 10 MB')
-                          return
-                        }
-                        setPdfFile(file)
-                        setError('')
-                      }
-                    }}
-                    className="hidden"
-                  />
-                </label>
-              )}
-            </div>
           )}
 
           {formData.type === 'QUESTIONNAIRE' && (
