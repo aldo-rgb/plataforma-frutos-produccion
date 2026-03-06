@@ -2493,6 +2493,62 @@ const vision = membership.SmallGroup.Vision;
 
 ---
 
+### Fix: Múltiples APIs usando `group` en lugar de `SmallGroup` (Marzo 2026)
+
+**Problema:** Error `Unknown argument 'group'. Did you mean 'groupId'?` en queries de SmallGroupMember
+
+**Causa raíz:** Múltiples archivos API usaban el nombre de relación incorrecto `group` en lugar de `SmallGroup` en queries where/include de `SmallGroupMember`.
+
+**Archivos corregidos:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `app/api/gc-calls/quick-log/route.ts` | `group` → `SmallGroup`, `membership.group.visionId` → `membership.SmallGroup.visionId` |
+| `app/api/gc-calls/my-post-entreno/route.ts` | `group` → `SmallGroup`, `membership.group.leaderId` → `membership.SmallGroup.leaderId` |
+| `app/api/squads/vision/[visionId]/orphans/route.ts` | `group` → `SmallGroup` en where clause |
+| `app/api/squads/vision/[visionId]/stats/route.ts` | `group` → `SmallGroup` (2 lugares) |
+| `app/api/game-changer/mark-drop/route.ts` | `group` → `SmallGroup`, `user` → `Usuario_SmallGroupMember_userIdToUsuario`, `enrollment` → `vision_enrollments` |
+| `app/api/school-admin/visiones/[id]/assign-gc-to-participant/route.ts` | `group` → `SmallGroup`, `leader` → `Usuario` |
+
+**Ejemplo de corrección:**
+```typescript
+// ANTES (incorrecto)
+const membership = await prisma.smallGroupMember.findFirst({
+  where: {
+    userId: participantId,
+    isActive: true,
+    group: { leaderId: gcId }  // ❌ 'group' no existe
+  },
+  include: {
+    group: { select: { id: true, level: true } }  // ❌
+  }
+});
+const visionId = membership.group.visionId;  // ❌
+
+// DESPUÉS (correcto)
+const membership = await prisma.smallGroupMember.findFirst({
+  where: {
+    userId: participantId,
+    isActive: true,
+    SmallGroup: { leaderId: gcId }  // ✅ Relación correcta
+  },
+  include: {
+    SmallGroup: { select: { id: true, level: true } }  // ✅
+  }
+});
+const visionId = membership.SmallGroup.visionId;  // ✅
+```
+
+**Relaciones correctas en SmallGroupMember:**
+| Relación Prisma | Campo FK | Descripción |
+|-----------------|----------|-------------|
+| `SmallGroup` | `groupId` | El grupo al que pertenece |
+| `Usuario_SmallGroupMember_userIdToUsuario` | `userId` | El usuario miembro |
+| `Usuario_SmallGroupMember_movedByToUsuario` | `movedBy` | Quién movió al miembro |
+| `vision_enrollments` | `enrollmentId` | La inscripción asociada |
+
+---
+
 ### Fix: API `/api/bitacora` - Campo updatedAt requerido en AdvancedQuestionnaire
 
 **Problema:** Error "Argument `updatedAt` is missing" al guardar bitácora
