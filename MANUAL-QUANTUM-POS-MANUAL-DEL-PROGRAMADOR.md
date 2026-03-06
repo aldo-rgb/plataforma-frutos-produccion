@@ -2606,6 +2606,104 @@ await prisma.advancedQuestionnaire.upsert({
 
 ---
 
+### 📋 Resumen de Relaciones Prisma Corregidas - Sesión 06/03/2026
+
+Esta sesión se corrigieron múltiples errores de relaciones Prisma que causaban errores 500 en varios endpoints.
+
+#### Correcciones en SmallGroupMember
+
+| Archivo | Relación Incorrecta | Relación Correcta |
+|---------|--------------------|--------------------|
+| `/api/gc-calls/quick-log/route.ts` | `group` | `SmallGroup` |
+| `/api/gc-calls/my-post-entreno/route.ts` | `group` | `SmallGroup` |
+| `/api/squads/vision/[visionId]/orphans/route.ts` | `group` | `SmallGroup` |
+| `/api/squads/vision/[visionId]/stats/route.ts` | `group`, `leader`, `members` | `SmallGroup`, `Usuario`, `SmallGroupMember` |
+| `/api/game-changer/mark-drop/route.ts` | `group`, `user`, `enrollment` | `SmallGroup`, `Usuario_SmallGroupMember_userIdToUsuario`, `vision_enrollments` |
+| `/api/school-admin/visiones/[id]/assign-gc-to-participant/route.ts` | `group`, `leader`, `members` | `SmallGroup`, `Usuario`, `SmallGroupMember` |
+
+#### Correcciones en SmallGroup
+
+| Archivo | Relación Incorrecta | Relación Correcta |
+|---------|--------------------|--------------------|
+| `/api/coordinator/gc-calls-monitor/route.ts` | `leader`, `members` | `Usuario`, `SmallGroupMember` |
+| `/api/gc-calls/dashboard/route.ts` | `leader`, `members`, `user` | `Usuario`, `SmallGroupMember`, `Usuario_SmallGroupMember_userIdToUsuario` |
+| `/api/squads/[id]/route.ts` | `leader`, `vision`, `product`, `members` | `Usuario`, `Vision`, `SchoolProduct`, `SmallGroupMember` |
+| `/api/squads/assign-orphan/route.ts` | `members` | `SmallGroupMember` |
+
+#### Correcciones en GCCallAttempt
+
+| Archivo | Relación Incorrecta | Relación Correcta |
+|---------|--------------------|--------------------|
+| `/api/coordinator/gc-calls-monitor/route.ts` | `participant` | `Usuario_GCCallAttempt_participantIdToUsuario` |
+
+#### Correcciones en GCCallLog y GCCallSlot
+
+| Archivo | Relación Incorrecta | Relación Correcta |
+|---------|--------------------|--------------------|
+| `/api/gc-calls/log/route.ts` | `participant`, `gameChanger`, `squad`, `slot`, `availability` | `Usuario_GCCallLog_participantIdToUsuario`, `Usuario_GCCallLog_gameChangerIdToUsuario`, `SmallGroup`, `GCCallSlot`, `GCAvailability` |
+| `/api/gc-calls/dashboard/route.ts` | `participant`, `gameChanger`, `squad`, `interventions`, `availability`, `callLog` | `Usuario_GCCallLog_participantIdToUsuario`, `Usuario_GCCallLog_gameChangerIdToUsuario`, `SmallGroup`, `TrainerIntervention`, `GCAvailability`, `GCCallLog` |
+
+#### Correcciones en TrainerIntervention
+
+| Archivo | Relación Incorrecta | Relación Correcta |
+|---------|--------------------|--------------------|
+| `/api/gc-calls/intervention/route.ts` | `trainer`, `callLog` | `Usuario`, `GCCallLog` |
+
+#### IDs Requeridos Agregados
+
+| Archivo | Modelo | Campo |
+|---------|--------|-------|
+| `/api/gc-calls/quick-log/route.ts` | `GCCallAttempt` | `id: crypto.randomUUID()` |
+| `/api/gc-calls/intervention/route.ts` | `TrainerIntervention` | `id: crypto.randomUUID()` |
+| `/api/school-admin/visiones/[id]/assign-gc-to-participant/route.ts` | `SmallGroup` | `id: crypto.randomUUID()`, `updatedAt: new Date()` |
+
+---
+
+### 🔍 Referencia Completa: Relaciones de Modelos GC Calls
+
+```prisma
+model GCCallAttempt {
+  // Relaciones correctas:
+  Usuario_GCCallAttempt_gameChangerIdToUsuario  Usuario     // gameChanger
+  Usuario_GCCallAttempt_participantIdToUsuario  Usuario     // participant
+  SmallGroup                                     SmallGroup? // squad
+  Vision                                         Vision
+}
+
+model GCCallLog {
+  // Relaciones correctas:
+  Usuario_GCCallLog_gameChangerIdToUsuario  Usuario               // gameChanger
+  Usuario_GCCallLog_participantIdToUsuario  Usuario               // participant
+  SmallGroup                                 SmallGroup?           // squad
+  GCCallSlot                                 GCCallSlot            // slot
+  Vision                                     Vision
+  TrainerIntervention                        TrainerIntervention[] // interventions
+}
+
+model GCCallSlot {
+  // Relaciones correctas:
+  Usuario_GCCallSlot_participantIdToUsuario  Usuario        // participant
+  Usuario_GCCallSlot_cancelledByToUsuario    Usuario?       // cancelledBy
+  GCAvailability                              GCAvailability // availability
+  SmallGroup                                  SmallGroup?    // squad
+  GCCallLog                                   GCCallLog?     // callLog
+}
+
+model GCAvailability {
+  // Relaciones correctas:
+  Usuario     Usuario      // gameChanger
+  SmallGroup  SmallGroup?  // squad
+}
+
+model TrainerIntervention {
+  // Relaciones correctas:
+  Usuario    Usuario   // trainer
+  GCCallLog  GCCallLog // callLog
+}
+```
+
+---
+
 ### 📋 Resumen de Relaciones Prisma Corregidas - Sesión 05/03/2026
 
 | Archivo | Relación Incorrecta | Relación Correcta |
