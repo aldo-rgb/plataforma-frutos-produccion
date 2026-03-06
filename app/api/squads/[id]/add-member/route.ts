@@ -47,8 +47,10 @@ export async function POST(
     const squad = await prisma.smallGroup.findUnique({
       where: { id: squadId },
       include: {
-        leader: { select: { nombre: true } },
-        _count: { select: { members: { where: { isActive: true } } } },
+        Usuario: { select: { nombre: true } },
+        Vision: { select: { advancedStartDate: true, endDate: true } },
+        SchoolProduct: { select: { trainingStatus: true } },
+        _count: { select: { SmallGroupMember: { where: { isActive: true } } } },
       },
     });
 
@@ -56,6 +58,37 @@ export async function POST(
       return NextResponse.json(
         { success: false, error: 'Átomo no encontrado' },
         { status: 404 }
+      );
+    }
+
+    // VALIDACIÓN DE SEGURIDAD: No permitir modificar átomos de niveles finalizados
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    // Verificar si el nivel ya finalizó
+    let isLevelFinalized = false;
+    if (squad.level === 'BASIC') {
+      // BASIC finaliza cuando inicia ADVANCED o cuando el producto está COMPLETED
+      if (squad.Vision?.advancedStartDate) {
+        const advStartDate = new Date(squad.Vision.advancedStartDate);
+        advStartDate.setHours(0, 0, 0, 0);
+        if (now >= advStartDate) {
+          isLevelFinalized = true;
+        }
+      }
+      if (squad.SchoolProduct?.trainingStatus === 'COMPLETED') {
+        isLevelFinalized = true;
+      }
+    } else if (squad.level === 'ADVANCED') {
+      if (squad.SchoolProduct?.trainingStatus === 'COMPLETED') {
+        isLevelFinalized = true;
+      }
+    }
+    
+    if (isLevelFinalized) {
+      return NextResponse.json(
+        { success: false, error: 'No se pueden agregar miembros a un átomo de un nivel que ya finalizó', code: 'LEVEL_FINALIZED' },
+        { status: 403 }
       );
     }
 
@@ -71,7 +104,7 @@ export async function POST(
     }
 
     // Verificar si el grupo está lleno
-    if (squad._count.members >= squad.maxSize) {
+    if (squad._count.SmallGroupMember >= squad.maxSize) {
       return NextResponse.json(
         { success: false, error: 'Grupo lleno. Inicia uno nuevo.', code: 'GROUP_FULL' },
         { status: 400 }
@@ -153,7 +186,7 @@ export async function POST(
       where: {
         userId: targetUser.id,
         isActive: true,
-        group: {
+        SmallGroup: {
           visionId: squad.visionId,
           level: squad.level,
           isActive: true,
@@ -161,9 +194,9 @@ export async function POST(
         },
       },
       include: {
-        group: {
+        SmallGroup: {
           include: {
-            leader: { select: { nombre: true } },
+            Usuario: { select: { nombre: true } },
           },
         },
       },
@@ -173,13 +206,13 @@ export async function POST(
     if (existingInOtherGroup && !forceMove) {
       return NextResponse.json({
         success: false,
-        error: `${targetUser.nombre} ya está en el Átomo de ${existingInOtherGroup.group.leader.nombre}. ¿Moverlo a tu Átomo?`,
+        error: `${targetUser.nombre} ya está en el Átomo de ${existingInOtherGroup.SmallGroup.Usuario.nombre}. ¿Moverlo a tu Átomo?`,
         code: 'ALREADY_IN_GROUP',
         conflictData: {
           currentGroup: {
-            id: existingInOtherGroup.group.id,
-            name: existingInOtherGroup.group.name,
-            leaderName: existingInOtherGroup.group.leader.nombre,
+            id: existingInOtherGroup.SmallGroup.id,
+            name: existingInOtherGroup.SmallGroup.name,
+            leaderName: existingInOtherGroup.SmallGroup.Usuario.nombre,
           },
           user: targetUser,
         },
@@ -206,12 +239,12 @@ export async function POST(
           groupId: squadId,
           userId: targetUser!.id,
           enrollmentId: enrollment?.id || null,
-          previousGroupId: existingInOtherGroup?.groupId || null,
+          previousGroupId: existingInOtherGroup?.SmallGroup?.id || null,
           movedAt: existingInOtherGroup ? new Date() : null,
           movedBy: existingInOtherGroup ? user.id : null,
         },
         include: {
-          user: {
+          Usuario_SmallGroupMember_userIdToUsuario: {
             select: { id: true, nombre: true, imagen: true, email: true },
           },
         },
@@ -232,7 +265,7 @@ export async function POST(
         : `${targetUser.nombre} agregado al Átomo`,
       member: {
         id: result.id,
-        user: result.user,
+        user: result.Usuario_SmallGroupMember_userIdToUsuario,
         wasMoved: !!existingInOtherGroup,
       },
       squadStats: {
