@@ -500,11 +500,21 @@ export async function GET() {
 
     // Si no hay activeTrainingInfo pero hay asignaciones de VisionGameChanger,
     // usar el nivel más alto asignado para indicar al frontend qué nivel usar
+    console.log('🔍 DEBUG my-stats: Checking fallback condition', {
+      hasActiveTrainingInfo: !!activeTrainingInfo,
+      gcAssignmentsLength: gcAssignments.length,
+      gcAssignments: gcAssignments.map(a => ({ visionId: a.visionId, level: a.level })),
+    });
+    
     if (!activeTrainingInfo && gcAssignments.length > 0) {
       // Prioridad: PL > ADVANCED > BASIC
       const levelPriority = ['PL', 'ADVANCED', 'BASIC'];
       const sortedAssignments = [...gcAssignments].sort((a, b) => {
         return levelPriority.indexOf(a.level) - levelPriority.indexOf(b.level);
+      });
+      
+      console.log('🔍 DEBUG my-stats: Using gcAssignment fallback', {
+        sortedAssignments: sortedAssignments.map(a => ({ visionId: a.visionId, level: a.level })),
       });
       
       const highestLevelAssignment = sortedAssignments[0];
