@@ -88,11 +88,10 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Verificar que el target esté en la misma visión y nivel ADVANCED o PL
+    // Verificar que el target esté en ADVANCED o PL (cualquier visión)
     const targetEnrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId: targetUserId,
-        visionId: myEnrollment.visionId,
         level: { in: ['ADVANCED', 'PL'] },
         enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
       }
@@ -100,15 +99,14 @@ export async function POST(request: Request) {
 
     if (!targetEnrollment) {
       return NextResponse.json({ 
-        error: 'Esta persona no está en tu mismo entrenamiento AVANZADO o PL',
-        code: 'DIFFERENT_VISION'
+        error: 'Esta persona no está en entrenamiento AVANZADO o PL',
+        code: 'NOT_IN_ADVANCED'
       }, { status: 400 });
     }
 
     // Verificar que no tenga YA una solicitud pendiente con este mismo usuario
     const existingPairWithTarget = await prisma.buddyPair.findFirst({
       where: {
-        visionId: myEnrollment.visionId,
         OR: [
           { initiatorId: userId, receiverId: targetUserId },
           { initiatorId: targetUserId, receiverId: userId }
