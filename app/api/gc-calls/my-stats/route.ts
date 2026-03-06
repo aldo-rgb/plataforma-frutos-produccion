@@ -271,7 +271,75 @@ export async function GET() {
     const memberIds = squads.flatMap(s => s.SmallGroupMember.map(m => m.userId));
     const totalMembers = memberIds.length;
 
+    // Si no hay miembros, aún necesitamos calcular trainingInfo basado en gcAssignments
     if (memberIds.length === 0) {
+      // Calcular trainingInfo desde gcAssignments aunque no haya squads
+      let trainingInfoForEmpty = null;
+      let targetVisionIdForEmpty: number | null = null;
+      
+      if (gcAssignments.length > 0) {
+        const levelPriority = ['PL', 'ADVANCED', 'BASIC'];
+        const sortedAssignments = [...gcAssignments].sort((a, b) => {
+          return levelPriority.indexOf(a.level) - levelPriority.indexOf(b.level);
+        });
+        
+        const highestLevelAssignment = sortedAssignments[0];
+        const level = highestLevelAssignment.level;
+        const vision = highestLevelAssignment.Vision;
+        
+        console.log('🔍 DEBUG my-stats (empty squads): Using gcAssignment fallback', {
+          level,
+          visionId: highestLevelAssignment.visionId,
+        });
+        
+        // Determinar fechas según el nivel
+        let totalDays = 3;
+        let staffCallDays = [2, 3];
+        let startDate: Date | null = null;
+        
+        if (level === 'PL' && vision?.plWeekend1StartDate) {
+          startDate = new Date(vision.plWeekend1StartDate);
+          totalDays = 6;
+          staffCallDays = [1, 2, 3, 4, 5, 6];
+        } else if (level === 'ADVANCED' && vision?.advancedStartDate) {
+          startDate = new Date(vision.advancedStartDate);
+          totalDays = 4;
+          staffCallDays = [2, 3, 4];
+        } else if (vision?.startDate) {
+          startDate = new Date(vision.startDate);
+          totalDays = 3;
+          staffCallDays = [2, 3];
+        }
+        
+        let currentDay: number | null = null;
+        let isStaffCallDay = false;
+        
+        if (startDate) {
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          startDate.setHours(0, 0, 0, 0);
+          
+          const diffTime = now.getTime() - startDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          currentDay = diffDays + 1;
+          
+          if (currentDay >= 1 && currentDay <= totalDays) {
+            isStaffCallDay = staffCallDays.includes(currentDay);
+          }
+        }
+        
+        trainingInfoForEmpty = {
+          currentDay,
+          totalDays,
+          isStaffCallDay,
+          staffCallDays,
+          level,
+          showInDashboard: true,
+        };
+        
+        targetVisionIdForEmpty = highestLevelAssignment.visionId;
+      }
+      
       return NextResponse.json({
         success: true,
         stats: {
@@ -282,6 +350,8 @@ export async function GET() {
         upcomingCalls: [],
         memberSchedules: {},
         todayCallStatus: {},
+        trainingInfo: trainingInfoForEmpty,
+        targetVisionId: targetVisionIdForEmpty,
       });
     }
 
