@@ -126,6 +126,7 @@ export async function POST(request: Request) {
     // Crear el grupo - usar la organizationId de la visión, no del usuario
     const squad = await prisma.smallGroup.create({
       data: {
+        id: crypto.randomUUID(),
         name: groupName,
         visionId: parseInt(visionId),
         leaderId: user.id,
@@ -133,6 +134,7 @@ export async function POST(request: Request) {
         productId: productId ? parseInt(productId) : null,
         level: level,
         maxSize: maxSize,
+        updatedAt: new Date(),
       },
       include: {
         Usuario: {
