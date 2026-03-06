@@ -7,11 +7,10 @@ import logger from '@/lib/logger';
 /**
  * POST /api/gc-calls/assign-schedule
  * Game Changer asigna horario fijo a un participante
- * HORARIOS FIJOS: 7:00 AM - 9:30 AM (no requiere configuración previa)
+ * HORARIOS FIJOS: 4:00 AM - 10:00 PM (disponibilidad automática para todos los GC)
  * 
  * NOTA: Se crea automáticamente un GCAvailability "de sistema" para mantener
  * la integridad del schema, pero NO es configurable por el GC.
- * El GCAvailability configurable se usará para llamadas Post-Entrenamiento.
  * 
  * FECHAS DE LLAMADAS:
  * - BÁSICO: 3 días de entrenamiento. Día 1 llegada, Días 2-3 llamadas staff (2 slots)
@@ -40,16 +39,16 @@ export async function POST(request: Request) {
       ? time.split(':').map((p: string) => p.padStart(2, '0')).join(':')
       : time;
 
-    // Validar que el horario está dentro del rango fijo (7:00 - 9:30)
+    // Validar que el horario está dentro del rango permitido (4:00 AM - 10:00 PM)
     const [hours, minutes] = normalizedTime.split(':').map(Number);
     const timeInMinutes = hours * 60 + minutes;
-    const startLimit = 7 * 60; // 7:00 AM
-    const endLimit = 9 * 60 + 30; // 9:30 AM
+    const startLimit = 4 * 60; // 4:00 AM
+    const endLimit = 22 * 60; // 10:00 PM
 
     if (timeInMinutes < startLimit || timeInMinutes >= endLimit) {
       return NextResponse.json({ 
         success: false,
-        error: 'El horario debe estar entre 7:00 AM y 9:30 AM' 
+        error: 'El horario debe estar entre 4:00 AM y 10:00 PM' 
       }, { status: 400 });
     }
 
