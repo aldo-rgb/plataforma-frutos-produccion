@@ -65,16 +65,16 @@ export async function GET(request: Request) {
     const logs = await prisma.gCCallLog.findMany({
       where,
       include: {
-        participant: {
+        Usuario_GCCallLog_participantIdToUsuario: {
           select: { id: true, nombre: true, telefono: true, imagen: true },
         },
-        gameChanger: {
+        Usuario_GCCallLog_gameChangerIdToUsuario: {
           select: { id: true, nombre: true },
         },
-        squad: {
+        SmallGroup: {
           select: { id: true, name: true },
         },
-        slot: {
+        GCCallSlot: {
           select: { scheduledDate: true, scheduledTime: true },
         },
       },
@@ -86,9 +86,9 @@ export async function GET(request: Request) {
       success: true,
       logs: logs.map(log => ({
         id: log.id,
-        participant: log.participant,
-        gameChanger: log.gameChanger,
-        squad: log.squad,
+        participant: log.Usuario_GCCallLog_participantIdToUsuario,
+        gameChanger: log.Usuario_GCCallLog_gameChangerIdToUsuario,
+        squad: log.SmallGroup,
         trainingType: log.trainingType,
         trainingDay: log.trainingDay,
         callStatus: log.callStatus,
@@ -98,8 +98,8 @@ export async function GET(request: Request) {
         isAtRisk: log.isAtRisk,
         riskReason: log.riskReason,
         requiresIntervention: log.requiresIntervention,
-        scheduledDate: log.slot?.scheduledDate,
-        scheduledTime: log.slot?.scheduledTime,
+        scheduledDate: log.GCCallSlot?.scheduledDate,
+        scheduledTime: log.GCCallSlot?.scheduledTime,
         createdAt: log.createdAt,
       })),
     });
@@ -154,12 +154,12 @@ export async function POST(request: Request) {
     const slot = await prisma.gCCallSlot.findUnique({
       where: { id: slotId },
       include: {
-        availability: {
+        GCAvailability: {
           include: {
-            squad: { select: { visionId: true } },
+            SmallGroup: { select: { visionId: true } },
           },
         },
-        participant: { select: { id: true, nombre: true } },
+        Usuario_GCCallSlot_participantIdToUsuario: { select: { id: true, nombre: true } },
       },
     });
 
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Slot no encontrado' }, { status: 404 });
     }
 
-    if (slot.availability.gameChangerId !== user.id && !['TRAINER', 'SCHOOL_ADMIN', 'COORDINADOR'].includes(user.rol)) {
+    if (slot.GCAvailability.gameChangerId !== user.id && !['TRAINER', 'SCHOOL_ADMIN', 'COORDINADOR'].includes(user.rol)) {
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 403 });
     }
 
@@ -209,7 +209,7 @@ export async function POST(request: Request) {
     // Obtener visionId del squad o del slot
     const visionId = slot.squadId 
       ? (await prisma.smallGroup.findUnique({ where: { id: slot.squadId }, select: { visionId: true } }))?.visionId
-      : slot.availability.squad?.visionId;
+      : slot.GCAvailability.SmallGroup?.visionId;
 
     if (!visionId) {
       return NextResponse.json({
@@ -240,7 +240,7 @@ export async function POST(request: Request) {
         requiresIntervention,
       },
       include: {
-        participant: { select: { nombre: true } },
+        Usuario_GCCallLog_participantIdToUsuario: { select: { nombre: true } },
       },
     });
 
@@ -252,10 +252,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Llamada con ${slot.participant.nombre} registrada`,
+      message: `Llamada con ${slot.Usuario_GCCallSlot_participantIdToUsuario.nombre} registrada`,
       log: {
         id: log.id,
-        participantName: log.participant.nombre,
+        participantName: log.Usuario_GCCallLog_participantIdToUsuario.nombre,
         callStatus: log.callStatus,
         potentialRating: log.potentialRating,
         isAtRisk: log.isAtRisk,

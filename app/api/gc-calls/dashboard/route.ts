@@ -188,16 +188,16 @@ async function getRescateView(visionId: number, trainingType: string) {
       ],
     },
     include: {
-      participant: {
+      Usuario_GCCallLog_participantIdToUsuario: {
         select: { id: true, nombre: true, telefono: true, imagen: true },
       },
-      gameChanger: {
+      Usuario_GCCallLog_gameChangerIdToUsuario: {
         select: { id: true, nombre: true },
       },
-      squad: {
+      SmallGroup: {
         select: { id: true, name: true },
       },
-      interventions: {
+      TrainerIntervention: {
         orderBy: { createdAt: 'desc' },
         take: 1,
       },
@@ -219,17 +219,17 @@ async function getRescateView(visionId: number, trainingType: string) {
 
   const rescueList = Array.from(participantMap.values()).map(log => ({
     id: log.id,
-    participant: log.participant,
-    gameChanger: log.gameChanger,
-    squad: log.squad,
+    participant: log.Usuario_GCCallLog_participantIdToUsuario,
+    gameChanger: log.Usuario_GCCallLog_gameChangerIdToUsuario,
+    squad: log.SmallGroup,
     trainingDay: log.trainingDay,
     callStatus: log.callStatus,
     potentialRating: log.potentialRating,
     riskReason: log.riskReason,
     notes: log.notes,
     requiresIntervention: log.requiresIntervention,
-    hasIntervention: log.interventions.length > 0,
-    lastIntervention: log.interventions[0] || null,
+    hasIntervention: log.TrainerIntervention.length > 0,
+    lastIntervention: log.TrainerIntervention[0] || null,
     createdAt: log.createdAt,
   }));
 
@@ -366,18 +366,18 @@ async function getAgendaView(visionId: number, dateStr: string | null) {
       status: { in: ['SCHEDULED', 'CONFIRMED', 'COMPLETED', 'NO_SHOW'] },
     },
     include: {
-      participant: {
+      Usuario_GCCallSlot_participantIdToUsuario: {
         select: { id: true, nombre: true, telefono: true, imagen: true },
       },
-      availability: {
+      GCAvailability: {
         include: {
-          gameChanger: { select: { id: true, nombre: true, imagen: true } },
+          Usuario: { select: { id: true, nombre: true, imagen: true } },
         },
       },
-      squad: {
+      SmallGroup: {
         select: { id: true, name: true },
       },
-      callLog: {
+      GCCallLog: {
         select: {
           callStatus: true,
           potentialRating: true,
@@ -391,7 +391,7 @@ async function getAgendaView(visionId: number, dateStr: string | null) {
   // Agrupar por GC
   const byGameChanger: Record<number, typeof slots> = {};
   slots.forEach(slot => {
-    const gcId = slot.availability.gameChangerId;
+    const gcId = slot.GCAvailability.gameChangerId;
     if (!byGameChanger[gcId]) {
       byGameChanger[gcId] = [];
     }
@@ -399,18 +399,18 @@ async function getAgendaView(visionId: number, dateStr: string | null) {
   });
 
   const agenda = Object.entries(byGameChanger).map(([gcId, gcSlots]) => {
-    const gc = gcSlots[0].availability.gameChanger;
+    const gc = gcSlots[0].GCAvailability.Usuario;
     return {
       gameChanger: gc,
       slots: gcSlots.map(s => ({
         id: s.id,
         time: s.scheduledTime,
         endTime: s.endTime,
-        participant: s.participant,
-        squad: s.squad,
+        participant: s.Usuario_GCCallSlot_participantIdToUsuario,
+        squad: s.SmallGroup,
         status: s.status,
-        hasLog: !!s.callLog,
-        callLog: s.callLog,
+        hasLog: !!s.GCCallLog,
+        callLog: s.GCCallLog,
       })),
       stats: {
         total: gcSlots.length,
