@@ -59,15 +59,15 @@ export async function POST(request: Request) {
       where: {
         userId: parseInt(participantId),
         isActive: true,
-        group: {
+        SmallGroup: {
           leaderId: gcId,
           isActive: true,
         }
       },
       include: {
-        group: {
+        SmallGroup: {
           include: {
-            vision: true
+            Vision: true
           }
         }
       }
@@ -79,8 +79,8 @@ export async function POST(request: Request) {
       }, { status: 403 });
     }
 
-    const squad = membership.group;
-    const vision = squad.vision;
+    const squad = membership.SmallGroup;
+    const vision = squad.Vision;
     const level = squad.level; // BASIC o ADVANCED
 
     // Determinar la fecha de inicio según el nivel
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
     // Verificar que el horario está disponible (no ocupado por otro participante)
     const existingSlot = await prisma.gCCallSlot.findFirst({
       where: {
-        squad: {
+        SmallGroup: {
           leaderId: gcId,
         },
         scheduledTime: normalizedTime,
