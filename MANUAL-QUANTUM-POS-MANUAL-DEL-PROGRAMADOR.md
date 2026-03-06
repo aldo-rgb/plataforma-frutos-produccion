@@ -3713,6 +3713,68 @@ onClick={() => {
 
 ---
 
+### Fix: API my-stats no retorna trainingInfo cuando GC no tiene squads
+
+**Problema:** Cuando un Game Changer tiene asignación en `VisionGameChanger` pero no tiene ningún squad creado, la página de squads mostraba siempre nivel "BASIC" porque la API `/api/gc-calls/my-stats` hacía un early return sin calcular el `trainingInfo`.
+
+**Diagnóstico:**
+```javascript
+// Consola del navegador mostraba:
+📊 my-stats response: {success: true, trainingInfo: undefined, targetVisionId: undefined}
+⚠️ No trainingInfo.level, defaulting to BASIC
+```
+
+**Causa raíz:** El código tenía un early return cuando `memberIds.length === 0`:
+```typescript
+// ANTES (código problemático)
+if (memberIds.length === 0) {
+  return NextResponse.json({
+    success: true,
+    stats: { totalMembers: 0, todayCalls: 0, membersWithoutCall: 0 },
+    // ❌ NO incluía trainingInfo ni targetVisionId
+  });
+}
+```
+
+**Solución:** Calcular `trainingInfo` desde `gcAssignments` antes del early return:
+```typescript
+// DESPUÉS (código corregido)
+if (memberIds.length === 0) {
+  let trainingInfoForEmpty = null;
+  let targetVisionIdForEmpty: number | null = null;
+  
+  if (gcAssignments.length > 0) {
+    const levelPriority = ['PL', 'ADVANCED', 'BASIC'];
+    const sortedAssignments = [...gcAssignments].sort((a, b) => {
+      return levelPriority.indexOf(a.level) - levelPriority.indexOf(b.level);
+    });
+    
+    const highestLevelAssignment = sortedAssignments[0];
+    const level = highestLevelAssignment.level;
+    
+    trainingInfoForEmpty = {
+      level,
+      showInDashboard: true,
+      // ... otros campos calculados
+    };
+    targetVisionIdForEmpty = highestLevelAssignment.visionId;
+  }
+  
+  return NextResponse.json({
+    success: true,
+    stats: { totalMembers: 0, todayCalls: 0, membersWithoutCall: 0 },
+    trainingInfo: trainingInfoForEmpty,  // ✅ Ahora incluye el nivel correcto
+    targetVisionId: targetVisionIdForEmpty,
+  });
+}
+```
+
+**Archivo modificado:** `app/api/gc-calls/my-stats/route.ts`
+
+**Lección:** En APIs con early returns, verificar que TODOS los campos necesarios estén incluidos en cada respuesta posible.
+
+---
+
 ## 📋 Checklist para Nuevos Desarrolladores
 
 ### Antes de crear cualquier `.create()`:
@@ -3732,6 +3794,6 @@ grep -A 20 "^model NombreDelModelo" prisma/schema.prisma
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 3.4 - Marzo 2026*  
-*Última actualización: 05/03/2026*
+*Versión 3.5 - Marzo 2026*  
+*Última actualización: 06/03/2026*
 

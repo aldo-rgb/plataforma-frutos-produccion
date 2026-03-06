@@ -2,36 +2,37 @@ import { prisma } from '@/lib/prisma';
 
 /**
  * Configuración por defecto de disponibilidad para Game Changers
- * Lunes a Jueves (1-4), 6:00 AM - 8:00 AM, slots de 10 minutos
+ * Lunes a Domingo (0-6), 4:00 AM - 10:00 PM, slots de 10 minutos
+ * TODOS los GC tienen esta disponibilidad automáticamente
  */
 export const DEFAULT_GC_AVAILABILITY = {
-  days: [1, 2, 3, 4], // Lunes, Martes, Miércoles, Jueves
-  startTime: '06:00',
-  endTime: '08:00',
+  days: [0, 1, 2, 3, 4, 5, 6], // Domingo a Sábado (toda la semana)
+  startTime: '04:00',
+  endTime: '22:00', // 10 PM
   slotDuration: 10,
 };
 
 /**
- * Crea la disponibilidad por defecto para un Game Changer si no tiene ninguna configurada
+ * Verifica disponibilidad del GC (ahora todos tienen disponibilidad automática)
  * @param gameChangerId - ID del Game Changer
- * @returns true si se creó la disponibilidad, false si ya existía
+ * @returns true siempre - todos los GC tienen disponibilidad automática
  */
 export async function ensureDefaultAvailability(gameChangerId: number): Promise<boolean> {
-  // Verificar si ya tiene disponibilidad configurada
-  const existingAvailability = await prisma.gCAvailability.findFirst({
-    where: {
-      gameChangerId,
-      isActive: true,
-    },
-  });
+  // Ya no se requiere crear disponibilidad manualmente
+  // Todos los GC tienen disponibilidad automática de 4am a 10pm, Lunes a Domingo
+  console.log(`✅ GC ${gameChangerId} tiene disponibilidad automática: Lun-Dom 4am-10pm`);
+  return true;
+}
 
-  // Si ya tiene disponibilidad, no crear defaults
-  if (existingAvailability) {
-    return false;
-  }
-
-  // Crear disponibilidad por defecto para Lunes a Jueves (6-8 AM)
-  const availabilityData = DEFAULT_GC_AVAILABILITY.days.map(dayOfWeek => ({
+/**
+ * Obtiene la disponibilidad de un GC (ahora es automática para todos)
+ * @param gameChangerId - ID del Game Changer
+ * @returns Configuración de disponibilidad automática
+ */
+export async function getOrCreateAvailability(gameChangerId: number) {
+  // Retornar configuración automática - no depende de registros en BD
+  const availabilities = DEFAULT_GC_AVAILABILITY.days.map(dayOfWeek => ({
+    id: `auto-${gameChangerId}-${dayOfWeek}`,
     gameChangerId,
     dayOfWeek,
     startTime: DEFAULT_GC_AVAILABILITY.startTime,
@@ -39,30 +40,6 @@ export async function ensureDefaultAvailability(gameChangerId: number): Promise<
     slotDuration: DEFAULT_GC_AVAILABILITY.slotDuration,
     isActive: true,
   }));
-
-  await prisma.gCAvailability.createMany({
-    data: availabilityData,
-  });
-
-  console.log(`✅ Disponibilidad por defecto creada para GC ${gameChangerId}: Lun-Jue 6-8 AM`);
-  return true;
-}
-
-/**
- * Obtiene la disponibilidad de un GC, creando la por defecto si no existe
- * @param gameChangerId - ID del Game Changer
- * @returns Lista de disponibilidades
- */
-export async function getOrCreateAvailability(gameChangerId: number) {
-  // Primero asegurar que tenga disponibilidad
-  await ensureDefaultAvailability(gameChangerId);
-
-  // Luego obtener todas las disponibilidades activas
-  return prisma.gCAvailability.findMany({
-    where: {
-      gameChangerId,
-      isActive: true,
-    },
-    orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-  });
+  
+  return availabilities;
 }

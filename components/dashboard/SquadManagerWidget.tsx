@@ -1557,16 +1557,6 @@ export default function SquadManagerWidget() {
                       <div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full mx-auto"></div>
                       <p className="text-xs text-slate-400 mt-2">Cargando horarios...</p>
                     </div>
-                  ) : availableSlots.length === 0 ? (
-                    <div className="text-center py-6 bg-slate-800/30 rounded-xl border border-slate-700/50">
-                      <AlertCircle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-                      <p className="text-sm text-slate-400">No tienes horarios configurados</p>
-                      <Link href="/dashboard/game-changer/calls">
-                        <Button size="sm" className="mt-3 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30">
-                          Configurar disponibilidad
-                        </Button>
-                      </Link>
-                    </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-2">
                       {availableSlots.map((slot) => {

@@ -7,7 +7,8 @@ import logger from '@/lib/logger';
 /**
  * GET /api/gc-calls/available-times
  * Obtener todos los horarios disponibles para llamadas de staff
- * HORARIOS FIJOS: 7:00 AM - 9:30 AM (slots de 10 minutos)
+ * HORARIOS FIJOS: 4:00 AM - 10:00 PM (slots de 10 minutos)
+ * Todos los GC tienen disponibilidad automática de Lunes a Domingo
  * No requiere configuración del GC
  */
 export async function GET(request: Request) {
@@ -37,13 +38,14 @@ export async function GET(request: Request) {
     }
 
     // ============================================
-    // HORARIOS FIJOS PARA LLAMADAS DE STAFF
-    // 7:00 AM - 9:30 AM, slots de 10 minutos
+    // HORARIOS FIJOS PARA TODOS LOS GAME CHANGERS
+    // 4:00 AM - 10:00 PM, slots de 10 minutos
+    // Disponible Lunes a Domingo automáticamente
     // ============================================
-    const STAFF_CALL_START_HOUR = 7;
+    const STAFF_CALL_START_HOUR = 4;
     const STAFF_CALL_START_MIN = 0;
-    const STAFF_CALL_END_HOUR = 9;
-    const STAFF_CALL_END_MIN = 30;
+    const STAFF_CALL_END_HOUR = 22; // 10 PM
+    const STAFF_CALL_END_MIN = 0;
     const SLOT_DURATION = 10; // minutos
 
     // Generar todos los horarios fijos
@@ -109,10 +111,11 @@ export async function GET(request: Request) {
       availableTimes: availableSlots,
       // Información del horario fijo
       scheduleInfo: {
-        startTime: '07:00',
-        endTime: '09:30',
+        startTime: '04:00',
+        endTime: '22:00',
         slotDuration: SLOT_DURATION,
         totalSlots: timesWithAvailability.length,
+        note: 'Disponibilidad automática Lunes a Domingo',
       },
     });
   } catch (error) {
