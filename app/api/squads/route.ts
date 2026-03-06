@@ -135,14 +135,14 @@ export async function POST(request: Request) {
         maxSize: maxSize,
       },
       include: {
-        leader: {
+        Usuario: {
           select: { id: true, nombre: true, imagen: true },
         },
-        vision: {
+        Vision: {
           select: { id: true, nombre: true },
         },
         _count: {
-          select: { members: true },
+          select: { SmallGroupMember: true },
         },
       },
     });
@@ -155,9 +155,9 @@ export async function POST(request: Request) {
         name: squad.name,
         level: squad.level,
         maxSize: squad.maxSize,
-        leader: squad.leader,
-        vision: squad.vision,
-        membersCount: squad._count.members,
+        leader: squad.Usuario,
+        vision: squad.Vision,
+        membersCount: squad._count.SmallGroupMember,
         createdAt: squad.createdAt,
       },
     });
@@ -271,23 +271,23 @@ export async function GET(request: Request) {
     const squads = await prisma.smallGroup.findMany({
       where,
       include: {
-        leader: {
+        Usuario: {
           select: { id: true, nombre: true, imagen: true, email: true },
         },
-        vision: {
+        Vision: {
           select: { id: true, nombre: true },
         },
-        product: {
+        SchoolProduct: {
           select: { id: true, name: true },
         },
         ...(includeMembers && {
-          members: {
+          SmallGroupMember: {
             where: { isActive: true },
             include: {
-              user: {
+              Usuario_SmallGroupMember_userIdToUsuario: {
                 select: { id: true, nombre: true, imagen: true, email: true, telefono: true },
               },
-              enrollment: {
+              vision_enrollments: {
                 select: { id: true, attendanceStatus: true, level: true },
               },
             },
@@ -295,7 +295,7 @@ export async function GET(request: Request) {
           },
         }),
         _count: {
-          select: { members: { where: { isActive: true } } },
+          select: { SmallGroupMember: { where: { isActive: true } } },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -306,7 +306,7 @@ export async function GET(request: Request) {
     
     if (includeMembers) {
       const allParticipantIds = squads.flatMap(squad => 
-        (squad.members || []).map(m => m.userId)
+        ((squad as any).SmallGroupMember || []).map((m: any) => m.userId)
       );
       
       if (allParticipantIds.length > 0) {
@@ -351,13 +351,18 @@ export async function GET(request: Request) {
         maxSize: squad.maxSize,
         isActive: squad.isActive,
         visionId: squad.visionId,
-        leader: squad.leader,
-        vision: squad.vision,
-        product: squad.product,
-        membersCount: squad._count.members,
-        isFull: squad._count.members >= squad.maxSize,
-        members: includeMembers ? squad.members?.map(member => ({
-          ...member,
+        leader: squad.Usuario,
+        vision: squad.Vision,
+        product: squad.SchoolProduct,
+        membersCount: squad._count.SmallGroupMember,
+        isFull: squad._count.SmallGroupMember >= squad.maxSize,
+        members: includeMembers ? (squad as any).SmallGroupMember?.map((member: any) => ({
+          id: member.id,
+          userId: member.userId,
+          joinedAt: member.joinedAt,
+          isActive: member.isActive,
+          user: member.Usuario_SmallGroupMember_userIdToUsuario,
+          enrollment: member.vision_enrollments,
           nextCall: nextCallsByParticipant[member.userId] || null
         })) : undefined,
         createdAt: squad.createdAt,
