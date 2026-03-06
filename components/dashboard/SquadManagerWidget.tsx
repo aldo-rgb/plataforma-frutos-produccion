@@ -22,7 +22,8 @@ import {
   Upload,
   Music,
   FileText,
-  Loader2
+  Loader2,
+  ChevronDown
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -164,6 +165,7 @@ export default function SquadManagerWidget() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedMember, setSelectedMember] = useState<SquadMember | null>(null);
   const [assigningSchedule, setAssigningSchedule] = useState(false);
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
 
   // Estado para editar nombre del átomo
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -1483,7 +1485,7 @@ export default function SquadManagerWidget() {
                   </div>
                 </div>
                 <button
-                  onClick={() => setShowScheduleModal(false)}
+                  onClick={() => { setShowScheduleModal(false); setSelectedHour(null); setSelectedMember(null); }}
                   className="p-2 rounded-lg hover:bg-slate-800 transition-colors"
                 >
                   <X className="w-5 h-5 text-slate-400" />
@@ -1506,7 +1508,10 @@ export default function SquadManagerWidget() {
                     return (
                       <button
                         key={member.id}
-                        onClick={() => setSelectedMember(member)}
+                        onClick={() => {
+                          setSelectedMember(member);
+                          setSelectedHour(null); // Reset hora seleccionada al cambiar de miembro
+                        }}
                         className={`w-full p-3 rounded-xl flex items-center justify-between transition-all ${
                           isSelected
                             ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-2 border-purple-500/50 shadow-lg shadow-purple-500/10'
@@ -1558,39 +1563,102 @@ export default function SquadManagerWidget() {
                       <p className="text-xs text-slate-400 mt-2">Cargando horarios...</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      {availableSlots.map((slot) => {
-                        const currentSchedule = getScheduleForMember(selectedMember.user.id);
-                        const isCurrentUser = currentSchedule === slot.time;
-                        const isOccupied = slot.isOccupied && !isCurrentUser;
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                      {/* Agrupar slots por hora */}
+                      {(() => {
+                        // Obtener horas únicas (4am a 9pm = 4 a 21)
+                        const hours = Array.from({ length: 18 }, (_, i) => i + 4);
                         
-                        return (
-                          <button
-                            key={slot.time}
-                            onClick={() => !isOccupied && handleAssignSchedule(slot.time)}
-                            disabled={isOccupied || assigningSchedule}
-                            className={`p-2.5 rounded-xl text-center transition-all relative ${
-                              isCurrentUser
-                                ? 'bg-gradient-to-br from-emerald-500/20 to-green-500/20 border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/10'
-                                : isOccupied
-                                ? 'bg-slate-800/30 text-slate-600 cursor-not-allowed'
-                                : 'bg-slate-800/50 text-white hover:bg-gradient-to-br hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-500/30 border border-slate-700/50'
-                            }`}
-                          >
-                            <p className={`text-sm font-mono font-medium ${isOccupied ? 'line-through' : ''}`}>
-                              {formatTime(slot.time)}
-                            </p>
-                            {isOccupied && slot.participantName && (
-                              <p className="text-[10px] text-slate-500 truncate mt-0.5">{slot.participantName}</p>
-                            )}
-                            {isCurrentUser && (
-                              <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
-                                <Check className="w-2.5 h-2.5 text-white" />
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
+                        return hours.map(hour => {
+                          const hourSlots = availableSlots.filter(slot => {
+                            const slotHour = parseInt(slot.time.split(':')[0]);
+                            return slotHour === hour;
+                          });
+                          
+                          if (hourSlots.length === 0) return null;
+                          
+                          const currentSchedule = getScheduleForMember(selectedMember.user.id);
+                          const hasCurrentUserSlot = hourSlots.some(s => s.time === currentSchedule);
+                          const occupiedCount = hourSlots.filter(s => s.isOccupied && s.time !== currentSchedule).length;
+                          const availableCount = hourSlots.length - occupiedCount;
+                          const isExpanded = selectedHour === hour;
+                          
+                          // Formatear hora para mostrar
+                          const hourDisplay = hour < 12 
+                            ? `${hour}:00 AM` 
+                            : hour === 12 
+                              ? '12:00 PM' 
+                              : `${hour - 12}:00 PM`;
+                          
+                          return (
+                            <div key={hour} className="rounded-xl overflow-hidden border border-slate-700/50">
+                              {/* Header de la hora - clickeable */}
+                              <button
+                                onClick={() => setSelectedHour(isExpanded ? null : hour)}
+                                className={`w-full flex items-center justify-between p-3 transition-all ${
+                                  hasCurrentUserSlot
+                                    ? 'bg-gradient-to-r from-emerald-500/20 to-green-500/10'
+                                    : 'bg-slate-800/50 hover:bg-slate-800/70'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="text-base font-semibold text-white">{hourDisplay}</span>
+                                  {hasCurrentUserSlot && (
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 text-xs font-medium">
+                                      Asignado
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-400">
+                                    {availableCount} disponibles
+                                  </span>
+                                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                </div>
+                              </button>
+                              
+                              {/* Slots de la hora - expandible */}
+                              {isExpanded && (
+                                <div className="p-3 pt-0 bg-slate-900/30">
+                                  <div className="grid grid-cols-3 gap-2 pt-3">
+                                    {hourSlots.map((slot) => {
+                                      const isCurrentUser = currentSchedule === slot.time;
+                                      const isOccupied = slot.isOccupied && !isCurrentUser;
+                                      
+                                      return (
+                                        <button
+                                          key={slot.time}
+                                          onClick={() => !isOccupied && handleAssignSchedule(slot.time)}
+                                          disabled={isOccupied || assigningSchedule}
+                                          className={`p-2 rounded-lg text-center transition-all relative ${
+                                            isCurrentUser
+                                              ? 'bg-gradient-to-br from-emerald-500/30 to-green-500/20 border-2 border-emerald-500/50'
+                                              : isOccupied
+                                              ? 'bg-slate-800/30 text-slate-600 cursor-not-allowed'
+                                              : 'bg-slate-800/50 text-white hover:bg-purple-500/20 hover:border-purple-500/30 border border-slate-700/50'
+                                          }`}
+                                        >
+                                          <p className={`text-sm font-mono font-medium ${isOccupied ? 'line-through' : ''}`}>
+                                            {formatTime(slot.time)}
+                                          </p>
+                                          {isOccupied && slot.participantName && (
+                                            <p className="text-[10px] text-slate-500 truncate mt-0.5">{slot.participantName}</p>
+                                          )}
+                                          {isCurrentUser && (
+                                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+                                              <Check className="w-2.5 h-2.5 text-white" />
+                                            </div>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   )}
                 </div>
@@ -1600,7 +1668,7 @@ export default function SquadManagerWidget() {
             {/* Footer */}
             <div className="p-4 border-t border-slate-800/50 bg-slate-900/50">
               <Button
-                onClick={() => setShowScheduleModal(false)}
+                onClick={() => { setShowScheduleModal(false); setSelectedHour(null); setSelectedMember(null); }}
                 variant="outline"
                 className="w-full border-slate-700 hover:bg-slate-800"
                 disabled={assigningSchedule}
