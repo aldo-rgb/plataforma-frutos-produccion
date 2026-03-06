@@ -168,16 +168,16 @@ export async function POST(
       where: {
         userId: enrollment.userId,
         isActive: true,
-        group: {
+        SmallGroup: {
           visionId: visionId,
           level: level,
           isActive: true
         }
       },
       include: {
-        group: {
+        SmallGroup: {
           include: {
-            leader: { select: { nombre: true } }
+            Usuario: { select: { nombre: true } }
           }
         }
       }
@@ -195,7 +195,7 @@ export async function POST(
           }
         });
 
-        logger.info(`🔄 Participante ${enrollment.Usuario_vision_enrollments_userIdToUsuario.nombre} movido del átomo de ${existingMembership.group.leader?.nombre} al átomo de ${gcUser.nombre}`);
+        logger.info(`🔄 Participante ${enrollment.Usuario_vision_enrollments_userIdToUsuario.nombre} movido del átomo de ${existingMembership.SmallGroup.Usuario?.nombre} al átomo de ${gcUser.nombre}`);
 
         return NextResponse.json({
           success: true,

@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const member = await prisma.smallGroupMember.findUnique({
       where: { id: memberId },
       include: {
-        group: {
+        SmallGroup: {
           select: { 
             id: true, 
             leaderId: true, 
@@ -48,10 +48,10 @@ export async function POST(request: NextRequest) {
             level: true  // Necesitamos el nivel del grupo
           }
         },
-        user: {
+        Usuario_SmallGroupMember_userIdToUsuario: {
           select: { id: true, nombre: true, email: true }
         },
-        enrollment: {
+        vision_enrollments: {
           select: { id: true, attendanceStatus: true, level: true, visionId: true }
         }
       }
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar que el GC sea el líder del grupo
     if (gameChanger.rol === 'GAMECHANGER' || gameChanger.rol === 'TRAINER') {
-      if (member.group.leaderId !== gameChanger.id) {
+      if (member.SmallGroup.leaderId !== gameChanger.id) {
         return NextResponse.json({ 
           error: 'No eres el líder de este grupo' 
         }, { status: 403 });
@@ -72,13 +72,13 @@ export async function POST(request: NextRequest) {
 
     // ⚠️ IMPORTANTE: Buscar el enrollment CORRECTO basado en el nivel del grupo
     // No usar member.enrollmentId porque puede estar desactualizado o ser de otro nivel
-    const groupLevel = member.group.level; // BASIC, ADVANCED, o PL
-    const visionId = member.group.visionId;
+    const groupLevel = member.SmallGroup.level; // BASIC, ADVANCED, o PL
+    const visionId = member.SmallGroup.visionId;
 
     // Buscar el enrollment del usuario en el nivel y visión correctos
     const correctEnrollment = await prisma.vision_enrollments.findFirst({
       where: {
-        userId: member.user.id,
+        userId: member.Usuario_SmallGroupMember_userIdToUsuario.id,
         visionId: visionId,
         level: groupLevel
       }
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         userId: gameChanger.id,
         type: 'OTHER',
         title: 'Participante Marcado como DROP',
-        message: `Marcaste a ${member.user.nombre} como DROP en ${groupLevel} (grupo "${member.group.name}"). Razón: ${reason || 'No especificada'}`,
+        message: `Marcaste a ${member.Usuario_SmallGroupMember_userIdToUsuario.nombre} como DROP en ${groupLevel} (grupo "${member.SmallGroup.name}"). Razón: ${reason || 'No especificada'}`,
         relatedId: correctEnrollment.id
       }
     });
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     // Crear notificación para el participante
     await prisma.notification.create({
       data: {
-        userId: member.user.id,
+        userId: member.Usuario_SmallGroupMember_userIdToUsuario.id,
         type: 'SYSTEM_ALERT',
         title: 'Estado de Inscripción Actualizado',
         message: `Tu inscripción en el entrenamiento ${groupLevel} ha sido marcada como DROP por tu Game Changer. Contacta a tu coordinador para más información.`,
@@ -131,14 +131,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    logger.debug(`🚫 Participante ${member.user.nombre} marcado como DROP en ${groupLevel} por GC ${gameChanger.nombre}`);
+    logger.debug(`🚫 Participante ${member.Usuario_SmallGroupMember_userIdToUsuario.nombre} marcado como DROP en ${groupLevel} por GC ${gameChanger.nombre}`);
 
     return NextResponse.json({
       success: true,
       message: `Participante marcado como DROP en ${groupLevel} correctamente`,
       participant: {
-        id: member.user.id,
-        nombre: member.user.nombre,
+        id: member.Usuario_SmallGroupMember_userIdToUsuario.id,
+        nombre: member.Usuario_SmallGroupMember_userIdToUsuario.nombre,
         status: 'DROP',
         level: groupLevel
       }

@@ -39,7 +39,7 @@ export async function GET(request: Request) {
         isActive: true,
       },
       include: {
-        group: {
+        SmallGroup: {
           select: { leaderId: true, name: true },
         },
       },
@@ -48,8 +48,8 @@ export async function GET(request: Request) {
     let gcId: number | null = null;
     
     if (membership) {
-      gcId = membership.group.leaderId;
-      logger.debug(`📞 User ${user.id} is in squad "${membership.group.name}", GC leaderId: ${gcId}`);
+      gcId = membership.SmallGroup.leaderId;
+      logger.debug(`📞 User ${user.id} is in squad "${membership.SmallGroup.name}", GC leaderId: ${gcId}`);
     } else if (gameChangerIdParam) {
       // Fallback al parámetro si no hay membresía
       gcId = parseInt(gameChangerIdParam);

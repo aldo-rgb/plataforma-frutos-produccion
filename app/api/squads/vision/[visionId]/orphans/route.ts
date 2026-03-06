@@ -64,7 +64,7 @@ export async function GET(
     const assignedUserIds = await prisma.smallGroupMember.findMany({
       where: {
         isActive: true,
-        group: {
+        SmallGroup: {
           visionId,
           ...(level ? { level } : {}),
           isActive: true,

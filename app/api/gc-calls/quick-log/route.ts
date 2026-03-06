@@ -40,12 +40,12 @@ export async function POST(request: Request) {
       where: {
         userId: parseInt(participantId),
         isActive: true,
-        group: {
+        SmallGroup: {
           leaderId: gc.id,
         },
       },
       include: {
-        group: {
+        SmallGroup: {
           select: { id: true, level: true, visionId: true },
         },
       },
@@ -59,8 +59,8 @@ export async function POST(request: Request) {
     }
 
     const squadId = membership.groupId;
-    const visionId = membership.group.visionId;
-    const trainingType = (membership.group.level as 'BASIC' | 'ADVANCED') || 'BASIC';
+    const visionId = membership.SmallGroup.visionId;
+    const trainingType = (membership.SmallGroup.level as 'BASIC' | 'ADVANCED') || 'BASIC';
 
     // Calcular el día de entrenamiento
     const vision = await prisma.vision.findUnique({
