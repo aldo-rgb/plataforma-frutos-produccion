@@ -1697,6 +1697,53 @@ Esta sesión se enfocó en corregir el **Sistema de Átomos (SmallGroup)** para 
 - Relaciones Prisma en APIs de stats y squads
 - Campos `id` requeridos en creación de SmallGroup y SmallGroupMember
 - Validación de seguridad para niveles finalizados
+- **Fix para GCs que solo tienen asignación ADVANCED (sin squad BASIC previo)**
+
+---
+
+### 🔧 Fix: Detección de nivel ADVANCED para GCs sin squad BASIC previo
+
+**Archivo modificado:** `app/api/gc-calls/my-stats/route.ts`
+
+**Problema:** Game Changers asignados **solo** al nivel ADVANCED (sin haber tenido squad BASIC) veían `level: BASIC` en lugar de `ADVANCED`.
+
+**Caso de uso:**
+- GC asignado a Vision 25 con `VisionGameChanger.level = 'ADVANCED'`
+- No tiene ningún SmallGroup (ni BASIC ni ADVANCED)
+- El sistema mostraba BASIC por defecto en lugar de usar su asignación real
+
+**Causa raíz:** La lógica de fallback en `my-stats` no marcaba `needsAdvancedSquad = true` cuando el GC tenía asignación ADVANCED pero ningún squad.
+
+**Solución:**
+```typescript
+// En el bloque de fallback cuando no hay squads pero sí gcAssignments
+if (!activeTrainingInfo && gcAssignments.length > 0) {
+  const levelPriority = ['PL', 'ADVANCED', 'BASIC'];
+  const sortedAssignments = [...gcAssignments].sort((a, b) => {
+    return levelPriority.indexOf(a.level) - levelPriority.indexOf(b.level);
+  });
+  
+  const highestLevelAssignment = sortedAssignments[0];
+  const level = highestLevelAssignment.level;
+  
+  // ✅ AGREGADO: Si es ADVANCED y no tiene squad, indicar que necesita crearlo
+  if (level === 'ADVANCED') {
+    needsAdvancedSquad = true;
+    targetVisionId = highestLevelAssignment.visionId;
+  }
+  
+  // ... calcular trainingInfo con el nivel correcto
+  activeTrainingInfo = {
+    level: level,  // ← Ahora usa 'ADVANCED' correctamente
+    // ... otros campos
+  };
+}
+```
+
+**Resultado:**
+- GCs con asignación ADVANCED ahora ven `trainingInfo.level = 'ADVANCED'`
+- Se muestra el botón "Crear Átomo" para nivel ADVANCED
+- `targetVisionId` apunta a la visión correcta para crear el squad
 
 ---
 
