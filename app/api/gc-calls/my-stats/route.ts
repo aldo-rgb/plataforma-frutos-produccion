@@ -32,6 +32,8 @@ export async function GET() {
         Vision: {
           select: {
             id: true,
+            nombre: true,
+            isActive: true,
             startDate: true,
             endDate: true,
             advancedStartDate: true,
@@ -41,6 +43,18 @@ export async function GET() {
           },
         },
       },
+    });
+    
+    logger.debug('🔍 my-stats: GC Assignments found', {
+      userId: user.id,
+      userEmail: session.user.email,
+      assignmentsCount: gcAssignments.length,
+      assignments: gcAssignments.map(a => ({
+        visionId: a.visionId,
+        visionName: a.Vision?.nombre,
+        visionIsActive: a.Vision?.isActive,
+        level: a.level,
+      })),
     });
 
     // Obtener todos los squads donde este GC es líder
@@ -557,6 +571,15 @@ export async function GET() {
       
       targetVisionId = highestLevelAssignment.visionId;
     }
+    
+    logger.debug('🔍 my-stats: Final response', {
+      userId: user.id,
+      trainingInfoLevel: activeTrainingInfo?.level,
+      targetVisionId,
+      needsAdvancedSquad,
+      squadsCount: squads.length,
+      activeTrainingInfo,
+    });
 
     return NextResponse.json({
       success: true,

@@ -137,8 +137,15 @@ export default function SquadBuilderPage() {
         const res = await fetch('/api/gc-calls/my-stats');
         if (res.ok) {
           const data = await res.json();
+          console.log('📊 my-stats response:', {
+            success: data.success,
+            trainingInfo: data.trainingInfo,
+            targetVisionId: data.targetVisionId,
+            needsAdvancedSquad: data.needsAdvancedSquad,
+          });
           if (data.success && data.trainingInfo?.level) {
             const level = data.trainingInfo.level;
+            console.log('✅ Active level from my-stats:', level);
             setActiveTrainingLevel(level);
             // Si no hay nivel en URL, usar el nivel activo
             if (!levelParam) {
@@ -150,12 +157,14 @@ export default function SquadBuilderPage() {
             }
           } else {
             // Si no hay training info, usar BASIC por defecto
+            console.log('⚠️ No trainingInfo.level, defaulting to BASIC');
             if (!levelParam) {
               setSelectedLevel('BASIC');
             }
           }
         } else {
           // Error en el API, usar BASIC por defecto
+          console.error('❌ my-stats API error:', res.status);
           if (!levelParam) {
             setSelectedLevel('BASIC');
           }
