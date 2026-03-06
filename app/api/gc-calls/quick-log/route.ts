@@ -100,6 +100,7 @@ export async function POST(request: Request) {
     // Crear nuevo intento de llamada
     const attempt = await prisma.gCCallAttempt.create({
       data: {
+        id: crypto.randomUUID(),
         gameChangerId: gc.id,
         participantId: parseInt(participantId),
         squadId,
