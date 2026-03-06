@@ -206,7 +206,7 @@ export async function GET(request: Request) {
               ...dateFilter,
             },
             include: {
-              participant: {
+              Usuario_GCCallAttempt_participantIdToUsuario: {
                 select: {
                   id: true,
                   nombre: true,
@@ -241,7 +241,7 @@ export async function GET(request: Request) {
             attemptNumber: a.attemptNumber,
             trainingDay: a.trainingDay,
             attemptedAt: a.attemptedAt.toISOString(),
-            participant: a.participant,
+            participant: a.Usuario_GCCallAttempt_participantIdToUsuario,
           })),
           stats: {
             totalCalls: attempts.length,
