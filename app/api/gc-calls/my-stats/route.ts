@@ -420,6 +420,16 @@ export async function GET() {
     const advancedSquad = squads.find(s => s.level === 'ADVANCED');
     const basicSquad = squads.find(s => s.level === 'BASIC');
     
+    logger.debug('🔍 my-stats: Squad search results', {
+      userId: user.id,
+      totalSquads: squads.length,
+      hasPL: !!plSquad,
+      hasAdvanced: !!advancedSquad,
+      hasBasic: !!basicSquad,
+      gcAssignmentsCount: gcAssignments.length,
+      gcAssignmentLevels: gcAssignments.map(a => a.level),
+    });
+    
     if (plSquad && squadTrainingInfo[plSquad.id]?.showInDashboard) {
       activeTrainingInfo = squadTrainingInfo[plSquad.id];
     } else if (advancedSquad && squadTrainingInfo[advancedSquad.id]?.showInDashboard) {
@@ -486,6 +496,19 @@ export async function GET() {
       const highestLevelAssignment = sortedAssignments[0];
       const level = highestLevelAssignment.level;
       const vision = highestLevelAssignment.Vision;
+      
+      logger.debug('🔍 my-stats: Using gcAssignment fallback', {
+        userId: user.id,
+        assignmentLevel: level,
+        visionId: highestLevelAssignment.visionId,
+        advancedStartDate: vision?.advancedStartDate,
+      });
+      
+      // Si es ADVANCED y no tiene squad, indicar que necesita crearlo
+      if (level === 'ADVANCED') {
+        needsAdvancedSquad = true;
+        targetVisionId = highestLevelAssignment.visionId;
+      }
       
       // Determinar fechas según el nivel
       let totalDays = 3;
