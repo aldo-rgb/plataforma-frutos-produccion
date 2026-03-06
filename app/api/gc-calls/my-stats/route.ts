@@ -50,11 +50,11 @@ export async function GET() {
         isActive: true,
       },
       include: {
-        members: {
+        SmallGroupMember: {
           where: { isActive: true },
           select: { userId: true },
         },
-        vision: {
+        Vision: {
           select: {
             startDate: true,
             endDate: true,
@@ -90,7 +90,7 @@ export async function GET() {
     }> = {};
 
     squads.forEach(squad => {
-      const vision = squad.vision;
+      const vision = squad.Vision;
       const level = squad.level || 'BASIC';
       
       // Configuración por nivel
@@ -254,7 +254,7 @@ export async function GET() {
     });
 
     // Obtener IDs de todos los miembros
-    const memberIds = squads.flatMap(s => s.members.map(m => m.userId));
+    const memberIds = squads.flatMap(s => s.SmallGroupMember.map(m => m.userId));
     const totalMembers = memberIds.length;
 
     if (memberIds.length === 0) {
@@ -431,7 +431,7 @@ export async function GET() {
       } else {
         // BÁSICO ya terminó/no debe mostrarse y no hay AVANZADO
         // Verificar si el Avanzado ya inició
-        const vision = basicSquad.vision;
+        const vision = basicSquad.Vision;
         if (vision?.advancedStartDate) {
           const advStartDate = new Date(vision.advancedStartDate);
           advStartDate.setHours(0, 0, 0, 0);
