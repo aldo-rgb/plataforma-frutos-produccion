@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const callLog = await prisma.gCCallLog.findUnique({
       where: { id: callLogId },
       include: {
-        participant: { select: { nombre: true } },
+        Usuario_GCCallLog_participantIdToUsuario: { select: { nombre: true } },
       },
     });
 
@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     // Crear la intervención
     const intervention = await prisma.trainerIntervention.create({
       data: {
+        id: crypto.randomUUID(),
         callLogId,
         trainerId: user.id,
         type,
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Intervención registrada para ${callLog.participant.nombre}`,
+      message: `Intervención registrada para ${callLog.Usuario_GCCallLog_participantIdToUsuario.nombre}`,
       intervention: {
         id: intervention.id,
         type: intervention.type,
@@ -107,11 +108,11 @@ export async function GET(request: Request) {
     const interventions = await prisma.trainerIntervention.findMany({
       where,
       include: {
-        trainer: { select: { nombre: true } },
-        callLog: {
+        Usuario: { select: { nombre: true } },
+        GCCallLog: {
           include: {
-            participant: { select: { nombre: true, telefono: true } },
-            gameChanger: { select: { nombre: true } },
+            Usuario_GCCallLog_participantIdToUsuario: { select: { nombre: true, telefono: true } },
+            Usuario_GCCallLog_gameChangerIdToUsuario: { select: { nombre: true } },
           },
         },
       },
@@ -126,10 +127,10 @@ export async function GET(request: Request) {
         notes: i.notes,
         actionTaken: i.actionTaken,
         outcome: i.outcome,
-        trainer: i.trainer.nombre,
-        participant: i.callLog.participant.nombre,
-        participantPhone: i.callLog.participant.telefono,
-        gameChanger: i.callLog.gameChanger.nombre,
+        trainer: i.Usuario.nombre,
+        participant: i.GCCallLog.Usuario_GCCallLog_participantIdToUsuario.nombre,
+        participantPhone: i.GCCallLog.Usuario_GCCallLog_participantIdToUsuario.telefono,
+        gameChanger: i.GCCallLog.Usuario_GCCallLog_gameChangerIdToUsuario.nombre,
         createdAt: i.createdAt,
         resolvedAt: i.resolvedAt,
       })),
