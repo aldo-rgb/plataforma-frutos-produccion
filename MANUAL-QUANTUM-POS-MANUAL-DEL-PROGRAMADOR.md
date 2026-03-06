@@ -2,8 +2,8 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 3.4  
-**Fecha:** 05 Marzo 2026  
+**Versión:** 3.5  
+**Fecha:** 06 Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
 ---
@@ -1688,6 +1688,252 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
+## v3.5 - 06/03/2026 (Fixes Sistema GC y Átomos - SmallGroup)
+
+### 🎯 Resumen de Sesión
+
+Esta sesión se enfocó en corregir el **Sistema de Átomos (SmallGroup)** para Game Changers, incluyendo:
+- Detección correcta del nivel de entrenamiento (BASIC vs ADVANCED)
+- Relaciones Prisma en APIs de stats y squads
+- Campos `id` requeridos en creación de SmallGroup y SmallGroupMember
+- Validación de seguridad para niveles finalizados
+
+---
+
+### 🔧 Fix: API `/api/gc-calls/my-stats` - Relaciones SmallGroup
+
+**Archivo modificado:** `app/api/gc-calls/my-stats/route.ts`
+
+**Problema 1:** Error "Unknown field `members`" y "Unknown field `vision`"
+
+**Causa raíz:** Nombres de relaciones incorrectos en el query:
+- `members` → `SmallGroupMember`
+- `vision` → `Vision`
+- `leader` → `Usuario`
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+const smallGroup = await prisma.smallGroup.findFirst({
+  where: { leaderId: gc.id, visionId },
+  include: {
+    members: { select: { userId: true } },
+    vision: { select: { nombre: true } }
+  }
+});
+
+// DESPUÉS (correcto)
+const smallGroup = await prisma.smallGroup.findFirst({
+  where: { leaderId: gc.id, visionId },
+  include: {
+    SmallGroupMember: { select: { userId: true } },
+    Vision: { select: { nombre: true } },
+    Usuario: { select: { id: true, nombre: true } }
+  }
+});
+```
+
+**Problema 2:** Error "Unknown field `participant`" en GCCallSlot
+
+**Causa raíz:** Relación multi-foreign key usa nombre completo
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+include: { participant: { select: { nombre: true } } }
+
+// DESPUÉS (correcto)
+include: { Usuario_GCCallSlot_participantIdToUsuario: { select: { nombre: true } } }
+```
+
+---
+
+### 🔧 Fix: API `/api/squads/route.ts` - Relaciones y campos requeridos
+
+**Archivo modificado:** `app/api/squads/route.ts`
+
+**Problema 1:** Error "Unknown field `leader`", `vision`, `product`, `members`"
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+include: {
+  leader: { select: { id: true, nombre: true, imagen: true } },
+  vision: { select: { id: true, nombre: true } },
+  product: { select: { id: true, name: true } },
+  members: { include: { Usuario_SmallGroupMember_userIdToUsuario: true } }
+}
+
+// DESPUÉS (correcto)
+include: {
+  Usuario: { select: { id: true, nombre: true, imagen: true } },
+  Vision: { select: { id: true, nombre: true } },
+  SchoolProduct: { select: { id: true, name: true } },
+  SmallGroupMember: { 
+    include: { Usuario_SmallGroupMember_userIdToUsuario: true } 
+  }
+}
+```
+
+**Problema 2:** Error "Argument `id` is missing" en SmallGroup.create()
+
+**Causa raíz:** Modelo `SmallGroup` tiene `id String @id` SIN `@default(uuid())`
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+const newSquad = await prisma.smallGroup.create({
+  data: {
+    visionId,
+    leaderId: gc.id,
+    name: name.trim(),
+    level,
+    maxMembers: maxMembers || 12,
+  }
+});
+
+// DESPUÉS (correcto)
+const newSquad = await prisma.smallGroup.create({
+  data: {
+    id: crypto.randomUUID(),   // ← REQUERIDO
+    visionId,
+    leaderId: gc.id,
+    name: name.trim(),
+    level,
+    maxMembers: maxMembers || 12,
+    updatedAt: new Date(),      // ← REQUERIDO
+  }
+});
+```
+
+---
+
+### 🔧 Fix: API `/api/squads/[id]/add-member/route.ts` - Múltiples fixes
+
+**Archivo modificado:** `app/api/squads/[id]/add-member/route.ts`
+
+**Problema 1:** Mismas relaciones incorrectas que en squads
+
+**Problema 2:** Error "Argument `id` is missing" en SmallGroupMember.create()
+
+**Causa raíz:** Modelo `SmallGroupMember` tiene `id String @id` SIN `@default(uuid())`
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+const newMember = await tx.smallGroupMember.create({
+  data: {
+    groupId: squadId,
+    userId: targetUser!.id,
+    enrollmentId: enrollment?.id || null,
+  }
+});
+
+// DESPUÉS (correcto)
+const newMember = await tx.smallGroupMember.create({
+  data: {
+    id: crypto.randomUUID(),  // ← REQUERIDO
+    groupId: squadId,
+    userId: targetUser!.id,
+    enrollmentId: enrollment?.id || null,
+  }
+});
+```
+
+---
+
+### 🛡️ Nueva Validación de Seguridad: Niveles Finalizados
+
+**Archivo modificado:** `app/api/squads/[id]/add-member/route.ts`
+
+**Problema:** Átomos de BASIC podían ser modificados incluso después de que el entrenamiento ADVANCED ya inició (advancedStartDate pasada).
+
+**Solución implementada:** Validar que no se puedan agregar miembros a átomos de niveles anteriores:
+
+```typescript
+// Obtener la visión con fechas de nivel
+const vision = await tx.vision.findUnique({
+  where: { id: squad.visionId },
+  select: { advancedStartDate: true }
+});
+
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+// Bloquear modificaciones a BASIC si ADVANCED ya inició
+if (squad.level === 'BASIC' && vision?.advancedStartDate) {
+  const advancedStart = new Date(vision.advancedStartDate);
+  advancedStart.setHours(0, 0, 0, 0);
+  
+  if (today >= advancedStart) {
+    return NextResponse.json({
+      success: false,
+      error: 'El nivel BÁSICO ya finalizó. No se pueden agregar miembros a este átomo.'
+    }, { status: 400 });
+  }
+}
+```
+
+---
+
+### 📋 Tabla Resumen de Relaciones Corregidas - Sesión 06/03/2026
+
+| Modelo | Relación Incorrecta | Relación Correcta |
+|--------|--------------------|--------------------|
+| `SmallGroup` | `members` | `SmallGroupMember` |
+| `SmallGroup` | `vision` | `Vision` |
+| `SmallGroup` | `leader` | `Usuario` |
+| `SmallGroup` | `product` | `SchoolProduct` |
+| `GCCallSlot` | `participant` | `Usuario_GCCallSlot_participantIdToUsuario` |
+
+### 📋 Modelos que Requieren `id` Manual - Actualizado
+
+| Modelo | Tipo de ID | Requiere en create() |
+|--------|------------|---------------------|
+| `SmallGroup` | `String @id` | ✅ `id: crypto.randomUUID()` |
+| `SmallGroupMember` | `String @id` | ✅ `id: crypto.randomUUID()` |
+| `CashBatch` | `String @id` | ✅ `id: randomUUID()` |
+| `ExpoVisitor` | `String @id` | ✅ `id: generateUUID()` |
+| `Ticket` | `String @id` | ✅ `id: crypto.randomUUID()` |
+| `ExpoReview` | `String @id` | ✅ `id: crypto.randomUUID()` |
+
+---
+
+### 🔍 Referencia Rápida: Modelos SmallGroup
+
+```prisma
+model SmallGroup {
+  id               String             @id        // ← SIN @default - REQUIERE MANUAL
+  visionId         Int
+  leaderId         Int
+  name             String
+  level            TrainingLevel
+  maxMembers       Int                @default(12)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           // ← SIN @default - REQUIERE MANUAL
+  
+  // Relaciones (usar estos nombres exactos en include)
+  Usuario          Usuario            @relation(fields: [leaderId])
+  Vision           Vision             @relation(fields: [visionId])
+  SchoolProduct    SchoolProduct?     @relation(fields: [productId])
+  SmallGroupMember SmallGroupMember[]
+}
+
+model SmallGroupMember {
+  id           String      @id        // ← SIN @default - REQUIERE MANUAL
+  groupId      String
+  userId       Int
+  enrollmentId Int?
+  joinedAt     DateTime    @default(now())
+  
+  // Relaciones
+  SmallGroup                                SmallGroup @relation(fields: [groupId])
+  Usuario_SmallGroupMember_userIdToUsuario  Usuario    @relation("SmallGroupMember_userIdToUsuario")
+}
+```
+
+---
+
 ## v3.4 - 05/03/2026 (Sesión de Fixes Masivos de Prisma)
 
 ### 🎯 Resumen de Sesión
@@ -2022,8 +2268,22 @@ Estos modelos tienen `updatedAt DateTime` **SIN** `@default()` ni `@updatedAt`:
 | `ProductAttendance` | create, update |
 | `Ticket` | create |
 | `ExpoReview` | create |
+| `SmallGroup` | create, update |
 
 **Siempre agregar:** `updatedAt: new Date()`
+
+### 📋 Modelos que Requieren `id` Manual (String @id sin default)
+
+| Modelo | Operaciones Afectadas |
+|--------|----------------------|
+| `SmallGroup` | create |
+| `SmallGroupMember` | create |
+| `CashBatch` | create |
+| `ExpoVisitor` | create |
+| `Ticket` | create |
+| `ExpoReview` | create |
+
+**Siempre agregar:** `id: crypto.randomUUID()`
 
 ---
 
