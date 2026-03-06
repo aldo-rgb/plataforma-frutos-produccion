@@ -48,6 +48,8 @@ export default function BuddySystemWidget() {
   const [showScanModal, setShowScanModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [showManualInputModal, setShowManualInputModal] = useState(false);
+  const [manualInputValue, setManualInputValue] = useState('');
   const [scannedUser, setScannedUser] = useState<BuddyInfo | null>(null);
   const [selectedPending, setSelectedPending] = useState<PendingBuddy | null>(null);
   const [phone, setPhone] = useState('');
@@ -404,9 +406,15 @@ export default function BuddySystemWidget() {
   };
 
   const handleManualInput = () => {
-    const input = prompt('Ingresa el ID del usuario:');
-    if (input) {
-      processScannedData(input);
+    setManualInputValue('');
+    setShowManualInputModal(true);
+  };
+
+  const submitManualInput = () => {
+    if (manualInputValue.trim()) {
+      setShowManualInputModal(false);
+      processScannedData(manualInputValue.trim());
+      setManualInputValue('');
     }
   };
 
@@ -598,7 +606,7 @@ export default function BuddySystemWidget() {
             </div>
             <div className="flex gap-2">
               <button onClick={() => { setSelectedPending(pending); setShowAcceptModal(true); }} className="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium text-sm transition-colors">
-                Aceptar Alianza
+                Aceptar Ser Uno
               </button>
               <button onClick={() => handleRejectBuddy(pending.buddyPairId)} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm transition-colors">
                 Rechazar
@@ -816,6 +824,60 @@ export default function BuddySystemWidget() {
           )}
         </AnimatePresence>
 
+        {/* MANUAL INPUT MODAL */}
+        <AnimatePresence>
+          {showManualInputModal && (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }} 
+                animate={{ scale: 1, y: 0 }} 
+                exit={{ scale: 0.9, y: 20 }} 
+                className="bg-slate-900 border border-purple-500/30 rounded-2xl p-6 max-w-sm w-full"
+              >
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
+                    <UserPlus className="w-8 h-8 text-purple-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Ingresa el ID del usuario</h3>
+                  <p className="text-sm text-slate-400 mt-1">Código de referido o ID numérico</p>
+                </div>
+                
+                <input 
+                  type="text" 
+                  value={manualInputValue} 
+                  onChange={(e) => setManualInputValue(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === 'Enter' && submitManualInput()}
+                  placeholder="Ej: EDGML5IGQHV52IO"
+                  autoFocus
+                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-center text-lg font-mono tracking-wider focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 placeholder:text-slate-600 placeholder:text-sm placeholder:font-sans"
+                />
+                
+                <div className="flex gap-3 mt-6">
+                  <button 
+                    onClick={() => { setShowManualInputModal(false); setManualInputValue(''); }} 
+                    className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-medium transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={submitManualInput} 
+                    disabled={!manualInputValue.trim()}
+                    className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    Aceptar
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* CONFIRM MODAL */}
         <AnimatePresence>
           {showConfirmModal && scannedUser && (
@@ -858,7 +920,7 @@ export default function BuddySystemWidget() {
           {showAcceptModal && selectedPending && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
               <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-                <h3 className="text-lg font-bold text-white text-center mb-2">Aceptar Alianza</h3>
+                <h3 className="text-lg font-bold text-white text-center mb-2">Aceptar Ser Uno</h3>
                 <p className="text-purple-400 text-center mb-6">con {selectedPending.buddy.apodo || selectedPending.buddy.nombre}</p>
                 <div className="flex justify-center mb-6">
                   <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
