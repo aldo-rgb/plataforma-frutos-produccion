@@ -112,14 +112,13 @@ export async function POST(request: Request) {
     });
 
     // Obtener o crear un GCAvailability "de sistema" para llamadas de staff
-    // Este availability es automático y representa el horario fijo 7:00-9:30
+    // Este availability es automático y representa el horario 4am-10pm
     // NO es el mismo que el configurable para Post-Entrenamiento
     let staffAvailability = await prisma.gCAvailability.findFirst({
       where: {
         gameChangerId: gcId,
-        startTime: '07:00',
-        endTime: '09:30',
-        // Podemos identificarlo por el horario exacto del staff
+        startTime: '04:00',
+        endTime: '22:00',
       }
     });
 
@@ -127,12 +126,14 @@ export async function POST(request: Request) {
       // Crear automáticamente el availability de sistema para staff
       staffAvailability = await prisma.gCAvailability.create({
         data: {
+          id: crypto.randomUUID(),
           gameChangerId: gcId,
           dayOfWeek: 0, // Todos los días (no importa para staff)
-          startTime: '07:00',
-          endTime: '09:30',
+          startTime: '04:00',
+          endTime: '22:00',
           slotDuration: 10,
           isActive: true,
+          updatedAt: new Date(),
         }
       });
       logger.debug('📅 GCAvailability de staff creado automáticamente para GC:', gcId);
@@ -188,6 +189,7 @@ export async function POST(request: Request) {
     for (const callDate of callDates) {
       const slot = await prisma.gCCallSlot.create({
         data: {
+          id: crypto.randomUUID(),
           availabilityId: staffAvailability.id,
           participantId: parseInt(participantId),
           squadId: membership.groupId,
