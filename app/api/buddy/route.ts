@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
+import crypto from 'crypto';
 
 /**
  * GET /api/buddy
@@ -246,6 +247,7 @@ export async function POST(request: Request) {
       // Crear el BuddyPair
       const newPair = await prisma.buddyPair.create({
         data: {
+          id: crypto.randomUUID(),
           visionId,
           initiatorId: userId,
           receiverId: targetUserId,
@@ -255,18 +257,20 @@ export async function POST(request: Request) {
           status: 'PENDING'
         },
         include: {
-          receiver: {
+          Usuario_BuddyPair_receiverIdToUsuario: {
             select: { nombre: true, apodo: true }
           }
         }
       });
+
+      const receiver = newPair.Usuario_BuddyPair_receiverIdToUsuario;
 
       // TODO: Enviar notificación push al receiver
 
       return NextResponse.json({
         success: true,
         buddyPairId: newPair.id,
-        message: `Solicitud enviada a ${newPair.receiver.apodo || newPair.receiver.nombre}`
+        message: `Solicitud enviada a ${receiver.apodo || receiver.nombre}`
       });
     }
 
