@@ -513,6 +513,11 @@ export default function BuddySystemWidget() {
     );
   }
 
+  // No mostrar el widget si el usuario no está en ADVANCED o PL
+  if (data?.status === 'NOT_IN_ADVANCED') {
+    return null;
+  }
+
   // RENDER: Estado con buddies matcheados
   if (data?.matchedBuddies && data.matchedBuddies.length > 0) {
     return (
