@@ -73,20 +73,20 @@ export async function GET(request: NextRequest) {
     const checkouts = await prisma.abandonedCheckout.findMany({
       where,
       include: {
-        vision: {
+        Vision: {
           select: {
             id: true,
             nombre: true
           }
         },
-        user: {
+        Usuario: {
           select: {
             id: true,
             nombre: true,
             email: true
           }
         },
-        ticket: {
+        Ticket: {
           select: {
             id: true,
             status: true
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
         lastName: c.lastName,
         fullName: c.firstName && c.lastName ? `${c.firstName} ${c.lastName}` : c.email,
         visionId: c.visionId,
-        visionName: c.vision?.nombre,
+        visionName: c.Vision?.nombre,
         originalPrice: Number(c.originalPrice),
         anticipoAmount: c.anticipoAmount ? Number(c.anticipoAmount) : null,
         status: c.status,
@@ -180,9 +180,9 @@ export async function GET(request: NextRequest) {
         emailSentAt: c.emailSentAt,
         convertedAt: c.convertedAt,
         userId: c.userId,
-        userName: c.user?.nombre,
+        userName: c.Usuario?.nombre,
         ticketId: c.ticketId,
-        ticketStatus: c.ticket?.status
+        ticketStatus: c.Ticket?.status
       })),
       stats: {
         byStatus: stats.reduce((acc, s) => {
