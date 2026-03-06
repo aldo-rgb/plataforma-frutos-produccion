@@ -298,7 +298,7 @@ export async function GET() {
         status: 'SCHEDULED',
       },
       include: {
-        participant: {
+        Usuario_GCCallSlot_participantIdToUsuario: {
           select: { id: true, nombre: true, imagen: true },
         },
       },
