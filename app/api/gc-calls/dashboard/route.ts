@@ -81,11 +81,11 @@ async function getSemaforoView(visionId: number, trainingType: string, level: st
       ...(level && { level: level as any }),
     },
     include: {
-      leader: { select: { id: true, nombre: true, imagen: true } },
-      members: {
+      Usuario: { select: { id: true, nombre: true, imagen: true } },
+      SmallGroupMember: {
         where: { isActive: true },
         include: {
-          user: { select: { id: true, nombre: true } },
+          Usuario_SmallGroupMember_userIdToUsuario: { select: { id: true, nombre: true } },
         },
       },
     },
@@ -93,7 +93,7 @@ async function getSemaforoView(visionId: number, trainingType: string, level: st
 
   // Para cada squad, calcular estadísticas de llamadas
   const squadStats = await Promise.all(squads.map(async (squad) => {
-    const memberIds = squad.members.map(m => m.userId);
+    const memberIds = squad.SmallGroupMember.map(m => m.userId);
 
     // Obtener logs de llamadas de los miembros
     const callLogs = await prisma.gCCallLog.findMany({
@@ -122,9 +122,9 @@ async function getSemaforoView(visionId: number, trainingType: string, level: st
 
     // Determinar color del semáforo
     let status: 'green' | 'yellow' | 'red' = 'green';
-    if (avgRating <= 2 || atRiskCount > squad.members.length / 2) {
+    if (avgRating <= 2 || atRiskCount > squad.SmallGroupMember.length / 2) {
       status = 'red';
-    } else if (avgRating <= 3 || atRiskCount > squad.members.length / 4) {
+    } else if (avgRating <= 3 || atRiskCount > squad.SmallGroupMember.length / 4) {
       status = 'yellow';
     }
 
@@ -132,8 +132,8 @@ async function getSemaforoView(visionId: number, trainingType: string, level: st
       id: squad.id,
       name: squad.name,
       level: squad.level,
-      leader: squad.leader,
-      membersCount: squad.members.length,
+      leader: squad.Usuario,
+      membersCount: squad.SmallGroupMember.length,
       stats: {
         totalCalls,
         answeredCalls,

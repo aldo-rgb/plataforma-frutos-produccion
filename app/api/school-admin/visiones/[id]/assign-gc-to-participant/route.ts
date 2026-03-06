@@ -132,7 +132,7 @@ export async function POST(
         isActive: true
       },
       include: {
-        _count: { select: { members: { where: { isActive: true } } } }
+        _count: { select: { SmallGroupMember: { where: { isActive: true } } } }
       }
     });
 
@@ -140,15 +140,17 @@ export async function POST(
     if (!smallGroup) {
       smallGroup = await prisma.smallGroup.create({
         data: {
+          id: crypto.randomUUID(),
           name: `Átomo ${gcUser.nombre?.split(' ')[0] || 'GC'}`,
           visionId: visionId,
           leaderId: gameChangerId,
           organizationId: vision.organizationId!,
           level: level,
           maxSize: 10,
+          updatedAt: new Date(),
         },
         include: {
-          _count: { select: { members: { where: { isActive: true } } } }
+          _count: { select: { SmallGroupMember: { where: { isActive: true } } } }
         }
       });
 
@@ -156,9 +158,9 @@ export async function POST(
     }
 
     // Verificar que el grupo no esté lleno
-    if (smallGroup._count.members >= smallGroup.maxSize) {
+    if (smallGroup._count.SmallGroupMember >= smallGroup.maxSize) {
       return NextResponse.json(
-        { success: false, error: `El átomo de ${gcUser.nombre} está lleno (${smallGroup._count.members}/${smallGroup.maxSize})` },
+        { success: false, error: `El átomo de ${gcUser.nombre} está lleno (${smallGroup._count.SmallGroupMember}/${smallGroup.maxSize})` },
         { status: 400 }
       );
     }

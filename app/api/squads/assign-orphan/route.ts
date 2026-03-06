@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     const squad = await prisma.smallGroup.findUnique({
       where: { id: squadId },
       include: {
-        _count: { select: { members: { where: { isActive: true } } } },
+        _count: { select: { SmallGroupMember: { where: { isActive: true } } } },
       },
     });
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar que no esté lleno
-    if (squad._count.members >= squad.maxSize) {
+    if (squad._count.SmallGroupMember >= squad.maxSize) {
       return NextResponse.json(
         { success: false, error: 'Grupo lleno' },
         { status: 400 }

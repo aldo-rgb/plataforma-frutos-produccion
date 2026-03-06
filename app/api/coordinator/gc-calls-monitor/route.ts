@@ -164,14 +164,14 @@ export async function GET(request: Request) {
         level: { in: nivelesActivos as any }
       },
       include: {
-        leader: {
+        Usuario: {
           select: {
             id: true,
             nombre: true,
             imagen: true,
           },
         },
-        members: {
+        SmallGroupMember: {
           where: { isActive: true },
           select: { id: true },
         },
@@ -230,8 +230,8 @@ export async function GET(request: Request) {
             id: squad.id,
             name: squad.name,
             level: squad.level,
-            gameChanger: squad.leader,
-            membersCount: squad.members.length,
+            gameChanger: squad.Usuario,
+            membersCount: squad.SmallGroupMember.length,
             attempts: attempts.map((a: any) => ({
               id: a.id,
             participantId: a.participantId,
@@ -256,8 +256,8 @@ export async function GET(request: Request) {
             id: squad.id,
             name: squad.name,
             level: squad.level,
-            gameChanger: squad.leader,
-            membersCount: squad.members.length,
+            gameChanger: squad.Usuario,
+            membersCount: squad.SmallGroupMember.length,
             attempts: [],
             stats: {
               totalCalls: 0,

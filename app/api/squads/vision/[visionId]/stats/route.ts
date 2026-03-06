@@ -118,20 +118,20 @@ export async function GET(
         ...(productId && { productId: parseInt(productId) }),
       },
       include: {
-        leader: {
+        Usuario: {
           select: { id: true, nombre: true, imagen: true, email: true },
         },
-        members: {
+        SmallGroupMember: {
           where: { isActive: true },
           include: {
-            user: {
+            Usuario_SmallGroupMember_userIdToUsuario: {
               select: { id: true, nombre: true, imagen: true, email: true, referralCode: true },
             },
           },
           orderBy: { joinedAt: 'asc' },
         },
         _count: {
-          select: { members: { where: { isActive: true } } },
+          select: { SmallGroupMember: { where: { isActive: true } } },
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -170,12 +170,12 @@ export async function GET(
         id: s.id,
         name: s.name,
         maxSize: s.maxSize,
-        leader: s.leader,
-        membersCount: s._count.members,
-        isFull: s._count.members >= s.maxSize,
-        members: s.members.map((m) => ({
+        leader: s.Usuario,
+        membersCount: s._count.SmallGroupMember,
+        isFull: s._count.SmallGroupMember >= s.maxSize,
+        members: s.SmallGroupMember.map((m) => ({
           id: m.id,
-          user: m.user,
+          user: m.Usuario_SmallGroupMember_userIdToUsuario,
           joinedAt: m.joinedAt,
         })),
       })),

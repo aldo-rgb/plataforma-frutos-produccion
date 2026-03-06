@@ -39,29 +39,29 @@ export async function GET(
     const squad = await prisma.smallGroup.findUnique({
       where: { id: params.id },
       include: {
-        leader: {
+        Usuario: {
           select: { id: true, nombre: true, imagen: true, email: true },
         },
-        vision: {
+        Vision: {
           select: { id: true, nombre: true },
         },
-        product: {
+        SchoolProduct: {
           select: { id: true, name: true },
         },
-        members: {
+        SmallGroupMember: {
           where: { isActive: true },
           include: {
-            user: {
+            Usuario_SmallGroupMember_userIdToUsuario: {
               select: { id: true, nombre: true, imagen: true, email: true, telefono: true },
             },
-            enrollment: {
+            vision_enrollments: {
               select: { id: true, enrollmentStatus: true, attendanceStatus: true },
             },
           },
           orderBy: { joinedAt: 'asc' },
         },
         _count: {
-          select: { members: { where: { isActive: true } } },
+          select: { SmallGroupMember: { where: { isActive: true } } },
         },
       },
     });
@@ -92,15 +92,15 @@ export async function GET(
         level: squad.level,
         maxSize: squad.maxSize,
         isActive: squad.isActive,
-        leader: squad.leader,
-        vision: squad.vision,
-        product: squad.product,
-        membersCount: squad._count.members,
-        isFull: squad._count.members >= squad.maxSize,
-        members: squad.members.map((m) => ({
+        leader: squad.Usuario,
+        vision: squad.Vision,
+        product: squad.SchoolProduct,
+        membersCount: squad._count.SmallGroupMember,
+        isFull: squad._count.SmallGroupMember >= squad.maxSize,
+        members: squad.SmallGroupMember.map((m) => ({
           id: m.id,
-          user: m.user,
-          enrollment: m.enrollment,
+          user: m.Usuario_SmallGroupMember_userIdToUsuario,
+          enrollment: m.vision_enrollments,
           joinedAt: m.joinedAt,
         })),
         createdAt: squad.createdAt,
