@@ -236,6 +236,7 @@ export async function POST(
       // Crear la nueva membresía
       const newMember = await tx.smallGroupMember.create({
         data: {
+          id: crypto.randomUUID(),
           groupId: squadId,
           userId: targetUser!.id,
           enrollmentId: enrollment?.id || null,
