@@ -2,7 +2,7 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 3.2  
+**Versión:** 3.4  
 **Fecha:** 05 Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
@@ -1688,6 +1688,452 @@ Organizaciones: Múltiples
 
 # 21. HISTORIAL DE CAMBIOS
 
+## v3.4 - 05/03/2026 (Sesión de Fixes Masivos de Prisma)
+
+### 🎯 Resumen de Sesión
+
+Esta sesión se enfocó en corregir **múltiples errores de relaciones Prisma** en todo el sistema, especialmente en los módulos de:
+- Biblioteca del Entrenador (TrainerTaskTemplate)
+- Lanzador de Tareas (TrainerMission)
+- Sistema Buddy (BuddyPair)
+- Submissions de Misiones (MissionSubmission)
+
+---
+
+### 🔧 Fix: Biblioteca del Entrenador - Relaciones de Templates
+
+**Archivos modificados:**
+- `app/api/trainer/biblioteca/route.ts`
+- `app/api/trainer/biblioteca/[id]/route.ts`
+- `app/dashboard/trainer/biblioteca/page.tsx`
+
+**Problema 1:** Error "Unknown field `Questions`" al crear/obtener plantillas
+
+**Causa:** Los nombres de relaciones en el schema son:
+- `Questions` → `TrainerTaskQuestion`
+- `Missions` → `TrainerMission`
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+include: {
+  Questions: { orderBy: { orderIndex: 'asc' } },
+  _count: { select: { Missions: true } }
+}
+
+// DESPUÉS (correcto)
+include: {
+  TrainerTaskQuestion: { orderBy: { orderIndex: 'asc' } },
+  _count: { select: { TrainerMission: true } }
+}
+
+// Mapear para compatibilidad con frontend:
+return {
+  ...template,
+  Questions: template.TrainerTaskQuestion,
+  usageCount: template._count.TrainerMission
+};
+```
+
+**Problema 2:** Error "Argument `updatedAt` is missing" en TrainerTaskTemplate y TrainerTaskQuestion
+
+**Solución:**
+```typescript
+// En trainerTaskTemplate.create()
+await prisma.trainerTaskTemplate.create({
+  data: {
+    // ...otros campos
+    updatedAt: new Date(), // ← REQUERIDO
+    TrainerTaskQuestion: questions?.length > 0 ? {
+      create: questions.map(q => ({
+        // ...campos de pregunta
+        updatedAt: new Date() // ← TAMBIÉN REQUERIDO EN ANIDADOS
+      }))
+    } : undefined
+  }
+});
+
+// En trainerTaskQuestion.createMany()
+await prisma.trainerTaskQuestion.createMany({
+  data: questions.map(q => ({
+    // ...campos
+    updatedAt: new Date() // ← REQUERIDO
+  }))
+});
+```
+
+**Problema 3:** Error `uploadingPdf is not defined` en página de biblioteca
+
+**Causa:** Se eliminó la funcionalidad de subir PDF pero quedó la referencia en el botón.
+
+**Solución:**
+```typescript
+// ANTES
+disabled={saving || uploadingPdf || uploadingImage}
+
+// DESPUÉS
+disabled={saving || uploadingImage}
+```
+
+---
+
+### 🔧 Fix: Lanzador de Tareas - Relaciones TrainerMission
+
+**Archivo modificado:** `app/api/trainer/lanzador/route.ts`
+
+**Problema:** Error "Unknown field `Template`" al obtener/crear misiones
+
+**Relaciones correctas del modelo TrainerMission:**
+```prisma
+model TrainerMission {
+  TrainerTaskTemplate TrainerTaskTemplate @relation(fields: [templateId])
+  SchoolProduct       SchoolProduct?      @relation(fields: [productId])
+  Vision              Vision?             @relation(fields: [visionId])
+  MissionSubmission   MissionSubmission[]
+}
+```
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+include: {
+  Template: { select: { title: true, type: true } },
+  Product: { select: { name: true } },
+  _count: { select: { Submissions: true } }
+}
+
+// DESPUÉS (correcto)
+include: {
+  TrainerTaskTemplate: { select: { title: true, type: true } },
+  SchoolProduct: { select: { name: true } },
+  _count: { select: { MissionSubmission: true } }
+}
+
+// Mapear:
+return {
+  title: mission.TrainerTaskTemplate?.title,
+  product: mission.SchoolProduct?.name,
+  submissionCount: mission._count.MissionSubmission
+};
+```
+
+**También agregado:** `updatedAt: new Date()` en `trainerMission.create()`
+
+---
+
+### 🔧 Fix: Sistema Buddy - Relaciones BuddyPair
+
+**Archivo modificado:** `app/api/buddy/route.ts`
+
+**Problema:** Error "Unknown field `initiator`" al buscar buddy pairs
+
+**Relaciones correctas del modelo BuddyPair:**
+```prisma
+model BuddyPair {
+  Usuario_BuddyPair_initiatorIdToUsuario Usuario @relation("BuddyPair_initiatorIdToUsuario")
+  Usuario_BuddyPair_receiverIdToUsuario  Usuario @relation("BuddyPair_receiverIdToUsuario")
+  Usuario_BuddyPair_brokenByToUsuario    Usuario? @relation("BuddyPair_brokenByToUsuario")
+  Vision                                 Vision   @relation(fields: [visionId])
+}
+```
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+include: {
+  initiator: { select: { id: true, nombre: true, apodo: true } },
+  receiver: { select: { id: true, nombre: true, apodo: true } }
+}
+
+// DESPUÉS (correcto)
+include: {
+  Usuario_BuddyPair_initiatorIdToUsuario: {
+    select: { id: true, nombre: true, apodo: true, profileImage: true, telefono: true }
+  },
+  Usuario_BuddyPair_receiverIdToUsuario: {
+    select: { id: true, nombre: true, apodo: true, profileImage: true, telefono: true }
+  }
+}
+
+// Mapear para compatibilidad:
+const mappedPairs = buddyPairs.map(p => ({
+  ...p,
+  initiator: p.Usuario_BuddyPair_initiatorIdToUsuario,
+  receiver: p.Usuario_BuddyPair_receiverIdToUsuario
+}));
+```
+
+---
+
+### 🔧 Fix: Submissions de Misiones - Relaciones MissionSubmission
+
+**Archivo modificado:** `app/api/trainer/lanzador/[missionId]/submissions/route.ts`
+
+**Problema:** Error 500 al ver respuestas de participantes
+
+**Relaciones correctas del modelo MissionSubmission:**
+```prisma
+model MissionSubmission {
+  Usuario_MissionSubmission_userIdToUsuario     Usuario  @relation("MissionSubmission_userIdToUsuario")
+  Usuario_MissionSubmission_reviewedByToUsuario Usuario? @relation("MissionSubmission_reviewedByToUsuario")
+  MissionQuestionAnswer                         MissionQuestionAnswer[]
+  TrainerMission                                TrainerMission @relation(fields: [missionId])
+}
+
+model MissionQuestionAnswer {
+  TrainerTaskQuestion TrainerTaskQuestion @relation(fields: [questionId])
+  MissionSubmission   MissionSubmission   @relation(fields: [submissionId])
+}
+```
+
+**Solución:**
+```typescript
+// ANTES (incorrecto)
+include: {
+  Template: { include: { Questions: true } }
+}
+// Y en submissions:
+include: {
+  User: { select: { id: true, nombre: true } },
+  QuestionAnswers: {
+    include: { Question: { select: { questionText: true } } }
+  }
+}
+
+// DESPUÉS (correcto)
+include: {
+  TrainerTaskTemplate: { include: { TrainerTaskQuestion: true } }
+}
+// Y en submissions:
+include: {
+  Usuario_MissionSubmission_userIdToUsuario: {
+    select: { id: true, nombre: true, email: true, imagen: true }
+  },
+  MissionQuestionAnswer: {
+    include: {
+      TrainerTaskQuestion: {
+        select: { id: true, questionText: true, questionType: true, options: true }
+      }
+    }
+  }
+}
+
+// Mapear:
+const formattedSubmissions = submissions.map(sub => {
+  const user = sub.Usuario_MissionSubmission_userIdToUsuario;
+  return {
+    user: { id: user.id, nombre: user.nombre },
+    answers: sub.MissionQuestionAnswer.map(ans => ({
+      questionText: ans.TrainerTaskQuestion.questionText,
+      textAnswer: ans.textAnswer
+    }))
+  };
+});
+```
+
+---
+
+### 🔧 Fix: Badges PDF - Relaciones SchoolProduct
+
+**Archivo modificado:** `app/api/school-admin/visiones/[id]/badges-pdf/route.ts`
+
+**Problema:** Error al generar badges - relaciones de Trainer y Coordinator incorrectas
+
+**Solución:**
+```typescript
+// ANTES
+include: { Trainer: true, Coordinator: true }
+
+// DESPUÉS
+include: {
+  Usuario_SchoolProduct_trainerIdToUsuario: true,
+  Usuario_SchoolProduct_coordinatorIdToUsuario: true
+}
+```
+
+---
+
+### 🔧 Fix: Check-In Complete - Campo updatedAt en ProductAttendance
+
+**Archivo modificado:** `app/api/staff/check-in/complete/route.ts`
+
+**Solución:**
+```typescript
+await prisma.productAttendance.create({
+  data: {
+    // ...campos
+    updatedAt: new Date() // ← AÑADIDO
+  }
+});
+```
+
+---
+
+### 🔧 Fix: Bitácoras Trainer - Relación BusinessCategory
+
+**Archivo modificado:** `app/api/trainer/bitacoras/[id]/route.ts`
+
+**Problema:** Error "Unknown field `category`"
+
+**Solución:**
+```typescript
+// ANTES
+include: { BusinessProfile: { include: { category: true } } }
+
+// DESPUÉS
+include: { BusinessProfile: { include: { BusinessCategory: true } } }
+```
+
+---
+
+### 📋 Tabla Resumen de Relaciones Corregidas - Sesión 05/03/2026
+
+| Modelo | Relación Incorrecta | Relación Correcta |
+|--------|--------------------|--------------------|
+| `TrainerTaskTemplate` | `Questions` | `TrainerTaskQuestion` |
+| `TrainerTaskTemplate` | `Missions` | `TrainerMission` |
+| `TrainerMission` | `Template` | `TrainerTaskTemplate` |
+| `TrainerMission` | `Product` | `SchoolProduct` |
+| `TrainerMission` | `Submissions` | `MissionSubmission` |
+| `MissionSubmission` | `User` | `Usuario_MissionSubmission_userIdToUsuario` |
+| `MissionSubmission` | `QuestionAnswers` | `MissionQuestionAnswer` |
+| `MissionQuestionAnswer` | `Question` | `TrainerTaskQuestion` |
+| `BuddyPair` | `initiator` | `Usuario_BuddyPair_initiatorIdToUsuario` |
+| `BuddyPair` | `receiver` | `Usuario_BuddyPair_receiverIdToUsuario` |
+| `SchoolProduct` | `Trainer` | `Usuario_SchoolProduct_trainerIdToUsuario` |
+| `SchoolProduct` | `Coordinator` | `Usuario_SchoolProduct_coordinatorIdToUsuario` |
+| `BusinessProfile` | `category` | `BusinessCategory` |
+| `SmallGroup` | `leader` | `Usuario` |
+| `SmallGroupMember` | `group` | `SmallGroup` |
+
+---
+
+### 📋 Modelos que Requieren updatedAt Manual
+
+Estos modelos tienen `updatedAt DateTime` **SIN** `@default()` ni `@updatedAt`:
+
+| Modelo | Operaciones Afectadas |
+|--------|----------------------|
+| `TrainerTaskTemplate` | create, update |
+| `TrainerTaskQuestion` | create, createMany |
+| `TrainerMission` | create, update |
+| `MissionSubmission` | create, createMany, update |
+| `AdvancedQuestionnaire` | create, update, upsert |
+| `ProductAttendance` | create, update |
+| `Ticket` | create |
+| `ExpoReview` | create |
+
+**Siempre agregar:** `updatedAt: new Date()`
+
+---
+
+### 🛠️ Utilidades de Datos Ejecutadas
+
+**Copiar plantillas de Mika a otras entrenadoras:**
+```javascript
+// Plantillas copiadas de Mika (trainerId: 158) a:
+// - Ivonne Flores (id: 46) - 7 plantillas
+// - Samantha Olivares (id: 56) - 7 plantillas
+
+const mikaTemplates = await prisma.trainerTaskTemplate.findMany({
+  where: { trainerId: 158 },
+  include: { TrainerTaskQuestion: true }
+});
+
+for (const template of mikaTemplates) {
+  const newTemplate = await prisma.trainerTaskTemplate.create({
+    data: {
+      trainerId: targetTrainerId,
+      title: template.title,
+      // ...copiar todos los campos
+      updatedAt: new Date()
+    }
+  });
+  
+  if (template.TrainerTaskQuestion.length > 0) {
+    await prisma.trainerTaskQuestion.createMany({
+      data: template.TrainerTaskQuestion.map(q => ({
+        templateId: newTemplate.id,
+        questionText: q.questionText,
+        // ...copiar campos
+        updatedAt: new Date()
+      }))
+    });
+  }
+}
+```
+
+**Crear submissions faltantes para misión:**
+```javascript
+// Misión 11 tenía solo 3 submissions pero 12 usuarios con ATTENDED
+const enrollments = await prisma.vision_enrollments.findMany({
+  where: { visionId, level: trainerLevel, attendanceStatus: 'ATTENDED' }
+});
+
+const existingSubmissions = await prisma.missionSubmission.findMany({
+  where: { missionId }
+});
+
+const missingUserIds = enrollments
+  .map(e => e.userId)
+  .filter(id => !existingSubmissions.some(s => s.userId === id));
+
+await prisma.missionSubmission.createMany({
+  data: missingUserIds.map(userId => ({
+    missionId,
+    userId,
+    status: 'PENDING',
+    updatedAt: new Date()
+  }))
+});
+```
+
+---
+
+### 🔍 Referencia Rápida: Modelos del Trainer System
+
+```prisma
+model TrainerTaskTemplate {
+  id                  Int                   @id @default(autoincrement())
+  trainerId           Int
+  title               String
+  type                TrainerTaskType
+  // Relaciones
+  TrainerMission      TrainerMission[]
+  TrainerTaskQuestion TrainerTaskQuestion[]
+  Usuario             Usuario               @relation(fields: [trainerId])
+}
+
+model TrainerMission {
+  id                  Int                 @id @default(autoincrement())
+  templateId          Int
+  trainerId           Int
+  visionId            Int?
+  productId           Int?
+  status              MissionStatus       @default(SCHEDULED)
+  // Relaciones
+  MissionSubmission   MissionSubmission[]
+  SchoolProduct       SchoolProduct?      @relation(fields: [productId])
+  TrainerTaskTemplate TrainerTaskTemplate @relation(fields: [templateId])
+  Usuario             Usuario             @relation(fields: [trainerId])
+  Vision              Vision?             @relation(fields: [visionId])
+}
+
+model MissionSubmission {
+  id                                            Int        @id @default(autoincrement())
+  missionId                                     Int
+  userId                                        Int
+  status                                        SubmissionStatus @default(PENDING)
+  updatedAt                                     DateTime   // ← SIN DEFAULT
+  // Relaciones
+  MissionQuestionAnswer                         MissionQuestionAnswer[]
+  TrainerMission                                TrainerMission @relation(fields: [missionId])
+  Usuario_MissionSubmission_userIdToUsuario     Usuario    @relation("MissionSubmission_userIdToUsuario")
+}
+```
+
+---
+
 ## v3.3 - 05/03/2026 (Sesión Actual)
 
 ### 🔧 Fixes de Relaciones Prisma y Campos Requeridos
@@ -2979,6 +3425,6 @@ grep -A 20 "^model NombreDelModelo" prisma/schema.prisma
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 3.2 - Marzo 2026*  
+*Versión 3.4 - Marzo 2026*  
 *Última actualización: 05/03/2026*
 
