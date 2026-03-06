@@ -68,17 +68,17 @@ export async function GET(request: Request) {
     }
 
     // Obtener todos los horarios ya ocupados por participantes de este GC
-    // Buscar a través del squad (ya que llamadas de staff no usan GCAvailability)
+    // Buscar a través del SmallGroup donde el GC es líder
     const occupiedSlots = await prisma.gCCallSlot.findMany({
       where: {
-        squad: {
+        SmallGroup: {
           leaderId: gcId,
         },
       },
       select: {
         scheduledTime: true,
         participantId: true,
-        participant: {
+        Usuario_GCCallSlot_participantIdToUsuario: {
           select: { nombre: true },
         },
       },
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
     occupiedSlots.forEach(s => {
       occupiedMap.set(s.scheduledTime, {
         participantId: s.participantId,
-        name: s.participant.nombre,
+        name: s.Usuario_GCCallSlot_participantIdToUsuario.nombre,
       });
     });
 
