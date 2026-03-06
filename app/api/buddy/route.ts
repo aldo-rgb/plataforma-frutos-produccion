@@ -210,10 +210,43 @@ export async function POST(request: Request) {
         }, { status: 400 });
       }
 
-      // Verificar que no tenga ya una conexión con este mismo usuario
+      // Obtener TODAS las visiones ADVANCED/PL del usuario actual
+      const myEnrollments = await prisma.vision_enrollments.findMany({
+        where: {
+          userId,
+          level: { in: ['ADVANCED', 'PL'] },
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+        },
+        select: { visionId: true, level: true }
+      });
+      const myVisionIds = myEnrollments.map(e => e.visionId);
+
+      // Buscar una visión común con el target en ADVANCED/PL
+      const targetEnrollment = await prisma.vision_enrollments.findFirst({
+        where: {
+          userId: targetUserId,
+          visionId: { in: myVisionIds },
+          level: { in: ['ADVANCED', 'PL'] },
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+        },
+        select: { visionId: true, level: true },
+        orderBy: { level: 'desc' } // Priorizar PL
+      });
+
+      if (!targetEnrollment) {
+        return NextResponse.json({ 
+          error: 'Esta persona no está en tu mismo entrenamiento AVANZADO o PL',
+          code: 'DIFFERENT_VISION'
+        }, { status: 400 });
+      }
+
+      // Usar la visión común encontrada
+      const commonVisionId = targetEnrollment.visionId;
+
+      // Verificar que no tenga ya una conexión con este mismo usuario en esta visión
       const existingPairWithTarget = await prisma.buddyPair.findFirst({
         where: {
-          visionId,
+          visionId: commonVisionId,
           OR: [
             { initiatorId: userId, receiverId: targetUserId },
             { initiatorId: targetUserId, receiverId: userId }
@@ -228,27 +261,11 @@ export async function POST(request: Request) {
         }, { status: 400 });
       }
 
-      // Verificar que el target esté en la misma visión y nivel ADVANCED o PL
-      const targetEnrollment = await prisma.vision_enrollments.findFirst({
-        where: {
-          userId: targetUserId,
-          visionId,
-          level: { in: ['ADVANCED', 'PL'] },
-          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
-        }
-      });
-
-      if (!targetEnrollment) {
-        return NextResponse.json({ 
-          error: 'Esta persona no está en tu mismo entrenamiento' 
-        }, { status: 400 });
-      }
-
-      // Crear el BuddyPair
+      // Crear el BuddyPair con la visión común
       const newPair = await prisma.buddyPair.create({
         data: {
           id: crypto.randomUUID(),
-          visionId,
+          visionId: commonVisionId,
           initiatorId: userId,
           receiverId: targetUserId,
           initiatorAccepted: true,
