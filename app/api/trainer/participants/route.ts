@@ -71,7 +71,7 @@ export async function GET(request: Request) {
       logger.debug('🎯 VisionIds from products:', visionIds);
 
       if (productIds.length > 0 || visionIds.length > 0) {
-        // Obtener enrollments de esos productos/visiones
+        // Obtener enrollments de esos productos/visiones - SOLO nivel ADVANCED con asistencia
         const enrollments = await prisma.vision_enrollments.findMany({
           where: {
             OR: [
@@ -80,7 +80,9 @@ export async function GET(request: Request) {
                 Vision: { SchoolProduct: { some: { id: parseInt(productId) } } } 
               }] : [])
             ],
-            enrollmentStatus: { in: ['ENROLLED', 'CONFIRMED', 'ACTIVE'] }
+            enrollmentStatus: { in: ['ENROLLED', 'CONFIRMED', 'ACTIVE'] },
+            level: 'ADVANCED', // Solo participantes de nivel ADVANCED
+            attendanceStatus: 'ATTENDED' // Solo los que tienen asistencia confirmada
           },
           select: {
             userId: true
@@ -88,7 +90,7 @@ export async function GET(request: Request) {
           distinct: ['userId']
         });
 
-        logger.debug('🎯 Enrollments found:', enrollments.length);
+        logger.debug('🎯 Enrollments found (ADVANCED with attendance):', enrollments.length);
 
         const userIds = enrollments.map(e => e.userId);
 
@@ -117,33 +119,45 @@ export async function GET(request: Request) {
         }
       }
     } else if (['DIRECTOR', 'SCHOOL_ADMIN', 'ADMINISTRADOR'].includes(trainer.rol)) {
-      // Para directores/admins, obtener todos los participantes
-      participants = await prisma.usuario.findMany({
+      // Para directores/admins, obtener participantes con asistencia en ADVANCED
+      // Primero obtener los userIds que cumplen con los criterios de enrollment
+      const advancedEnrollments = await prisma.vision_enrollments.findMany({
         where: {
-          rol: 'PARTICIPANTE',
-          isActive: true,
-          ...(excludeWithMetamorfosis && participantsWithActiveMetamorfosis.length > 0 && {
-            id: { notIn: participantsWithActiveMetamorfosis }
-          }),
-          ...(trainer.rol !== 'ADMINISTRADOR' && trainer.organizationId && {
-            organizationId: trainer.organizationId
-          }),
-          ...(visionId && {
-            vision_enrollments_vision_enrollments_userIdToUsuario: {
-              some: { visionId: parseInt(visionId) }
-            }
-          })
+          level: 'ADVANCED',
+          attendanceStatus: 'ATTENDED',
+          enrollmentStatus: { in: ['ENROLLED', 'CONFIRMED', 'ACTIVE'] },
+          ...(visionId && { visionId: parseInt(visionId) })
         },
-        select: {
-          id: true,
-          nombre: true,
-          email: true,
-          profileImage: true,
-          currentVisionLevel: true
-        },
-        orderBy: { nombre: 'asc' },
-        take: 200 // Limitar resultados
+        select: { userId: true },
+        distinct: ['userId']
       });
+      
+      const advancedUserIds = advancedEnrollments.map(e => e.userId);
+      
+      if (advancedUserIds.length > 0) {
+        participants = await prisma.usuario.findMany({
+          where: {
+            id: { in: advancedUserIds },
+            rol: 'PARTICIPANTE',
+            isActive: true,
+            ...(excludeWithMetamorfosis && participantsWithActiveMetamorfosis.length > 0 && {
+              id: { notIn: participantsWithActiveMetamorfosis }
+            }),
+            ...(trainer.rol !== 'ADMINISTRADOR' && trainer.organizationId && {
+              organizationId: trainer.organizationId
+            })
+          },
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            profileImage: true,
+            currentVisionLevel: true
+          },
+          orderBy: { nombre: 'asc' },
+          take: 200 // Limitar resultados
+        });
+      }
     }
 
     return NextResponse.json({ 
