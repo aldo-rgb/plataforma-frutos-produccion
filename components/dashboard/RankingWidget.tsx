@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Trophy, Shield } from 'lucide-react';
+import { Trophy, Shield, Zap, Star } from 'lucide-react';
 import Link from 'next/link';
 
 // Función para generar un color aleatorio basado en el ID del usuario
@@ -74,13 +74,81 @@ export default function RankingWidget() {
           <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tu Posición</span>
         </div>
         <div className="text-3xl font-bold text-slate-100">
-          -- <span className="text-lg text-slate-500 font-normal">Global</span>
+          -- <span className="text-lg text-slate-500 font-normal">Cargando...</span>
         </div>
       </div>
     );
   }
 
-  // Vista para cuando no hay ranking pero sí hay capitanías
+  // Vista compacta con Posición, Puntos, XP y Capitanías
+  // Se muestra cuando el usuario tiene datos pero no está en un ranking de visión
+  if ((!rankingData.userRank || rankingData.topUsers.length === 0) && !rankingData.isLoboSolitario && rankingData.userData) {
+    const userData = rankingData.userData;
+    return (
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-900/20 to-slate-900 border border-indigo-500/30 rounded-2xl overflow-hidden shadow-xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-600/20 to-purple-600/20 px-4 py-3 border-b border-indigo-500/30">
+          <div className="flex items-center justify-between">
+            <h3 className="text-slate-200 font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-indigo-400" />
+              Tu Progreso
+            </h3>
+            <Link 
+              href="/dashboard/ranking"
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium"
+            >
+              Ver Ranking →
+            </Link>
+          </div>
+        </div>
+
+        {/* Estadísticas principales */}
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-slate-800/50 border border-yellow-500/20 rounded-xl p-3 text-center">
+              <Zap className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
+              <p className="text-2xl font-black text-yellow-400">{userData.puntos.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Puntos Cuánticos</p>
+            </div>
+            <div className="bg-slate-800/50 border border-blue-500/20 rounded-xl p-3 text-center">
+              <Star className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+              <p className="text-2xl font-black text-blue-400">{userData.xp.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Experiencia XP</p>
+            </div>
+          </div>
+
+          {/* Capitanías */}
+          {rankingData.captaincies && rankingData.captaincies.length > 0 ? (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="w-4 h-4 text-amber-400" />
+                <p className="text-xs text-amber-400 font-semibold uppercase tracking-wider">
+                  {rankingData.captaincies.length === 1 ? 'Tu Capitanía' : 'Tus Capitanías'}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {rankingData.captaincies.map((cap, idx) => (
+                  <span 
+                    key={idx}
+                    className="px-2 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full text-xs font-medium text-amber-300"
+                  >
+                    {cap.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-3 text-center">
+              <Shield className="w-5 h-5 text-slate-600 mx-auto mb-1" />
+              <p className="text-xs text-slate-500">Sin capitanías asignadas</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Vista para cuando no hay ranking ni datos de usuario
   if ((!rankingData.userRank || rankingData.topUsers.length === 0) && !rankingData.isLoboSolitario) {
     return (
       <div className="bg-gradient-to-br from-slate-900 via-amber-900/10 to-slate-900 border border-amber-500/30 rounded-2xl overflow-hidden shadow-xl">

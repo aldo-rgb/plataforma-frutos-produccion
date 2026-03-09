@@ -20,7 +20,12 @@ export async function GET() {
     // Obtener el usuario actual con su visión activa y paquetes
     const currentUser = await prisma.usuario.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        id: true,
+        nombre: true,
+        puntosCuanticos: true,
+        experienciaXP: true,
+        profileImage: true,
         VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           where: {
             Vision: {
@@ -47,6 +52,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
+    // Datos básicos del usuario (siempre disponibles)
+    const userData = {
+      nombre: currentUser.nombre,
+      puntos: currentUser.puntosCuanticos || 0,
+      xp: currentUser.experienciaXP || 0,
+      avatar: currentUser.profileImage
+    };
+
     // Verificar si es Lobo Solitario (sin visión pero con paquete completado)
     const activeVision = currentUser.VisionParticipante_VisionParticipante_participanteIdToUsuario[0]?.Vision;
     const hasLoboPackage = currentUser.MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario.some(
@@ -56,69 +69,72 @@ export async function GET() {
     if (!activeVision) {
       // Si no tiene visión activa, verificar si es Lobo Solitario
       if (hasLoboPackage) {
-        // Lobo Solitario: mostrar mensaje personalizado
         return NextResponse.json({
           topUsers: [],
           userRank: null,
           currentUserId: userId,
           isLoboSolitario: true,
-          userData: {
-            nombre: currentUser.nombre,
-            puntos: currentUser.puntosCuanticos || 0,
-            xp: currentUser.experienciaXP || 0,
-            avatar: currentUser.profileImage
-          }
+          userData,
+          captaincies: []
         });
       }
       
-      // Usuario sin visión y sin paquete: devolver datos vacíos
+      // Usuario sin visión y sin paquete: devolver datos básicos
       return NextResponse.json({
         topUsers: [],
         userRank: null,
         currentUserId: userId,
-        isLoboSolitario: false
+        isLoboSolitario: false,
+        userData,
+        captaincies: []
       });
     }
 
     // Obtener capitanías asignadas del usuario
-    const captainAssignments = await prisma.tribeCaptainAssignment.findMany({
-      where: {
-        userId: userId,
-        status: 'ACCEPTED',
-        TribeCaptaincy: {
-          visionId: activeVision.id,
-          isActive: true
-        }
-      },
-      include: {
-        TribeCaptaincy: {
-          select: {
-            roleType: true
+    let userCaptaincies: Array<{ role: string; name: string }> = [];
+    try {
+      const captainAssignments = await prisma.tribeCaptainAssignment.findMany({
+        where: {
+          userId: userId,
+          status: 'ACCEPTED',
+          TribeCaptaincy: {
+            visionId: activeVision.id,
+            isActive: true
+          }
+        },
+        include: {
+          TribeCaptaincy: {
+            select: {
+              roleType: true
+            }
           }
         }
-      }
-    });
+      });
 
-    // Mapear nombres de capitanías
-    const captaincyNames: Record<string, string> = {
-      TRIBE_CAPTAIN: 'Capitán de Tribu',
-      TRIBE_CO_CAPTAIN: 'Co-Capitán de Tribu',
-      TREASURER: 'Tesorero',
-      SHIRTS_LOGO: 'Playeras y Logo',
-      CONTRIBUTION_BASIC: 'Contribución Básicos',
-      CONTRIBUTION_ADVANCED: 'Contribución Avanzados',
-      COMMUNITY_SERVICE: 'Comunitaria Grupal',
-      BOOKS_MOVIES: 'Libros y Películas',
-      FOOD: 'Comidas',
-      CLEANLINESS: 'Vestimenta y Limpieza',
-      CONTEXT_GUARDIAN: 'Guardián del Contexto',
-      GRADUATION_CAPTAIN: 'Capitán de Graduación'
-    };
+      // Mapear nombres de capitanías
+      const captaincyNames: Record<string, string> = {
+        TRIBE_CAPTAIN: 'Capitán de Tribu',
+        TRIBE_CO_CAPTAIN: 'Co-Capitán',
+        TREASURER: 'Tesorero',
+        SHIRTS_LOGO: 'Playeras y Logo',
+        CONTRIBUTION_BASIC: 'Contribución Básicos',
+        CONTRIBUTION_ADVANCED: 'Contribución Avanzados',
+        COMMUNITY_SERVICE: 'Comunitaria Grupal',
+        BOOKS_MOVIES: 'Libros y Películas',
+        FOOD: 'Comidas',
+        CLEANLINESS: 'Vestimenta y Limpieza',
+        CONTEXT_GUARDIAN: 'Guardián del Contexto',
+        GRADUATION_CAPTAIN: 'Capitán de Graduación'
+      };
 
-    const userCaptaincies = captainAssignments.map(a => ({
-      role: a.TribeCaptaincy.roleType,
-      name: captaincyNames[a.TribeCaptaincy.roleType] || a.TribeCaptaincy.roleType
-    }));
+      userCaptaincies = captainAssignments.map(a => ({
+        role: a.TribeCaptaincy.roleType,
+        name: captaincyNames[a.TribeCaptaincy.roleType] || a.TribeCaptaincy.roleType
+      }));
+    } catch (captainError) {
+      logger.warn('⚠️ Error obteniendo capitanías:', captainError);
+      // Continuar sin capitanías
+    }
 
     // Obtener todos los usuarios de la misma visión, ordenados por puntos
     const usersInVision = await prisma.usuario.findMany({
@@ -165,13 +181,14 @@ export async function GET() {
         total: totalUsers
       } : null,
       currentUserId: userId,
+      userData,
       captaincies: userCaptaincies
     });
 
   } catch (error) {
     logger.error('❌ Error obteniendo datos de ranking:', error);
     return NextResponse.json(
-      { error: 'Error obteniendo datos de ranking' },
+      { error: 'Error obteniendo datos de ranking', details: error instanceof Error ? error.message : 'Unknown' },
       { status: 500 }
     );
   }
