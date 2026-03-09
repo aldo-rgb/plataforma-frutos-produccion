@@ -79,12 +79,20 @@ export async function GET() {
     const participantesConMetricas = participantes.map(p => {
       const carta = p.CartaFrutos[0];
       const metas = carta?.Meta || [];
-      const totalMetas = metas.length;
-      const metasCompletadas = metas.filter(m => m.avance >= 100).length;
       
-      // Calcular progreso general (promedio de todas las metas)
-      const progresoGeneral = totalMetas > 0 
-        ? Math.round(metas.reduce((acc, m) => acc + m.avance, 0) / totalMetas)
+      // Contar acciones totales y completadas
+      let totalAcciones = 0;
+      let accionesCompletadas = 0;
+      
+      metas.forEach(m => {
+        const acciones = m.Accion || [];
+        totalAcciones += acciones.length;
+        accionesCompletadas += acciones.filter(a => a.completada).length;
+      });
+      
+      // Calcular progreso general basado en acciones completadas
+      const progresoGeneral = totalAcciones > 0 
+        ? Math.round((accionesCompletadas / totalAcciones) * 100)
         : 0;
 
       // Determinar estado basado en progreso y actividad
@@ -116,14 +124,14 @@ export async function GET() {
         id: p.id,
         nombre: p.nombre,
         email: p.email,
-        imagen: p.imagen,
+        imagen: p.profileImage || p.imagen,
         progreso: progresoGeneral,
         estado,
-        plan: p.planActual || 'Sin plan',
+        plan: p.planActual || 'General',
         ultimaSesion: ultimaSesionFecha,
-        puntosGamificacion: p.puntosGamificacion || 0,
-        metasCompletadas,
-        totalMetas
+        puntosGamificacion: p.puntosCuanticos || 0,
+        metasCompletadas: accionesCompletadas,
+        totalMetas: totalAcciones
       };
     });
 

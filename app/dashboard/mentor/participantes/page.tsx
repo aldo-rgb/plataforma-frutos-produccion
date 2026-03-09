@@ -283,8 +283,8 @@ export default function MisParticipantes() {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-1">
-                      <span className="text-yellow-400 font-bold">{p.puntosGamificacion}</span>
-                      <span className="text-xs text-gray-500">pts</span>
+                      <span className="text-yellow-400 font-bold">{p.puntosGamificacion.toLocaleString()}</span>
+                      <span className="text-xs text-gray-500">PC</span>
                     </div>
                   </td>
                   <td className="p-4 text-right">
