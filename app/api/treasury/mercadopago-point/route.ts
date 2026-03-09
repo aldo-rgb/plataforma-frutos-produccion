@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     // Obtener credenciales de Mercado Pago de la organización
     const usuario = await prisma.usuario.findUnique({
-      where: { id: session.user.id },
+      where: { id: parseInt(session.user.id) },
       select: { organizationId: true, nombre: true },
     });
 
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     // Obtener credenciales de Mercado Pago
     const usuario = await prisma.usuario.findUnique({
-      where: { id: session.user.id },
+      where: { id: parseInt(session.user.id) },
       select: { organizationId: true },
     });
 
@@ -294,7 +294,7 @@ export async function DELETE(request: NextRequest) {
 
     // Obtener credenciales
     const usuario = await prisma.usuario.findUnique({
-      where: { id: session.user.id },
+      where: { id: parseInt(session.user.id) },
       select: { organizationId: true },
     });
 
