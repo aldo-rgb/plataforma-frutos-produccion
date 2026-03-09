@@ -1617,7 +1617,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
             
             {/* PASO 1: Selector de Visión */}
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">1️⃣ Visión *</label>
+              <label className="text-xs text-slate-400 mb-1 block">1️⃣ Registrar a Visión *</label>
               <select
                 value={cobroForm.visionId}
                 onChange={(e) => {
@@ -1641,7 +1641,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
             {/* PASO 2: Selector de Participante - Solo cuando hay visión seleccionada */}
             {cobroForm.visionId && (
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">2️⃣ Quien Invita/Padrino (busca en toda la organización)</label>
+                <label className="text-xs text-slate-400 mb-1 block">2️⃣ Nombre / Referencia (busca en toda la organización)</label>
                 {selectedParticipante ? (
                   <div className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                     <div className="flex items-center gap-3">
