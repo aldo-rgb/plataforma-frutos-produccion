@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
-import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import TrainingStatsWidgets from '@/components/dashboard/TrainingStatsWidgets';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
@@ -433,11 +432,6 @@ export default function CoordinadorAvanzadoDashboard() {
         {/* Quantum Wallet - Comisiones del Coordinador */}
         <div className="mt-8">
           <QuantumWalletWidget />
-        </div>
-
-        {/* Widget Monitor de Llamadas */}
-        <div className="mt-8">
-          <GCCallsMonitorWidget />
         </div>
 
         {/* Widget de Tesorería Express */}

@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
-import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
 import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
@@ -448,10 +447,6 @@ export default function CoordinadorBasicoDashboard() {
           <MedicalAlertsWidget />
         </div>
 
-        {/* Widget Monitor de Llamadas */}
-        <div className="mt-8">
-          <GCCallsMonitorWidget />
-        </div>
         {/* Widget de Tesorería Express */}
         <div className="mt-8">
           <TreasuryQuickWidget />
