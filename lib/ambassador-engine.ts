@@ -148,6 +148,25 @@ export async function processAmbassadorCommission(params: {
   const { referralCode, referredUserId, ticketId, productType, saleAmount, organizationId, visionId } = params;
 
   try {
+    // 0. Verificar si las comisiones están habilitadas para esta organización
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        referralCommissionsEnabled: true,
+        referralCommissionBasicPercent: true,
+        referralCommissionAdvancedPercent: true,
+        referralCommissionPLPercent: true,
+        referralCommissionComboPercent: true,
+      }
+    });
+
+    if (!organization?.referralCommissionsEnabled) {
+      return {
+        success: false,
+        message: 'Comisiones por referido deshabilitadas para esta organización'
+      };
+    }
+
     // 1. Verificar elegibilidad del embajador
     const eligibility = await findEligibleAmbassador(referralCode);
     
@@ -180,8 +199,26 @@ export async function processAmbassadorCommission(params: {
       }
     }
 
-    // 4. Calcular comisión
-    const commissionRate = AMBASSADOR_COMMISSION_RATES[productType];
+    // 4. Obtener el porcentaje de comisión de la configuración de la organización
+    let commissionPercent: number;
+    switch (productType) {
+      case 'BASIC':
+        commissionPercent = Number(organization.referralCommissionBasicPercent) || 20;
+        break;
+      case 'ADVANCED':
+        commissionPercent = Number(organization.referralCommissionAdvancedPercent) || 10;
+        break;
+      case 'PL':
+        commissionPercent = Number(organization.referralCommissionPLPercent) || 10;
+        break;
+      case 'COMBO':
+        commissionPercent = Number(organization.referralCommissionComboPercent) || 20;
+        break;
+      default:
+        commissionPercent = 10;
+    }
+    
+    const commissionRate = commissionPercent / 100; // Convertir porcentaje a decimal
     const commissionAmount = saleAmount * commissionRate;
 
     // 5. Crear transacción de comisión
