@@ -381,6 +381,13 @@ async function createStripeCheckout(
       apodo: userData.apodo || '',
       telefono: userData.telefono || userData.phone || '',
       password: userData.password || '',
+      referralCode: userData.referralCode || '',
+      horarioLlamada: userData.horarioLlamada || '',
+      profession: userData.profession || '',
+      birthdate: userData.birthdate || '',
+      children: userData.children?.toString() || '0',
+      goals: userData.goals ? JSON.stringify(userData.goals) : '[]',
+      expectations: (userData.expectations || '').substring(0, 450),
       appliedCodes: JSON.stringify(orderData.appliedCodes || []),
     },
   });
