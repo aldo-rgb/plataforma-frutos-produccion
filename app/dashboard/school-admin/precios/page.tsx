@@ -708,7 +708,7 @@ export default function DefaultPricesPage() {
         {/* ========================================= */}
         
         {/* Comisiones para el Equipo (Coordinadores) */}
-        <div className="mb-8 bg-gradient-to-br from-emerald-900/30 to-slate-900/50 border-2 border-emerald-500/30 rounded-xl p-6">
+        <div className="mb-10 bg-gradient-to-br from-emerald-900/30 to-slate-900/50 border-2 border-emerald-500/30 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="text-4xl">👥</div>
             <div className="flex-1">
@@ -857,7 +857,7 @@ export default function DefaultPricesPage() {
         </div>
 
         {/* Comisiones por Referencia (Embajadores/GCs) */}
-        <div className="mb-8 bg-gradient-to-br from-purple-900/30 to-slate-900/50 border-2 border-purple-500/30 rounded-xl p-6">
+        <div className="mb-10 bg-gradient-to-br from-purple-900/30 to-slate-900/50 border-2 border-purple-500/30 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="text-4xl">🎁</div>
             <div className="flex-1">
