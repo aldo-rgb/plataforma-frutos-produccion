@@ -1042,6 +1042,8 @@ model DefaultPrice {
   basePrice      Float
   promoPrice     Float?
   promoDeadline  DateTime?
+  pago1          Float?           // Primer pago (apartado) para COMBO_ADV_PL
+  pago2          Float?           // Segundo pago (liquidación) para COMBO_ADV_PL
   currency       Currency         @default(MXN)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime
@@ -3859,11 +3861,13 @@ model TicketPriceConfig {
   id              Int          @id @default(autoincrement())
   organizationId  Int
   level           VisionLevel
-  regularPrice    Decimal      @db.Decimal(10, 2)
-  promoPrice      Decimal?     @db.Decimal(10, 2)
-  promoValidUntil DateTime?
-  comboAdvPL      Decimal?     @db.Decimal(10, 2)
-  partialPayment  Decimal?     @db.Decimal(10, 2)
+  regularPrice      Decimal      @db.Decimal(10, 2)
+  promoPrice        Decimal?     @db.Decimal(10, 2)
+  promoValidUntil   DateTime?
+  comboAdvPL        Decimal?     @db.Decimal(10, 2)
+  comboAdvPLPago1   Decimal?     @db.Decimal(10, 2) // Primer pago (apartado)
+  comboAdvPLPago2   Decimal?     @db.Decimal(10, 2) // Segundo pago (liquidación)
+  partialPayment    Decimal?     @db.Decimal(10, 2)
   isActive        Boolean      @default(true)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime

@@ -6,9 +6,10 @@
  * 
  * Porcentajes:
  * - Básico: 20%
- * - Combo (Jornada Completa): 20%
+ * - Combo (Jornada Completa B+A+PL): 20%
  * - Avanzado: 10%
  * - PL: 10%
+ * - Combo Avanzado+PL (sin básico): 10%
  */
 
 import prisma from '@/lib/prisma';
@@ -16,17 +17,19 @@ import { Decimal } from '@prisma/client/runtime/library';
 
 // Diccionario de comisiones por tipo de producto
 export const AMBASSADOR_COMMISSION_RATES: Record<string, number> = {
-  BASIC: 0.20,      // 20%
-  COMBO: 0.20,      // 20% (Jornada Completa)
-  ADVANCED: 0.10,   // 10%
-  PL: 0.10          // 10%
+  BASIC: 0.20,        // 20%
+  COMBO: 0.20,        // 20% (Jornada Completa B+A+PL)
+  ADVANCED: 0.10,     // 10%
+  PL: 0.10,           // 10%
+  COMBO_ADV_PL: 0.10  // 10% (Combo Avanzado+PL sin básico)
 };
 
 export const PRODUCT_TYPE_LABELS: Record<string, string> = {
   BASIC: 'Básico',
   COMBO: 'Jornada Completa',
   ADVANCED: 'Avanzado',
-  PL: 'Proyecto de Liderazgo'
+  PL: 'Proyecto de Liderazgo',
+  COMBO_ADV_PL: 'Combo Avanzado + PL'
 };
 
 interface AmbassadorCommissionResult {

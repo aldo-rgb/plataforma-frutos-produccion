@@ -46,6 +46,8 @@ export async function GET(request: NextRequest) {
       promoDeadline: string | null;
       isPromoActive: boolean;
       currency: string;
+      pago1: number | null;
+      pago2: number | null;
     }> = {};
 
     const now = new Date();
@@ -60,6 +62,8 @@ export async function GET(request: NextRequest) {
         promoDeadline: p.promoDeadline ? p.promoDeadline.toISOString() : null,
         isPromoActive,
         currency: p.currency || 'MXN',
+        pago1: p.pago1 ? Number(p.pago1) : null,
+        pago2: p.pago2 ? Number(p.pago2) : null,
       };
     });
 
@@ -200,6 +204,16 @@ function generateAdvancedOptions(prices: Record<string, any>) {
       description: 'Avanzado + Programa de Liderato',
       type: 'COMBO_ADV_PL'
     });
+
+    // Primer pago del Combo Avanzado+PL (el 2do pago aparece en Liderato)
+    if (comboAdvPL.pago1) {
+      options.push({
+        label: `$${formatNumber(comboAdvPL.pago1)} - Combo Avanzado+PL (1er Pago)`,
+        amount: comboAdvPL.pago1,
+        description: 'Apartado - Combo Avanzado + Programa de Liderato',
+        type: 'COMBO_ADV_PL_PAGO1'
+      });
+    }
   }
 
   return options;
@@ -236,12 +250,22 @@ function generatePLOptions(prices: Record<string, any>) {
     });
   }
 
+  // Segundo pago del Combo Avanzado+PL (liquidación)
+  const comboAdvPL = prices.COMBO_ADV_PL;
+  if (comboAdvPL && comboAdvPL.pago2) {
+    options.push({
+      label: `$${formatNumber(comboAdvPL.pago2)} - Combo Avanzado+PL (2do Pago)`,
+      amount: comboAdvPL.pago2,
+      description: 'Liquidación - Para quien ya pagó el 1er pago del Combo',
+      type: 'COMBO_ADV_PL_PAGO2'
+    });
+  }
+
   // Opción para completar combo Avanzado+PL
   // Precios según estructura del sistema:
   // - Combo Avanzado+PL base = $14,500
   // - Solo Avanzado pagado = $7,500
   // - Completar Combo = $14,500 - $7,500 = $7,000
-  const comboAdvPL = prices.COMBO_ADV_PL;
   const advancedPrice = prices.ADVANCED;
   
   if (comboAdvPL && advancedPrice) {

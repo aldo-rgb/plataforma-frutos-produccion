@@ -1745,6 +1745,63 @@ PROBLEMA 3: Relaciones de Prisma con mayúsculas
 - Causa: Prisma genera nombres de relación con mayúscula inicial
 - Fix: Usar `Organization` y `Vision` (con mayúscula) en includes
 
+--------------------------------------------------------------------------------
+14.5 FLUJOS DE PAGO PARA NIVEL AVANZADO (Marzo 2026)
+--------------------------------------------------------------------------------
+
+La API /api/treasury/register-advanced maneja múltiples tipos de pago para 
+inscripciones en Avanzado y combos. Los precios se configuran en:
+/dashboard/school-admin/precios
+
+**Tabla de flujos:**
+
+| priceType              | Monto típico | Qué hace                                      |
+|------------------------|--------------|-----------------------------------------------|
+| ADVANCED_PROMO         | $7,500       | Crea ADVANCED pagado completo                 |
+| ADVANCED               | $9,500       | Crea ADVANCED pagado completo (precio base)   |
+| ADVANCED_UPGRADE_PL    | $1,500       | Para quien YA pagó ADVANCED, aparta PL        |
+| COMBO_ADV_PL           | $14,500      | Crea ADVANCED + PL pagados completos          |
+| COMBO_ADV_PL_PAGO1     | $9,000*      | 1er pago combo: ADVANCED pagado + PL apartado |
+| COMBO_ADV_PL_PAGO2     | $5,500*      | 2do pago combo: completa PL apartado → pagado |
+
+* Los montos de PAGO1 y PAGO2 son configurables en DefaultPrice (campos pago1, pago2)
+
+**Detalle de cada flujo:**
+
+1. ADVANCED_PROMO / ADVANCED:
+   - Crea vision_enrollment nivel ADVANCED con paymentStatus: 'PAID'
+   - Crea Ticket nivel ADVANCED con status: 'ACTIVE'
+
+2. ADVANCED_UPGRADE_PL:
+   - Requiere: ticket ADVANCED existente
+   - Suma $1,500 al amountPaid del ticket ADVANCED
+   - Crea enrollment PL con enrollmentStatus: 'PENDING', paymentStatus: 'PARTIAL'
+   - Crea ticket PL tipo 'APARTADO' con status: 'PENDING_PAYMENT'
+
+3. COMBO_ADV_PL:
+   - Crea ADVANCED completo (enrollment + ticket pagados)
+   - Crea PL completo (enrollment + ticket pagados)
+
+4. COMBO_ADV_PL_PAGO1 (Primer pago del combo):
+   - Crea ADVANCED completo (enrollment + ticket pagados)
+   - Crea PL como apartado:
+     * enrollment: enrollmentStatus: 'PENDING', paymentStatus: 'PARTIAL'
+     * ticket: type: 'APARTADO', status: 'PENDING_PAYMENT'
+   - Deuda pendiente = precioCombo - montoPagado
+
+5. COMBO_ADV_PL_PAGO2 (Segundo pago del combo - liquidación):
+   - Requiere: ticket PL con status: 'PENDING_PAYMENT'
+   - Actualiza ticket PL:
+     * type: 'STANDARD', status: 'ACTIVE', paymentStatus: 'PAID'
+   - Actualiza enrollment PL:
+     * enrollmentStatus: 'ACTIVE', paymentStatus: 'PAID'
+
+**Campos en DefaultPrice para pagos parciales:**
+- pago1: Decimal? - Monto del primer pago (apartado)
+- pago2: Decimal? - Monto del segundo pago (liquidación)
+
+Estos se configuran solo para COMBO_ADV_PL en /dashboard/school-admin/precios
+
 ================================================================================
 15. SISTEMA DE PAGOS CON TARJETA (MercadoPago/Stripe)
 ================================================================================

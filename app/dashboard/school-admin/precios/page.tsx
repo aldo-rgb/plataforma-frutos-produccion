@@ -28,6 +28,8 @@ interface DefaultPrice {
   basePrice: number;
   promoPrice: number | null;
   promoDeadline: string | null;
+  pago1: number | null;
+  pago2: number | null;
   currency: 'MXN' | 'USD';
 }
 
@@ -43,11 +45,11 @@ export default function DefaultPricesPage() {
 
   // Precios predeterminados para cada nivel
   const [prices, setPrices] = useState({
-    BASIC: { basePrice: 3500, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
-    ADVANCED: { basePrice: 5000, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
-    PL: { basePrice: 7000, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
-    COMBO_FULL: { basePrice: 12000, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
-    COMBO_ADV_PL: { basePrice: 9500, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
+    BASIC: { basePrice: 3500, promoPrice: null as number | null, promoDeadline: '', pago1: null as number | null, pago2: null as number | null, currency: 'MXN' as 'MXN' | 'USD' },
+    ADVANCED: { basePrice: 5000, promoPrice: null as number | null, promoDeadline: '', pago1: null as number | null, pago2: null as number | null, currency: 'MXN' as 'MXN' | 'USD' },
+    PL: { basePrice: 7000, promoPrice: null as number | null, promoDeadline: '', pago1: null as number | null, pago2: null as number | null, currency: 'MXN' as 'MXN' | 'USD' },
+    COMBO_FULL: { basePrice: 12000, promoPrice: null as number | null, promoDeadline: '', pago1: null as number | null, pago2: null as number | null, currency: 'MXN' as 'MXN' | 'USD' },
+    COMBO_ADV_PL: { basePrice: 9500, promoPrice: null as number | null, promoDeadline: '', pago1: null as number | null, pago2: null as number | null, currency: 'MXN' as 'MXN' | 'USD' },
   });
 
   // Configuración de anticipos
@@ -282,6 +284,8 @@ export default function DefaultPricesPage() {
               basePrice: p.basePrice,
               promoPrice: p.promoPrice,
               promoDeadline: p.promoDeadline || '',
+              pago1: p.pago1,
+              pago2: p.pago2,
               currency: p.currency || 'MXN',
             };
           }
@@ -338,7 +342,7 @@ export default function DefaultPricesPage() {
     let processedValue = value;
     
     // Para campos numéricos, asegurar que sean números válidos
-    if (field === 'basePrice' || field === 'promoPrice') {
+    if (field === 'basePrice' || field === 'promoPrice' || field === 'pago1' || field === 'pago2') {
       if (value === '' || value === null || value === undefined) {
         processedValue = field === 'basePrice' ? 0 : null;
       } else {
@@ -1081,6 +1085,67 @@ export default function DefaultPricesPage() {
                         handlePriceChange(config.key, 'promoDeadline', e.target.value)
                       }
                     />
+                  </div>
+                )}
+
+                {/* Campos de Pago en 2 Partes - Solo para COMBO_ADV_PL */}
+                {config.key === 'COMBO_ADV_PL' && (
+                  <div className="pt-4 mt-4 border-t border-cyan-500/30">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xl">💳</span>
+                      <h4 className="text-white font-semibold">Pago en 2 Partes</h4>
+                    </div>
+                    <p className="text-slate-400 text-xs mb-4">
+                      Configura los montos para permitir que este combo se pague en 2 exhibiciones
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                          <DollarSign size={14} />
+                          1er Pago (Apartado)
+                        </label>
+                        <input
+                          type="number"
+                          className="w-full px-4 py-3 bg-slate-900/50 border border-cyan-600/50 rounded-lg text-white font-bold"
+                          value={prices[config.key].pago1 || ''}
+                          onChange={(e) =>
+                            handlePriceChange(config.key, 'pago1', e.target.value)
+                          }
+                          min="0"
+                          step="100"
+                          placeholder="Ej: 5000"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                          <DollarSign size={14} />
+                          2do Pago (Liquidación)
+                        </label>
+                        <input
+                          type="number"
+                          className="w-full px-4 py-3 bg-slate-900/50 border border-cyan-600/50 rounded-lg text-white font-bold"
+                          value={prices[config.key].pago2 || ''}
+                          onChange={(e) =>
+                            handlePriceChange(config.key, 'pago2', e.target.value)
+                          }
+                          min="0"
+                          step="100"
+                          placeholder="Ej: 4500"
+                        />
+                      </div>
+                    </div>
+                    {prices[config.key].pago1 && prices[config.key].pago2 && (
+                      <div className="mt-3 p-3 bg-cyan-900/30 rounded-lg border border-cyan-500/20">
+                        <p className="text-cyan-300 text-sm">
+                          <span className="font-bold">Total:</span> ${((prices[config.key].pago1 || 0) + (prices[config.key].pago2 || 0)).toLocaleString()} {globalCurrency}
+                          {prices[config.key].basePrice !== ((prices[config.key].pago1 || 0) + (prices[config.key].pago2 || 0)) && (
+                            <span className="text-yellow-400 ml-2">
+                              ⚠️ Diferente al precio base (${prices[config.key].basePrice.toLocaleString()})
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 

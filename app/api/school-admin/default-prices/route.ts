@@ -67,9 +67,9 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { levelType, basePrice, promoPrice, promoDeadline, currency } = body;
+    const { levelType, basePrice, promoPrice, promoDeadline, currency, pago1, pago2 } = body;
 
-    logger.debug('📥 Received data:', { levelType, basePrice, promoPrice, promoDeadline, currency });
+    logger.debug('📥 Received data:', { levelType, basePrice, promoPrice, promoDeadline, currency, pago1, pago2 });
     logger.debug('📥 Data types:', { 
       levelType: typeof levelType, 
       basePrice: typeof basePrice,
@@ -96,7 +96,21 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    logger.debug('💾 Saving price:', { levelType, basePrice: basePriceNum, promoPrice: promoPriceNum, promoDeadline, currency });
+    // Validar y convertir pago1 y pago2 para COMBO_ADV_PL
+    let pago1Num = null;
+    let pago2Num = null;
+    if (levelType === 'COMBO_ADV_PL') {
+      if (pago1 !== null && pago1 !== undefined && pago1 !== '') {
+        pago1Num = typeof pago1 === 'number' ? pago1 : parseFloat(pago1);
+        if (isNaN(pago1Num)) pago1Num = null;
+      }
+      if (pago2 !== null && pago2 !== undefined && pago2 !== '') {
+        pago2Num = typeof pago2 === 'number' ? pago2 : parseFloat(pago2);
+        if (isNaN(pago2Num)) pago2Num = null;
+      }
+    }
+
+    logger.debug('💾 Saving price:', { levelType, basePrice: basePriceNum, promoPrice: promoPriceNum, promoDeadline, currency, pago1: pago1Num, pago2: pago2Num });
 
     // Primero buscar si existe el precio
     const existingPrice = await prisma.defaultPrice.findFirst({
@@ -116,6 +130,8 @@ export async function PUT(request: NextRequest) {
           promoPrice: promoPriceNum,
           promoDeadline: promoDeadline ? new Date(promoDeadline) : null,
           currency: currency || 'MXN',
+          pago1: pago1Num,
+          pago2: pago2Num,
         },
       });
       logger.debug('✅ Price updated:', price);
@@ -129,6 +145,8 @@ export async function PUT(request: NextRequest) {
           promoPrice: promoPriceNum,
           promoDeadline: promoDeadline ? new Date(promoDeadline) : null,
           currency: currency || 'MXN',
+          pago1: pago1Num,
+          pago2: pago2Num,
         },
       });
       logger.debug('✅ Price created:', price);

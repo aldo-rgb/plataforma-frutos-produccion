@@ -121,15 +121,22 @@ export async function POST(request: NextRequest) {
       where: { organizationId: vision.organizationId! },
     });
 
-    const priceMap: Record<string, number> = {};
+    const priceMap: Record<string, any> = {};
     defaultPrices.forEach((p) => {
-      priceMap[p.levelType] = Number(p.promoPrice ?? p.basePrice);
+      priceMap[p.levelType] = {
+        base: Number(p.basePrice),
+        promo: p.promoPrice ? Number(p.promoPrice) : null,
+        pago1: p.pago1 ? Number(p.pago1) : null,
+        pago2: p.pago2 ? Number(p.pago2) : null,
+      };
     });
 
-    const advancedPromoPrice = priceMap['ADVANCED'] || 7500;
-    const plPromoPrice = priceMap['PL'] || 5500;
-    const comboPromoPrice = priceMap['COMBO_ADV_PL'] || 9000;
-    const comboBasePrice = 14500; // Precio base combo
+    const advancedPromoPrice = priceMap['ADVANCED']?.promo || priceMap['ADVANCED']?.base || 7500;
+    const plPromoPrice = priceMap['PL']?.promo || priceMap['PL']?.base || 5500;
+    const comboPromoPrice = priceMap['COMBO_ADV_PL']?.promo || priceMap['COMBO_ADV_PL']?.base || 9000;
+    const comboBasePrice = priceMap['COMBO_ADV_PL']?.base || 14500;
+    const comboPago1 = priceMap['COMBO_ADV_PL']?.pago1 || 9000;
+    const comboPago2 = priceMap['COMBO_ADV_PL']?.pago2 || 5500;
 
     // Transacción para crear todo
     const result = await prisma.$transaction(async (tx) => {
@@ -438,6 +445,138 @@ export async function POST(request: NextRequest) {
           logger.info(`✅ [Treasury] Combo completo A+PL para ${participant.nombre}`);
           break;
 
+        case 'COMBO_ADV_PL_PAGO1':
+          // Primer pago del combo (apartado) - Crea ADVANCED + PL como apartado
+          if (existingAdvanced) {
+            throw new Error('El participante ya tiene inscripción en Avanzado para esta visión');
+          }
+
+          isApartado = true;
+          isCombo = true;
+          pendingDebt = comboBasePrice - parseFloat(amount); // Lo que falta por pagar
+
+          // Crear enrollment ADVANCED como ACTIVE
+          advancedEnrollment = await tx.vision_enrollments.create({
+            data: {
+              userId: participantId,
+              visionId: visionId,
+              coordinatorId: coordinatorId,
+              level: 'ADVANCED',
+              enrollmentStatus: 'ACTIVE',
+              paymentStatus: 'PAID',
+              enrolledAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+
+          // Crear ticket ADVANCED (pagado con parte del pago)
+          advancedTicket = await tx.ticket.create({
+            data: {
+              id: `TKT-ADV-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+              ownerId: participantId,
+              organizationId: vision.organizationId!,
+              visionId: visionId,
+              level: 'ADVANCED',
+              type: 'STANDARD',
+              status: 'ACTIVE',
+              paymentStatus: 'PAID',
+              costAtPurchase: advancedPromoPrice,
+              amountPaid: advancedPromoPrice,
+              isTransferable: false,
+              validUntil: vision.advancedEndDate,
+              updatedAt: new Date(),
+            },
+          });
+
+          // Crear enrollment PL como PENDING (apartado)
+          plEnrollment = await tx.vision_enrollments.create({
+            data: {
+              userId: participantId,
+              visionId: visionId,
+              coordinatorId: coordinatorId,
+              level: 'PL',
+              enrollmentStatus: 'PENDING',
+              paymentStatus: 'PARTIAL',
+              enrolledAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+
+          // Crear ticket PL como APARTADO
+          const pago1PLAmount = parseFloat(amount) - advancedPromoPrice;
+          plTicket = await tx.ticket.create({
+            data: {
+              id: `TKT-PL-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+              ownerId: participantId,
+              organizationId: vision.organizationId!,
+              visionId: visionId,
+              level: 'PL',
+              type: 'APARTADO',
+              status: 'PENDING_PAYMENT',
+              paymentStatus: 'PARTIAL',
+              costAtPurchase: comboBasePrice - advancedPromoPrice,
+              amountPaid: pago1PLAmount > 0 ? pago1PLAmount : 0,
+              isTransferable: false,
+              validUntil: vision.plWeekend3EndDate,
+              updatedAt: new Date(),
+            },
+          });
+
+          logger.info(`✅ [Treasury] PAGO1 Combo A+PL para ${participant.nombre} - Deuda: $${pendingDebt}`);
+          break;
+
+        case 'COMBO_ADV_PL_PAGO2':
+          // Segundo pago del combo (liquidación) - Completa el PL
+          // Debe tener ticket PL en estado APARTADO/PENDING_PAYMENT
+          const existingPLTicketForPago2 = await tx.ticket.findFirst({
+            where: {
+              ownerId: participantId,
+              visionId: visionId,
+              level: 'PL',
+              status: 'PENDING_PAYMENT',
+            },
+          });
+
+          if (!existingPLTicketForPago2) {
+            throw new Error('El participante no tiene un apartado de PL pendiente de pago');
+          }
+
+          // Actualizar ticket PL a PAID
+          plTicket = await tx.ticket.update({
+            where: { id: existingPLTicketForPago2.id },
+            data: {
+              type: 'STANDARD',
+              status: 'ACTIVE',
+              paymentStatus: 'PAID',
+              amountPaid: { increment: parseFloat(amount) },
+              updatedAt: new Date(),
+            },
+          });
+
+          // Actualizar enrollment PL a ACTIVE
+          const existingPLEnrollmentForPago2 = await tx.vision_enrollments.findFirst({
+            where: {
+              userId: participantId,
+              visionId: visionId,
+              level: 'PL',
+            },
+          });
+
+          if (existingPLEnrollmentForPago2) {
+            plEnrollment = await tx.vision_enrollments.update({
+              where: { id: existingPLEnrollmentForPago2.id },
+              data: {
+                enrollmentStatus: 'ACTIVE',
+                paymentStatus: 'PAID',
+                updatedAt: new Date(),
+              },
+            });
+          }
+
+          isCombo = true;
+          logger.info(`✅ [Treasury] PAGO2 (Liquidación) Combo A+PL para ${participant.nombre}`);
+          break;
+
         default:
           throw new Error(`Tipo de precio no reconocido: ${priceType}`);
       }
@@ -447,13 +586,18 @@ export async function POST(request: NextRequest) {
       let codePrefix = 'ADV';
       if (isCombo && !isApartado) codePrefix = 'COMBO-ADV';
       if (isApartado) codePrefix = 'APARTADO';
+      if (priceType === 'COMBO_ADV_PL_PAGO2') codePrefix = 'LIQUIDACION';
       
       const timestamp = Date.now().toString(36).toUpperCase();
       const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
       const paymentCodeValue = `${codePrefix}-${timestamp}-${randomSuffix}`;
 
       let referenceText = `Avanzado - ${participant.nombre}`;
-      if (isCombo && !isApartado) {
+      if (priceType === 'COMBO_ADV_PL_PAGO1') {
+        referenceText = `1er Pago Combo A+PL - ${participant.nombre} (Deuda: $${pendingDebt.toLocaleString()})`;
+      } else if (priceType === 'COMBO_ADV_PL_PAGO2') {
+        referenceText = `2do Pago (Liquidación) Combo A+PL - ${participant.nombre}`;
+      } else if (isCombo && !isApartado) {
         referenceText = `Combo Avanzado+PL - ${participant.nombre}`;
       } else if (isApartado) {
         referenceText = `Apartado Combo A+PL - ${participant.nombre} (Deuda: $${pendingDebt.toLocaleString()})`;
@@ -514,7 +658,10 @@ export async function POST(request: NextRequest) {
 
       const inviter = originalEnrollment?.Usuario_vision_enrollments_invitedByToUsuario;
       if (originalEnrollment?.invitedBy && inviter?.referralCode && inviter?.isGraduated) {
-        const productType = result.isCombo ? 'COMBO' : 'ADVANCED';
+        // Determinar el tipo de producto para la comisión:
+        // - COMBO_ADV_PL: Cuando es combo Avanzado+PL (10%)
+        // - ADVANCED: Solo Avanzado individual (10%)
+        const productType = result.isCombo ? 'COMBO_ADV_PL' : 'ADVANCED';
         const commissionResult = await processAmbassadorCommission({
           referralCode: inviter.referralCode,
           referredUserId: participantId,

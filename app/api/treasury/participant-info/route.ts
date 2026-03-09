@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         purchasePrice: true,
         amountPaid: true,
         createdAt: true,
-        vision: {
+        Vision: {
           select: {
             id: true,
             nombre: true,
