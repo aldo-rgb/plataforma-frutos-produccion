@@ -110,13 +110,14 @@ export async function POST(request: NextRequest) {
       coordinatorId = visionCoordinator?.coordinatorId || currentUser.id;
     }
 
-    // Verificar si ya tiene PL en esta visión
+    // Verificar si ya tiene PL en esta visión (activo/pagado, no pendientes)
     const existingPL = await prisma.vision_enrollments.findFirst({
       where: {
         userId: participantId,
         visionId: visionId,
         level: 'PL',
         enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'RESERVED'] },
+        paymentStatus: 'PAID', // Solo los ya pagados
       },
     });
 
@@ -149,7 +150,10 @@ export async function POST(request: NextRequest) {
         userId: participantId,
         visionId: visionId,
         level: 'PL',
-        paymentStatus: { in: ['PENDING', 'PARTIAL'] },
+        OR: [
+          { paymentStatus: { in: ['PENDING', 'PARTIAL'] } },
+          { enrollmentStatus: 'PENDING' },
+        ],
       },
     });
 
