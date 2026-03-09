@@ -68,8 +68,8 @@ export async function POST(request: Request) {
     const giftCode = await prisma.giftCode.findUnique({
       where: { code: cleanCode },
       include: {
-        vision: { select: { id: true, nombre: true } },
-        organization: { select: { id: true, name: true } },
+        Vision: { select: { id: true, nombre: true } },
+        Organization: { select: { id: true, name: true } },
       },
     });
 
@@ -108,8 +108,8 @@ export async function POST(request: Request) {
         type: giftCode.type,
         value: giftCode.value ? Number(giftCode.value) : null,
         discountPercentage: giftCode.discountPercentage,
-        organizationName: giftCode.organization.name,
-        visionName: giftCode.vision?.nombre || null,
+        organizationName: giftCode.Organization.name,
+        visionName: giftCode.Vision?.nombre || null,
         tickets: giftCode.type === 'PLATINUM' 
           ? [
               { level: 'BASIC', name: 'Entrenamiento Básico' },
