@@ -35,8 +35,12 @@ export async function GET(
     // Validar que el usuario tenga permisos de coordinador
     const hasCoordinatorAccess = 
       currentUser.rol === 'COORDINADOR' || 
+      currentUser.rol === 'COORDINATOR_BASIC' ||
+      currentUser.rol === 'COORDINATOR_ADVANCED' ||
+      currentUser.rol === 'COORDINATOR_PL' ||
       currentUser.rol === 'SCHOOL_ADMIN' ||
       currentUser.rol === 'ADMIN' ||
+      currentUser.rol === 'ADMINISTRADOR' ||
       currentUser.esCoordinador ||
       currentUser.esCoordinadorBasico ||
       currentUser.esCoordinadorAvanzado ||
