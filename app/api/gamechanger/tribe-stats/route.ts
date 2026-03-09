@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 /**
  * GET /api/gamechanger/tribe-stats
- * Obtiene estadísticas de enrollados y graduados de la visión activa del Game Changer
+ * Obtiene estadísticas GLOBALES de enrollados y graduados del Game Changer
  */
 export async function GET() {
   try {
@@ -17,7 +17,13 @@ export async function GET() {
 
     const userId = parseInt(session.user.id);
 
-    // 1. Buscar la visión activa donde el usuario es Game Changer
+    // Obtener datos del usuario
+    const user = await prisma.usuario.findUnique({
+      where: { id: userId },
+      select: { referralCode: true }
+    });
+
+    // 1. Buscar la visión activa donde el usuario es Game Changer (para mostrar nombre)
     let visionId: number | null = null;
     let visionName: string | null = null;
     let tribeMission: string | null = null;
@@ -71,7 +77,7 @@ export async function GET() {
       }
     }
 
-    // 3. Si aún no tiene visión, buscar su enrollment más reciente en una visión activa
+    // 3. Si aún no tiene visión, buscar su enrollment más reciente
     if (!visionId) {
       const latestEnrollment = await prisma.vision_enrollments.findFirst({
         where: { 
@@ -101,55 +107,32 @@ export async function GET() {
       return NextResponse.json({ error: 'No se encontró visión activa' }, { status: 404 });
     }
 
-    // Obtener referralCode del usuario
-    const user = await prisma.usuario.findUnique({
-      where: { id: userId },
-      select: { referralCode: true }
-    });
+    // =====================================================
+    // CONTAR REFERIDOS GLOBALMENTE (sin filtrar por visión)
+    // =====================================================
 
-    // Contar enrollados: usuarios invitados por este GC en esta visión
-    // Método 1: Por invitedBy en Usuario
+    // Contar TODOS los usuarios invitados por este GC (global)
     const enrolledByInvitedBy = await prisma.usuario.count({
       where: {
-        invitedBy: userId,
-        Ticket_Ticket_ownerIdToUsuario: {
-          some: {
-            visionId: visionId,
-            status: 'ACTIVE'
-          }
-        }
+        invitedBy: userId
       }
     });
 
-    // Método 2: Por vision_enrollments.invitedBy
-    const enrolledByEnrollment = await prisma.vision_enrollments.count({
-      where: {
-        visionId: visionId,
-        invitedBy: userId,
-        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
-      }
-    });
-
-    // Método 3: Por referralCode - usuarios que usaron este código
+    // Contar también por referralCode
     let enrolledByReferral = 0;
     if (user?.referralCode) {
       enrolledByReferral = await prisma.usuario.count({
         where: {
           invitedByText: user.referralCode,
-          vision_enrollments_vision_enrollments_userIdToUsuario: {
-            some: {
-              visionId: visionId,
-              enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
-            }
-          }
+          invitedBy: { not: userId } // Evitar duplicados
         }
       });
     }
 
-    // Usar el máximo de los métodos (evitar duplicados)
-    const enrolledCount = Math.max(enrolledByInvitedBy, enrolledByEnrollment, enrolledByReferral);
+    // Total de enrollados (global)
+    const enrolledCount = enrolledByInvitedBy + enrolledByReferral;
 
-    // Contar graduados: usuarios invitados por este GC que están graduados
+    // Contar graduados globalmente
     const graduatedByInvitedBy = await prisma.usuario.count({
       where: {
         invitedBy: userId,
@@ -162,12 +145,13 @@ export async function GET() {
       graduatedByReferral = await prisma.usuario.count({
         where: {
           invitedByText: user.referralCode,
+          invitedBy: { not: userId },
           isGraduated: true
         }
       });
     }
 
-    const graduatedCount = Math.max(graduatedByInvitedBy, graduatedByReferral);
+    const graduatedCount = graduatedByInvitedBy + graduatedByReferral;
 
     return NextResponse.json({
       visionId,
