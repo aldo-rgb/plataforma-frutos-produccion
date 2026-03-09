@@ -117,12 +117,18 @@ export default function ZonaEjecucionMiniWidget() {
             </p>
           </div>
         </div>
-        {/* Racha de días */}
-        <div className="flex items-center gap-1.5 bg-orange-500/20 border border-orange-500/30 px-3 py-1.5 rounded-full">
-          <Flame className="w-4 h-4 text-orange-400" />
-          <span className="text-orange-300 font-bold text-sm">{streak}</span>
-          <span className="text-orange-400/70 text-xs">días</span>
-        </div>
+        {/* Racha de días - más llamativo */}
+        <motion.div 
+          className="flex items-center gap-2 bg-gradient-to-r from-orange-500/30 to-yellow-500/30 border-2 border-orange-400/50 px-4 py-2 rounded-xl shadow-lg shadow-orange-500/20"
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <Flame className="w-5 h-5 text-orange-400" />
+          <div className="flex flex-col items-center leading-tight">
+            <span className="text-orange-300 font-black text-lg">{streak}</span>
+            <span className="text-orange-400/80 text-[10px] font-semibold uppercase tracking-wider">días racha</span>
+          </div>
+        </motion.div>
       </div>
 
       {/* Content - flex-1 para ocupar todo el espacio */}
