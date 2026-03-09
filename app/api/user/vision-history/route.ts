@@ -297,7 +297,7 @@ export async function GET(request: NextRequest) {
           const checkInsVision = await prisma.checkInRecord.count({
             where: {
               visionId: assignment.Vision.id,
-              Product: {
+              SchoolProduct: {
                 trainerId: user.id
               }
             }
