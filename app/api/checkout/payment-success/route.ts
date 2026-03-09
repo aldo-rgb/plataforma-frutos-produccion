@@ -75,6 +75,24 @@ export async function GET(request: NextRequest) {
       orderData = await getOrderDataFromPreference(preferenceId);
     }
 
+    // Compatibilidad: si userData no existe pero email sí, crear userData desde los campos legacy
+    if (orderData && !orderData.userData && orderData.email) {
+      orderData.userData = {
+        email: orderData.email,
+        nombre: orderData.nombre,
+        apodo: orderData.apodo || '',
+        telefono: orderData.telefono || '',
+        password: orderData.password || '',
+        referralCode: orderData.referralCode || '',
+        horarioLlamada: orderData.horarioLlamada || '',
+        profession: orderData.profession || '',
+        birthdate: orderData.birthdate || '',
+        children: orderData.children || 0,
+        goals: orderData.goals || [],
+        expectations: orderData.expectations || '',
+      };
+    }
+
     if (!orderData || !orderData.userData || !orderData.organizationId) {
       logger.error('❌ Missing order data after all attempts');
       logger.error('   orderData:', orderData);
