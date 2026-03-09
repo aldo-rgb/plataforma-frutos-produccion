@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 /**
  * GET /api/treasury/search-users
- * Busca usuarios en toda la master organización para asignar como "quien invita"
+ * Busca usuarios en TODAS las organizaciones de la master organization
  * Se usa en Tesorería Express para referir nuevos participantes
  */
 export async function GET(request: NextRequest) {
@@ -29,7 +29,10 @@ export async function GET(request: NextRequest) {
         organizationId: true,
         rol: true,
         Organization_Usuario_organizationIdToOrganization: {
-          select: { masterOrganizationId: true }
+          select: { 
+            id: true,
+            masterOrganizationId: true 
+          }
         }
       }
     });
@@ -38,25 +41,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario sin organización' }, { status: 400 });
     }
 
-    const masterOrgId = currentUser.Organization_Usuario_organizationIdToOrganization?.masterOrganizationId;
+    const userOrg = currentUser.Organization_Usuario_organizationIdToOrganization;
+    
+    // Determinar el masterOrgId: si la org tiene masterOrganizationId, usarlo
+    // Si no, la organización ES la master (usar su propio ID)
+    const masterOrgId = userOrg?.masterOrganizationId || userOrg?.id;
 
     if (!masterOrgId) {
       return NextResponse.json({ error: 'Sin master organization' }, { status: 400 });
     }
 
-    // Buscar usuarios en todas las organizaciones de la master org
-    // Incluyendo GCs, coordinadores, y participantes que puedan invitar
+    // Primero obtener TODAS las organizaciones que pertenecen a esta master org
+    const allOrgsInMaster = await prisma.organization.findMany({
+      where: {
+        OR: [
+          { id: masterOrgId }, // La master org misma
+          { masterOrganizationId: masterOrgId } // Todas las sub-organizaciones
+        ]
+      },
+      select: { id: true, name: true }
+    });
+
+    const allOrgIds = allOrgsInMaster.map(o => o.id);
+    const orgMap = new Map(allOrgsInMaster.map(o => [o.id, o.name]));
+
+    console.log(`[search-users] Master org: ${masterOrgId}, Orgs encontradas: ${allOrgIds.length}`, allOrgIds);
+
+    // Buscar usuarios en TODAS estas organizaciones
     const users = await prisma.usuario.findMany({
       where: {
-        Organization_Usuario_organizationIdToOrganization: {
-          masterOrganizationId: masterOrgId
-        },
+        organizationId: { in: allOrgIds },
         OR: [
           { nombre: { contains: query, mode: 'insensitive' } },
           { email: { contains: query, mode: 'insensitive' } },
           { telefono: { contains: query } }
         ],
-        // Solo usuarios activos o pendientes
+        // Excluir super admins
         NOT: {
           rol: 'SUPER_ADMIN'
         }
@@ -72,19 +92,13 @@ export async function GET(request: NextRequest) {
         organizationId: true
       },
       orderBy: [
-        // Priorizar GCs y coordinadores (más probable que inviten)
-        { rol: 'asc' }
+        { isGraduated: 'desc' }, // GCs primero
+        { nombre: 'asc' }
       ],
-      take: 20 // Limitar resultados
+      take: 30 // Aumentar límite
     });
 
-    // Obtener nombres de organizaciones para los usuarios encontrados
-    const orgIds = [...new Set(users.map(u => u.organizationId).filter(Boolean))];
-    const orgs = await prisma.organization.findMany({
-      where: { id: { in: orgIds as number[] } },
-      select: { id: true, name: true }
-    });
-    const orgMap = new Map(orgs.map(o => [o.id, o.name]));
+    console.log(`[search-users] Usuarios encontrados para "${query}": ${users.length}`);
 
     // Formatear respuesta
     const formattedUsers = users.map(u => ({
