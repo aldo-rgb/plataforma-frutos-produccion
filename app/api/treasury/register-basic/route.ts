@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import logger from '@/lib/logger';
 import crypto from 'crypto';
+import { processAmbassadorCommission, determineProductType } from '@/lib/ambassador-engine';
 
 /**
  * POST /api/treasury/register-basic
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
     if (padrinoId) {
       padrinoData = await prisma.usuario.findUnique({
         where: { id: parseInt(padrinoId) },
-        select: { id: true, nombre: true, invitedCount: true, organizationId: true }
+        select: { id: true, nombre: true, invitedCount: true, organizationId: true, referralCode: true, isGraduated: true }
       });
       
       if (!padrinoData) {
@@ -351,6 +352,36 @@ export async function POST(request: NextRequest) {
     });
 
     logger.info(`🎉 [Treasury] Registro completo: Usuario ${result.user.id} inscrito en ${result.vision.nombre}${result.padrino ? ` (invitado por ${result.padrino.nombre})` : ''}`);
+
+    // 🎁 PROCESAR COMISIÓN POR REFERIDO (si aplica)
+    let ambassadorCommission = null;
+    if (result.padrino?.referralCode && result.padrino?.isGraduated) {
+      try {
+        const productType = result.isCombo ? 'COMBO' : 'BASIC';
+        const commissionResult = await processAmbassadorCommission({
+          referralCode: result.padrino.referralCode,
+          referredUserId: result.user.id,
+          ticketId: result.ticket.id,
+          productType: productType,
+          saleAmount: parseFloat(amount),
+          organizationId: result.vision.organizationId!,
+          visionId: result.vision.id
+        });
+        
+        if (commissionResult.success) {
+          ambassadorCommission = {
+            ambassadorId: commissionResult.ambassadorId,
+            amount: commissionResult.commissionAmount
+          };
+          logger.info(`💰 [Treasury] Comisión generada: $${commissionResult.commissionAmount} para embajador ${commissionResult.ambassadorId}`);
+        } else {
+          logger.info(`ℹ️ [Treasury] Sin comisión: ${commissionResult.message}`);
+        }
+      } catch (commError) {
+        logger.warn(`⚠️ [Treasury] Error al procesar comisión:`, commError);
+        // No fallar el registro por error de comisión
+      }
+    }
 
     return NextResponse.json({
       success: true,
