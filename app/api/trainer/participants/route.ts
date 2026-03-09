@@ -36,9 +36,10 @@ export async function GET(request: Request) {
     let participantsWithActiveMetamorfosis: number[] = [];
     if (excludeWithMetamorfosis) {
       // Excluir CUALQUIER participante con metamorfosis activa (sin importar visión)
+      // Status activos: SENT (enviada) y VIEWED (vista pero no completada)
       const activeAssignments = await prisma.metamorfosisAssignment.findMany({
         where: {
-          status: { in: ['SENT', 'IN_PROGRESS'] }
+          status: { in: ['SENT', 'VIEWED'] }
         },
         select: { participantId: true },
         distinct: ['participantId']
@@ -48,6 +49,8 @@ export async function GET(request: Request) {
 
     // Construir consulta basada en el rol
     let participants: any[] = [];
+
+    logger.debug('🎯 Trainer participants API:', { userId, rol: trainer.rol, visionId, productId, excludeWithMetamorfosis });
 
     if (trainer.rol === 'TRAINER') {
       // Obtener productos donde es trainer
@@ -60,8 +63,12 @@ export async function GET(request: Request) {
         select: { id: true, visionId: true }
       });
 
+      logger.debug('🎯 Products found for trainer:', products);
+
       const productIds = products.map(p => p.id);
       const visionIds = [...new Set(products.map(p => p.visionId).filter(Boolean))] as number[];
+      
+      logger.debug('🎯 VisionIds from products:', visionIds);
 
       if (productIds.length > 0 || visionIds.length > 0) {
         // Obtener enrollments de esos productos/visiones
@@ -81,6 +88,8 @@ export async function GET(request: Request) {
           distinct: ['userId']
         });
 
+        logger.debug('🎯 Enrollments found:', enrollments.length);
+
         const userIds = enrollments.map(e => e.userId);
 
         if (userIds.length > 0) {
@@ -88,6 +97,8 @@ export async function GET(request: Request) {
           const filteredUserIds = excludeWithMetamorfosis 
             ? userIds.filter(id => !participantsWithActiveMetamorfosis.includes(id))
             : userIds;
+
+          logger.debug('🎯 Filtered user IDs:', filteredUserIds.length);
 
           participants = await prisma.usuario.findMany({
             where: {
