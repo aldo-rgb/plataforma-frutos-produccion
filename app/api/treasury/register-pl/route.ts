@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import crypto from 'crypto';
+import { processAmbassadorCommission } from '@/lib/ambassador-engine';
 
 const ALLOWED_ROLES = ['ADMIN', 'SUPER_ADMIN', 'COORDINADOR', 'TESORERO', 'DIRECTOR', 'SUBDIRECTOR', 'SCHOOL_ADMIN'];
 
@@ -395,6 +396,51 @@ export async function POST(request: NextRequest) {
         isUpgrade,
       };
     });
+
+    // 🎁 PROCESAR COMISIÓN POR REFERIDO (si el participante fue invitado por alguien)
+    let ambassadorCommission = null;
+    try {
+      // Buscar quién invitó originalmente al participante (desde su enrollment de BASIC)
+      const originalEnrollment = await prisma.vision_enrollments.findFirst({
+        where: {
+          userId: participantId,
+          level: 'BASIC',
+          invitedBy: { not: null }
+        },
+        select: {
+          invitedBy: true,
+          Usuario_vision_enrollments_invitedByToUsuario: {
+            select: { referralCode: true, isGraduated: true }
+          }
+        },
+        orderBy: { enrolledAt: 'asc' }
+      });
+
+      const inviter = originalEnrollment?.Usuario_vision_enrollments_invitedByToUsuario;
+      if (originalEnrollment?.invitedBy && inviter?.referralCode && inviter?.isGraduated) {
+        const commissionResult = await processAmbassadorCommission({
+          referralCode: inviter.referralCode,
+          referredUserId: participantId,
+          ticketId: result.ticket?.id || undefined,
+          productType: 'PL',
+          saleAmount: parseFloat(amount),
+          organizationId: vision.organizationId!,
+          visionId: vision.id
+        });
+        
+        if (commissionResult.success) {
+          ambassadorCommission = {
+            ambassadorId: commissionResult.ambassadorId,
+            amount: commissionResult.commissionAmount
+          };
+          logger.info(`💰 [Treasury] Comisión PL generada: $${commissionResult.commissionAmount} para embajador ${commissionResult.ambassadorId}`);
+        } else {
+          logger.info(`ℹ️ [Treasury] Sin comisión PL: ${commissionResult.message}`);
+        }
+      }
+    } catch (commError) {
+      logger.warn(`⚠️ [Treasury] Error al procesar comisión PL:`, commError);
+    }
 
     return NextResponse.json({
       success: true,
