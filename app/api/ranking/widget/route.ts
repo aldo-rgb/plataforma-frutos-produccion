@@ -17,7 +17,7 @@ export async function GET() {
 
     const userId = parseInt(session.user.id);
 
-    // Obtener el usuario actual con su visión activa y paquetes
+    // Obtener el usuario actual con su visión activa
     const currentUser = await prisma.usuario.findUnique({
       where: { id: userId },
       select: {
@@ -35,15 +35,6 @@ export async function GET() {
           include: {
             Vision: true
           }
-        },
-        MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario: {
-          where: {
-            status: 'COMPLETED'
-          },
-          select: {
-            id: true,
-            metadata: true
-          }
         }
       }
     });
@@ -60,26 +51,11 @@ export async function GET() {
       avatar: currentUser.profileImage
     };
 
-    // Verificar si es Lobo Solitario (sin visión pero con paquete completado)
+    // Verificar si tiene visión activa
     const activeVision = currentUser.VisionParticipante_VisionParticipante_participanteIdToUsuario[0]?.Vision;
-    const hasLoboPackage = currentUser.MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario.some(
-      (order: any) => order.metadata?.tipoCliente === 'LOBO_SOLITARIO'
-    );
     
     if (!activeVision) {
-      // Si no tiene visión activa, verificar si es Lobo Solitario
-      if (hasLoboPackage) {
-        return NextResponse.json({
-          topUsers: [],
-          userRank: null,
-          currentUserId: userId,
-          isLoboSolitario: true,
-          userData,
-          captaincies: []
-        });
-      }
-      
-      // Usuario sin visión y sin paquete: devolver datos básicos
+      // Usuario sin visión: devolver datos básicos con sus puntos
       return NextResponse.json({
         topUsers: [],
         userRank: null,
