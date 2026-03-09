@@ -122,6 +122,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Buscar CUALQUIER enrollment PL (para upsert)
+    const anyExistingPL = await prisma.vision_enrollments.findFirst({
+      where: {
+        userId: participantId,
+        visionId: visionId,
+        level: 'PL',
+      },
+    });
+
     // Verificar si tiene ADVANCED (necesario para upgrade)
     const existingAdvanced = await prisma.vision_enrollments.findFirst({
       where: {
@@ -212,20 +221,33 @@ export async function POST(request: NextRequest) {
             throw new Error('El participante ya tiene inscripción activa en Programa de Liderato para esta visión');
           }
 
-          // CASO 3: No tiene PL → Crear nuevo
-          // Crear enrollment PL
-          plEnrollment = await tx.vision_enrollments.create({
-            data: {
-              userId: participantId,
-              visionId: visionId,
-              coordinatorId: coordinatorId,
-              level: 'PL',
-              enrollmentStatus: 'ACTIVE',
-              paymentStatus: 'PAID',
-              enrolledAt: new Date(),
-              updatedAt: new Date(),
-            },
-          });
+          // CASO 3: No tiene PL pagado → Crear o actualizar
+          // Verificar si hay enrollment existente (en cualquier estado)
+          if (anyExistingPL) {
+            // Actualizar enrollment existente
+            plEnrollment = await tx.vision_enrollments.update({
+              where: { id: anyExistingPL.id },
+              data: {
+                enrollmentStatus: 'ACTIVE',
+                paymentStatus: 'PAID',
+                updatedAt: new Date(),
+              },
+            });
+          } else {
+            // Crear enrollment PL nuevo
+            plEnrollment = await tx.vision_enrollments.create({
+              data: {
+                userId: participantId,
+                visionId: visionId,
+                coordinatorId: coordinatorId,
+                level: 'PL',
+                enrollmentStatus: 'ACTIVE',
+                paymentStatus: 'PAID',
+                enrolledAt: new Date(),
+                updatedAt: new Date(),
+              },
+            });
+          }
 
           // Crear ticket PL
           plTicket = await tx.ticket.create({
@@ -314,19 +336,32 @@ export async function POST(request: NextRequest) {
               });
             }
           } else {
-            // Crear enrollment PL nuevo
-            plEnrollment = await tx.vision_enrollments.create({
-              data: {
-                userId: participantId,
-                visionId: visionId,
-                coordinatorId: coordinatorId,
-                level: 'PL',
-                enrollmentStatus: 'ACTIVE',
-                paymentStatus: 'PAID',
-                enrolledAt: new Date(),
-                updatedAt: new Date(),
-              },
-            });
+            // Crear o actualizar enrollment PL
+            if (anyExistingPL) {
+              // Ya existe un enrollment, actualizarlo
+              plEnrollment = await tx.vision_enrollments.update({
+                where: { id: anyExistingPL.id },
+                data: {
+                  enrollmentStatus: 'ACTIVE',
+                  paymentStatus: 'PAID',
+                  updatedAt: new Date(),
+                },
+              });
+            } else {
+              // Crear enrollment PL nuevo
+              plEnrollment = await tx.vision_enrollments.create({
+                data: {
+                  userId: participantId,
+                  visionId: visionId,
+                  coordinatorId: coordinatorId,
+                  level: 'PL',
+                  enrollmentStatus: 'ACTIVE',
+                  paymentStatus: 'PAID',
+                  enrolledAt: new Date(),
+                  updatedAt: new Date(),
+                },
+              });
+            }
 
             // Crear ticket PL
             plTicket = await tx.ticket.create({
