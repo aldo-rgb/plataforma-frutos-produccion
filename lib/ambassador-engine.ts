@@ -272,7 +272,7 @@ export async function processAmbassadorCommission(params: {
  */
 export async function getAmbassadorWalletSummary(ambassadorId: number) {
   const [user, transactions, stats] = await Promise.all([
-    // Usuario con balance
+    // Usuario con balance y organización
     prisma.usuario.findUnique({
       where: { id: ambassadorId },
       select: {
@@ -283,7 +283,13 @@ export async function getAmbassadorWalletSummary(ambassadorId: number) {
         isGraduated: true,
         bankClabe: true,
         bankName: true,
-        bankAccountHolder: true
+        bankAccountHolder: true,
+        organizationId: true,
+        Organization_Usuario_organizationIdToOrganization: {
+          select: {
+            slug: true
+          }
+        }
       }
     }),
     
@@ -342,7 +348,8 @@ export async function getAmbassadorWalletSummary(ambassadorId: number) {
       referralCode: user.referralCode,
       balance: Number(user.ambassadorBalance),
       isGraduated: user.isGraduated,
-      hasBankInfo: !!(user.bankClabe && user.bankAccountHolder)
+      hasBankInfo: !!(user.bankClabe && user.bankAccountHolder),
+      organizationSlug: user.Organization_Usuario_organizationIdToOrganization?.slug || null
     },
     stats: statsMap,
     transactions: transactions.map(t => ({

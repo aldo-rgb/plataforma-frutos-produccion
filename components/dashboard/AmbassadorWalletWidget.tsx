@@ -27,6 +27,7 @@ interface WalletData {
     balance: number;
     isGraduated: boolean;
     hasBankInfo: boolean;
+    organizationSlug: string | null;
   };
   stats: {
     available: number;
@@ -66,7 +67,11 @@ export default function AmbassadorWalletWidget() {
   const copyReferralLink = () => {
     if (!data?.user.referralCode) return;
     
-    const link = `${window.location.origin}/registro?ref=${data.user.referralCode}`;
+    // Generar link con organización si está disponible
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.impactocuantico.com';
+    const link = data.user.organizationSlug 
+      ? `${baseUrl}/org/${data.user.organizationSlug}?ref=${data.user.referralCode}`
+      : `${baseUrl}/registro?ref=${data.user.referralCode}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -75,7 +80,11 @@ export default function AmbassadorWalletWidget() {
   const shareOnWhatsApp = () => {
     if (!data?.user.referralCode) return;
     
-    const link = `${window.location.origin}/registro?ref=${data.user.referralCode}`;
+    // Generar link con organización si está disponible
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.impactocuantico.com';
+    const link = data.user.organizationSlug 
+      ? `${baseUrl}/org/${data.user.organizationSlug}?ref=${data.user.referralCode}`
+      : `${baseUrl}/registro?ref=${data.user.referralCode}`;
     const message = encodeURIComponent(
       `¡Hola! Te invito a vivir una experiencia transformadora. Usa mi código de referido y regístrate aquí: ${link}`
     );
