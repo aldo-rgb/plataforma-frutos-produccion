@@ -444,7 +444,8 @@ async function createSingleLevelTicket(
         isTransferable: false,
         purchasePrice: 0,
         amountPaid: 0,
-        validUntil: validUntil
+        validUntil: validUntil,
+        updatedAt: new Date(),
       }
     });
 

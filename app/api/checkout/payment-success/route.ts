@@ -232,6 +232,7 @@ export async function GET(request: NextRequest) {
           amountPaid: ticketSelection === 'BASIC_ONLY' ? amount : basicPrice,
           isTransferable: false,
           validUntil: vision?.endDate || null,
+          updatedAt: new Date(),
         },
       });
 
@@ -303,6 +304,7 @@ export async function GET(request: NextRequest) {
             amountPaid: advancedPrice,
             isTransferable: false,
             validUntil: vision?.advancedEndDate || null,
+            updatedAt: new Date(),
           },
         });
 
@@ -323,6 +325,7 @@ export async function GET(request: NextRequest) {
             amountPaid: plPrice,
             isTransferable: false,
             validUntil: vision?.plWeekend3EndDate || null,
+            updatedAt: new Date(),
           },
         });
 

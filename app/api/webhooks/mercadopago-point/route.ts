@@ -292,7 +292,8 @@ async function generateTicketFromPayment(transaction: {
           status: 'ACTIVE',
           paymentStatus: 'PAID',
           purchasePrice: amount,
-          amountPaid: amount
+          amountPaid: amount,
+          updatedAt: new Date(),
         }
       });
 
