@@ -283,6 +283,7 @@ async function generateTicketFromPayment(transaction: {
 
       const newTicket = await prisma.ticket.create({
         data: {
+          id: crypto.randomUUID(),
           ownerId: transaction.participantId,
           organizationId: vision.organizationId,
           visionId: transaction.visionId,

@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Determinar la URL base para callbacks
+    logger.debug('🔍 NEXTAUTH_URL env:', process.env.NEXTAUTH_URL);
     let baseUrl = process.env.NEXTAUTH_URL || 'https://impactocuantico.net';
     if (organization.customDomain) {
       baseUrl = `https://${organization.customDomain}`;

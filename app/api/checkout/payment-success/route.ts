@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import logger from '@/lib/logger';
 import Stripe from 'stripe';
+import crypto from 'crypto';
 import { sendWelcomeNotifications } from '@/lib/welcome-notification';
 import { processAmbassadorCommission, determineProductType } from '@/lib/ambassador-engine';
 
@@ -219,6 +220,7 @@ export async function GET(request: NextRequest) {
       // Create BASIC ticket
       const basicTicket = await tx.ticket.create({
         data: {
+          id: crypto.randomUUID(),
           ownerId: newUser.id,
           organizationId: organizationId,
           visionId: visionId || null,
@@ -289,6 +291,7 @@ export async function GET(request: NextRequest) {
         // Create ADVANCED ticket (pending until basic completes)
         await tx.ticket.create({
           data: {
+            id: crypto.randomUUID(),
             ownerId: newUser.id,
             organizationId: organizationId,
             visionId: visionId,
@@ -308,6 +311,7 @@ export async function GET(request: NextRequest) {
         // Create PL ticket (pending until advanced completes)
         await tx.ticket.create({
           data: {
+            id: crypto.randomUUID(),
             ownerId: newUser.id,
             organizationId: organizationId,
             visionId: visionId,

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import crypto from 'crypto';
 
 // Tipos de situación que generan ticket de cortesía
 export type TicketReasonType = 'BACKLOG' | 'DROP';
@@ -432,6 +433,7 @@ async function createSingleLevelTicket(
     
     const newTicket = await prisma.ticket.create({
       data: {
+        id: crypto.randomUUID(),
         ownerId: userId,
         organizationId: organizationId,
         visionId: targetVision.id,
