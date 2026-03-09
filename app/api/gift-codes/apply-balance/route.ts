@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const giftCode = await prisma.giftCode.findUnique({
       where: { code: code.toUpperCase() },
       include: {
-        organization: true,
+        Organization: true,
       },
     });
 

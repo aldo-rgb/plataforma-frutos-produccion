@@ -26,13 +26,13 @@ export async function POST(request: Request) {
     const giftCode = await prisma.giftCode.findUnique({
       where: { code: codeUpper },
       include: {
-        organization: {
+        Organization: {
           select: {
             id: true,
             name: true,
           },
         },
-        vision: {
+        Vision: {
           select: {
             id: true,
             nombre: true,
@@ -118,8 +118,8 @@ export async function POST(request: Request) {
         type: giftCode.type,
         value: giftCode.value ? parseFloat(giftCode.value.toString()) : null,
         discountPercentage: giftCode.discountPercentage,
-        organization: giftCode.organization,
-        vision: giftCode.vision,
+        organization: giftCode.Organization,
+        vision: giftCode.Vision,
         description,
         ticketsIncluded,
       },
