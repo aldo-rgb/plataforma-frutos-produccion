@@ -19,7 +19,6 @@ import ParticipantesAsignadosWidget from "@/components/dashboard/ParticipantesAs
 import VisionHistoryWidget from "@/components/widgets/VisionHistoryWidget";
 import GCPendingSurveyBanner from "@/components/dashboard/GCPendingSurveyBanner";
 import GCLegacyRewardBanner from "@/components/dashboard/GCLegacyRewardBanner";
-import ReferralCommissionsWidget from "@/components/dashboard/ReferralCommissionsWidget";
 import AmbassadorWalletWidget from "@/components/dashboard/AmbassadorWalletWidget";
 import GCTribeWidget from "@/components/dashboard/GCTribeWidget";
 
@@ -308,10 +307,9 @@ export default async function GameChangerDashboardPage() {
       />
 
       {/* ZONA MEDIA: KPIs + Programa Intensivo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <QuantumPointsWidget puntosCuanticos={usuario.puntosCuanticos} />
         <RankingWidget />
-        <ReferralCommissionsWidget />
 
         {isAuthorized && hasDisciplineProgram && programData ? (
           <IntensiveProgramCard 
