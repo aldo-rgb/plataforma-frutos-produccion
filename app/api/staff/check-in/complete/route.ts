@@ -3,6 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { triggerEnrollmentTaskCompletion } from '@/lib/enrollment-task-trigger';
+import { 
+  triggerBasicSeatedCommission, 
+  triggerAdvanceSeatedCommission,
+  triggerPLStartCommission 
+} from '@/lib/commission-engine';
 import logger from '@/lib/logger';
 
 // POST - Completar el check-in: registrar asistencia y consumir licencia
@@ -243,6 +248,100 @@ export async function POST(request: NextRequest) {
           }
         });
         logger.debug(`✅ Asistencia marcada automáticamente para enrollment ${enrollment.id} - Usuario: ${user.nombre}`);
+
+        // *** TRIGGER: COMISIONES AUTOMÁTICAS PARA COORDINADORES ***
+        // Generar comisión según el nivel del check-in
+        try {
+          // Buscar coordinador correspondiente según nivel
+          let coordinatorId: number | null = null;
+          let coordinatorRole: 'COORDINATOR_BASIC' | 'COORDINATOR_ADVANCED' | 'COORDINATOR_PL' | null = null;
+
+          if (enrollment.level === 'BASIC') {
+            // Para BASIC: buscar coordinador básico de la organización
+            const basicCoord = await prisma.usuario.findFirst({
+              where: {
+                organizationId: organization.id,
+                OR: [
+                  { rol: 'COORDINADOR' },
+                  { rol: 'COORDINATOR_BASIC' },
+                  { esCoordinadorBasico: true },
+                  { esCoordinador: true }
+                ]
+              },
+              select: { id: true, rol: true }
+            });
+            if (basicCoord) {
+              coordinatorId = basicCoord.id;
+              coordinatorRole = 'COORDINATOR_BASIC';
+            }
+          } else if (enrollment.level === 'ADVANCED') {
+            // Para ADVANCED: buscar coordinador avanzado de la organización
+            const advCoord = await prisma.usuario.findFirst({
+              where: {
+                organizationId: organization.id,
+                OR: [
+                  { rol: 'COORDINATOR_ADVANCED' },
+                  { esCoordinadorAvanzado: true }
+                ]
+              },
+              select: { id: true, rol: true }
+            });
+            if (advCoord) {
+              coordinatorId = advCoord.id;
+              coordinatorRole = 'COORDINATOR_ADVANCED';
+            }
+          } else if (enrollment.level === 'PL') {
+            // Para PL: buscar coordinador PL de la organización
+            const plCoord = await prisma.usuario.findFirst({
+              where: {
+                organizationId: organization.id,
+                OR: [
+                  { rol: 'COORDINATOR_PL' },
+                  { rol: 'COORDINADOR' }
+                ]
+              },
+              select: { id: true, rol: true }
+            });
+            if (plCoord) {
+              coordinatorId = plCoord.id;
+              coordinatorRole = 'COORDINATOR_PL';
+            }
+          }
+
+          if (coordinatorId && coordinatorRole && product.visionId) {
+            const commissionData = {
+              coordinatorId,
+              relatedUserId: parseInt(userId),
+              visionId: product.visionId,
+              organizationId: organization.id,
+              enrollmentId: enrollment.id,
+              coordinatorRole,
+              checkInTimestamp: new Date()
+            };
+
+            if (enrollment.level === 'BASIC') {
+              const commission = await triggerBasicSeatedCommission(commissionData);
+              if (commission) {
+                logger.debug(`💰 Comisión BASIC_SEATED generada para coordinador ${coordinatorId}`);
+              }
+            } else if (enrollment.level === 'ADVANCED') {
+              const commission = await triggerAdvanceSeatedCommission(commissionData);
+              if (commission) {
+                logger.debug(`💰 Comisión ADVANCE_SEATED generada para coordinador ${coordinatorId}`);
+              }
+            } else if (enrollment.level === 'PL') {
+              const commission = await triggerPLStartCommission(commissionData);
+              if (commission) {
+                logger.debug(`💰 Comisión PL_START generada para coordinador ${coordinatorId}`);
+              }
+            }
+          } else {
+            logger.debug(`ℹ️ No se encontró coordinador para nivel ${enrollment.level} en org ${organization.id}`);
+          }
+        } catch (commissionError) {
+          // No fallar el check-in si las comisiones fallan
+          logger.error('⚠️ Error generando comisión (no crítico):', commissionError);
+        }
 
         // *** TRIGGER: Completar tarea de enrolamiento del invitador ***
         // Si este usuario fue invitado por alguien y está asistiendo a BASIC,

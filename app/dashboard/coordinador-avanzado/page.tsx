@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
-  Users, Ticket, AlertTriangle, Building2, GraduationCap, Activity,
+  Users, AlertTriangle, Building2, GraduationCap, Activity,
   Clock, Calendar, Scan, Heart, X, Phone, Mail, Loader2, Zap, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
@@ -47,7 +47,6 @@ export default function CoordinadorAvanzadoDashboard() {
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [countdown, setCountdown] = useState<{[key: number]: string}>({});
   const [medicalAlertsCount, setMedicalAlertsCount] = useState(0);
-  const [advancedCallsData, setAdvancedCallsData] = useState<{ completed: number; total: number; pending: number; visionId?: number }>({ completed: 0, total: 0, pending: 0 });
   const [preRegistros, setPreRegistros] = useState<{ pending: number; paid: number; total: number }>({ pending: 0, paid: 0, total: 0 });
   const [visionInfo, setVisionInfo] = useState<{ nombre: string; level: string } | null>(null);
   const [advancedStats, setAdvancedStats] = useState<{ pending: number; enrolled: number; total: number }>({ pending: 0, enrolled: 0, total: 0 });
@@ -105,27 +104,9 @@ export default function CoordinadorAvanzadoDashboard() {
       fetchDashboardData();
       fetchProductos();
       fetchMedicalAlerts();
-      fetchAdvancedCallsData();
       fetchPreRegistros();
     }
   }, [status, session]);
-
-  const fetchAdvancedCallsData = async () => {
-    try {
-      const res = await fetch('/api/gc-calls/today-stats?level=ADVANCED');
-      const result = await res.json();
-      if (res.ok && result.success) {
-        setAdvancedCallsData({
-          completed: result.completed || 0,
-          total: result.total || 0,
-          pending: result.pending || (result.total - result.completed) || 0,
-          visionId: result.visionId
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching advanced calls data:', error);
-    }
-  };
 
   const fetchDashboardData = async () => {
     try {
@@ -360,38 +341,6 @@ export default function CoordinadorAvanzadoDashboard() {
             <p className="text-slate-400 mt-1">🔥 COORDINATOR_ADVANCED • Logística, Pagos y Asistencia</p>
             <p className="text-sm text-slate-500">{session?.user?.email}</p>
           </div>
-        </div>
-
-        {/* KPI Cards - Llamadas, Declarados e Inscritos */}
-        <div className="grid grid-cols-1 gap-6">
-          {/* Widget Llamadas Pendientes con botón */}
-          <Link href={`/dashboard/school-admin/vision/${advancedCallsData.visionId || 2}/call-management?level=ADVANCED`} className="h-full">
-            <div className="bg-gradient-to-br from-yellow-900/40 via-orange-900/30 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 hover:border-yellow-500/50 transition-all cursor-pointer group hover:scale-105 hover:shadow-2xl h-full">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-yellow-500/20 group-hover:bg-yellow-500/30 rounded-xl transition-colors">
-                    <Ticket className="text-yellow-400" size={32} />
-                  </div>
-                  <div>
-                    <div className="text-yellow-400 text-sm font-medium uppercase tracking-wider">Llamadas Pendientes</div>
-                    <div className="text-white text-4xl font-black mt-1">
-                      {advancedCallsData.pending}/{advancedCallsData.total}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm">Gestión de llamadas del día</span>
-                <div className="flex items-center gap-2 text-yellow-400 font-semibold group-hover:gap-3 transition-all">
-                  <span>Ir a llamadas</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </Link>
         </div>
 
         {/* Widget Prospectos de Staff */}
