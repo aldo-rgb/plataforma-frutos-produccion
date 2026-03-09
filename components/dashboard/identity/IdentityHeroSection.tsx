@@ -33,6 +33,7 @@ interface DashboardStatsResponse {
         lockReason?: string;
         currentWeek?: number;
         totalWeeks?: number;
+        hasPendingPLPayment?: boolean;
       } | null;
     };
     visionInfo: {

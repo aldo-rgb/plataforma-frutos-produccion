@@ -10,6 +10,7 @@ interface NextMilestone {
   isLocked: boolean;
   progressPercent: number;
   lockReason?: string;
+  hasPendingPLPayment?: boolean; // Si ya tiene ticket PL con pago parcial
 }
 
 interface EvolutionBarProps {
@@ -239,8 +240,8 @@ export default function EvolutionBar({ currentLevel, nextMilestone, onUpgradeCli
           )}
         </div>
         
-        {/* No mostrar botón de upgrade si el usuario está en DROP */}
-        {!isDropped && nextMilestone?.isLocked && config.cta && (
+        {/* No mostrar botón de upgrade si el usuario está en DROP o ya tiene ticket PL pendiente */}
+        {!isDropped && nextMilestone?.isLocked && !nextMilestone?.hasPendingPLPayment && config.cta && (
           <motion.button
             onClick={onUpgradeClick}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${

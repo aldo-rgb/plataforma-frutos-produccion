@@ -165,12 +165,23 @@ export async function GET() {
       // Para ADVANCED: siguiente es PL
       const plStartDate = vision.plWeekend1StartDate;
       
-      // Verificar si ha pagado PL (tiene ticket PL)
+      // Verificar si ha pagado PL (tiene ticket PL con pago completo)
       const plTicket = await prisma.ticket.findFirst({
         where: {
           ownerId: usuario.id,
           level: 'PL',
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          paymentStatus: 'PAID' // Solo cuenta como desbloqueado si está completamente pagado
+        }
+      });
+      
+      // Verificar si tiene ticket PL con pago parcial (ya apartó pero no ha pagado completo)
+      const plTicketPartial = await prisma.ticket.findFirst({
+        where: {
+          ownerId: usuario.id,
+          level: 'PL',
+          status: 'ACTIVE',
+          paymentStatus: 'PARTIAL'
         }
       });
 
@@ -209,9 +220,10 @@ export async function GET() {
       nextMilestone = {
         name: 'Programa de Liderato',
         deadline: plStartDate,
-        isLocked: !plTicket,
+        isLocked: !plTicket && !plTicketPartial, // Bloqueado solo si no tiene ningún ticket PL
         progressPercent,
-        lockReason: !plTicket ? 'Requiere compromiso PL' : undefined,
+        lockReason: !plTicket && !plTicketPartial ? 'Requiere compromiso PL' : undefined,
+        hasPendingPLPayment: !!plTicketPartial, // Si tiene ticket PL con pago parcial
       };
     } else if (currentLevel === 'PL' && vision) {
       // Para PL: progreso hacia graduación
