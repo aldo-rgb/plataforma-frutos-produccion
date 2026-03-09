@@ -148,6 +148,68 @@ export async function GET(
       }
     });
 
+    // Obtener tareas retrasadas del usuario
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tareasRetrasadas = await prisma.taskInstance.findMany({
+      where: {
+        usuarioId: userId,
+        status: 'PENDING',
+        dueDate: { lt: today }
+      },
+      include: {
+        Accion: {
+          select: {
+            texto: true,
+            Meta: {
+              select: {
+                categoria: true,
+                metaPrincipal: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { dueDate: 'asc' }
+    });
+
+    // Agrupar tareas retrasadas por área
+    const tareasRetrasadasPorArea: Record<string, { count: number; tasks: any[] }> = {};
+    const AREA_NAMES: Record<string, string> = {
+      'finanzas': 'Finanzas',
+      'relaciones': 'Relaciones',
+      'salud': 'Salud',
+      'tiempo': 'Ocio',
+      'ocupacion': 'Talentos',
+      'espiritualidad': 'Paz Mental',
+      'ocio': 'Ocio',
+      'pazMental': 'Paz Mental',
+      'talentos': 'Talentos',
+      'servicioTrans': 'Transformacional',
+      'servicioComun': 'Comunitaria'
+    };
+
+    tareasRetrasadas.forEach(task => {
+      const area = task.Accion?.Meta?.categoria || 'General';
+      const areaDisplay = AREA_NAMES[area] || area;
+      
+      if (!tareasRetrasadasPorArea[areaDisplay]) {
+        tareasRetrasadasPorArea[areaDisplay] = { count: 0, tasks: [] };
+      }
+      
+      const diasRetraso = Math.floor((today.getTime() - new Date(task.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+      
+      tareasRetrasadasPorArea[areaDisplay].count++;
+      tareasRetrasadasPorArea[areaDisplay].tasks.push({
+        id: task.id,
+        texto: task.Accion?.texto || 'Tarea sin descripción',
+        dueDate: task.dueDate,
+        diasRetraso,
+        metaPrincipal: task.Accion?.Meta?.metaPrincipal
+      });
+    });
+
     return NextResponse.json({
       id: usuario.id,
       nombre: usuario.nombre,
@@ -159,7 +221,17 @@ export async function GET(
       estadoCarta: carta?.estado || 'SIN_CARTA',
       metas,
       historialEvidencias,
-      miembroDesde: usuario.createdAt
+      miembroDesde: usuario.createdAt,
+      // Nuevo: Datos de tareas retrasadas
+      totalTareasRetrasadas: tareasRetrasadas.length,
+      tareasRetrasadasPorArea,
+      tareasRetrasadasDetalle: tareasRetrasadas.slice(0, 20).map(t => ({
+        id: t.id,
+        texto: t.Accion?.texto || 'Tarea sin descripción',
+        area: AREA_NAMES[t.Accion?.Meta?.categoria || ''] || 'General',
+        dueDate: t.dueDate,
+        diasRetraso: Math.floor((today.getTime() - new Date(t.dueDate).getTime()) / (1000 * 60 * 60 * 24))
+      }))
     });
 
   } catch (error) {

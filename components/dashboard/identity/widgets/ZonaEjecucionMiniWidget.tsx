@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, CheckCircle, AlertCircle, Rocket, Calendar, Clock, Flame, Trophy, Zap } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Rocket, Calendar, Clock, Flame, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface ZonaEjecucionData {
   totalHoy: number;
   totalRetrasadas: number;
   isDropped?: boolean;
+  streak?: number;
 }
 
 export default function ZonaEjecucionMiniWidget() {
@@ -68,6 +69,7 @@ export default function ZonaEjecucionMiniWidget() {
 
   const totalHoy = data?.totalHoy || 0;
   const totalRetrasadas = data?.totalRetrasadas || 0;
+  const streak = data?.streak || 0;
   const todoListo = totalHoy === 0 && totalRetrasadas === 0;
   const hasUrgentTasks = totalRetrasadas > 0;
 
@@ -115,14 +117,12 @@ export default function ZonaEjecucionMiniWidget() {
             </p>
           </div>
         </div>
-        {hasUrgentTasks && (
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
-          >
-            <Zap className="w-6 h-6 text-yellow-400" />
-          </motion.div>
-        )}
+        {/* Racha de días */}
+        <div className="flex items-center gap-1.5 bg-orange-500/20 border border-orange-500/30 px-3 py-1.5 rounded-full">
+          <Flame className="w-4 h-4 text-orange-400" />
+          <span className="text-orange-300 font-bold text-sm">{streak}</span>
+          <span className="text-orange-400/70 text-xs">días</span>
+        </div>
       </div>
 
       {/* Content - flex-1 para ocupar todo el espacio */}

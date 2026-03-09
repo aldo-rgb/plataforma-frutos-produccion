@@ -36,6 +36,21 @@ interface CallHistory {
   tipo: string;
 }
 
+interface TareaRetrasada {
+  id: number;
+  texto: string;
+  area: string;
+  dueDate: string;
+  diasRetraso: number;
+}
+
+interface TareasRetrasadasPorArea {
+  [area: string]: {
+    count: number;
+    tasks: TareaRetrasada[];
+  };
+}
+
 interface LiderData {
   id: number;
   nombre: string;
@@ -78,6 +93,11 @@ interface LiderData {
   evidenciasRechazadas: number;
   evidenciasPendientes: number;
   
+  // Tareas retrasadas
+  totalTareasRetrasadas: number;
+  tareasRetrasadasPorArea: TareasRetrasadasPorArea;
+  tareasRetrasadasDetalle: TareaRetrasada[];
+  
   miembroDesde: string;
 }
 
@@ -96,6 +116,8 @@ export default function LiderProfilePage({ params }: { params: Promise<{ id: str
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [liderId, setLiderId] = useState<string>('');
+  const [showTareasModal, setShowTareasModal] = useState(false);
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
 
   useEffect(() => {
     params.then(p => setLiderId(p.id));
@@ -294,34 +316,53 @@ export default function LiderProfilePage({ params }: { params: Promise<{ id: str
 
         {/* ===== INFORMACIÓN ORGANIZACIONAL ===== */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card title="Estructura Organizacional" icon={<Users size={18} className='text-cyan-400' />}>
-            <div className="space-y-2.5">
-              {lider.vision && (
-                <div className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
-                  <span className="text-slate-400 text-sm">Visión:</span>
-                  <span className="text-white font-semibold">{lider.vision}</span>
+          <Card title="Tareas Retrasadas" icon={<AlertTriangle size={18} className='text-red-400' />}>
+            <div className="space-y-3">
+              {/* Contador principal */}
+              <div className="flex items-center justify-between p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="text-red-400" size={24} />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-black text-red-400">{lider.totalTareasRetrasadas || 0}</p>
+                    <p className="text-xs text-slate-400">tareas pendientes</p>
+                  </div>
                 </div>
-              )}
-              {lider.director && (
-                <div className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
-                  <span className="text-slate-400 text-sm">Director:</span>
-                  <span className="text-white font-semibold">{lider.director}</span>
+                <button
+                  onClick={() => setShowTareasModal(true)}
+                  className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 text-sm font-semibold transition-all flex items-center gap-2"
+                >
+                  <Calendar size={16} />
+                  Ver Detalle
+                </button>
+              </div>
+
+              {/* Distribución por área */}
+              {lider.tareasRetrasadasPorArea && Object.keys(lider.tareasRetrasadasPorArea).length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(lider.tareasRetrasadasPorArea).slice(0, 6).map(([area, data]) => (
+                    <button
+                      key={area}
+                      onClick={() => {
+                        setSelectedArea(area);
+                        setShowTareasModal(true);
+                      }}
+                      className="p-2 bg-slate-800/50 hover:bg-slate-700/50 rounded-lg text-left transition-all group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-400 truncate">{area}</span>
+                        <span className="text-lg font-bold text-red-400 group-hover:text-red-300">{data.count}</span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-              )}
-              {lider.coordinador && (
-                <div className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
-                  <span className="text-slate-400 text-sm">Coordinador:</span>
-                  <span className="text-white font-semibold">{lider.coordinador}</span>
+              ) : (
+                <div className="text-center py-4">
+                  <CheckCircle className="text-green-400 mx-auto mb-2" size={32} />
+                  <p className="text-green-400 font-semibold">¡Sin tareas retrasadas!</p>
+                  <p className="text-xs text-slate-500">Todas las tareas están al día</p>
                 </div>
-              )}
-              {lider.mentor && (
-                <div className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
-                  <span className="text-slate-400 text-sm">Mentor:</span>
-                  <span className="text-white font-semibold">{lider.mentor}</span>
-                </div>
-              )}
-              {!lider.vision && !lider.director && !lider.coordinador && !lider.mentor && (
-                <p className="text-slate-500 text-center py-4">Sin información organizacional</p>
               )}
             </div>
           </Card>
@@ -560,6 +601,133 @@ export default function LiderProfilePage({ params }: { params: Promise<{ id: str
           )}
         </Card>
       </div>
+
+      {/* ===== MODAL DE TAREAS RETRASADAS ===== */}
+      {showTareasModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden">
+            {/* Header del modal */}
+            <div className="p-6 border-b border-slate-700 bg-gradient-to-r from-red-900/30 to-orange-900/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="text-red-400" size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Análisis de Tareas Retrasadas</h2>
+                    <p className="text-sm text-slate-400">{lider.nombre}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowTareasModal(false);
+                    setSelectedArea(null);
+                  }}
+                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <XCircle className="text-slate-400" size={24} />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido del modal */}
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {/* Filtros por área */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                <button
+                  onClick={() => setSelectedArea(null)}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    !selectedArea 
+                      ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50' 
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  Todas ({lider.totalTareasRetrasadas || 0})
+                </button>
+                {lider.tareasRetrasadasPorArea && Object.entries(lider.tareasRetrasadasPorArea).map(([area, data]) => (
+                  <button
+                    key={area}
+                    onClick={() => setSelectedArea(area)}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                      selectedArea === area 
+                        ? 'bg-red-500/30 text-red-300 border border-red-500/50' 
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    {area} ({data.count})
+                  </button>
+                ))}
+              </div>
+
+              {/* Lista de tareas */}
+              <div className="space-y-3">
+                {lider.tareasRetrasadasDetalle && lider.tareasRetrasadasDetalle.length > 0 ? (
+                  lider.tareasRetrasadasDetalle
+                    .filter(t => !selectedArea || t.area === selectedArea)
+                    .map((tarea) => (
+                      <div 
+                        key={tarea.id}
+                        className="p-4 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-red-500/30 transition-all"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <p className="text-white font-semibold">{tarea.texto}</p>
+                            <div className="flex items-center gap-3 mt-2">
+                              <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full">
+                                {tarea.area}
+                              </span>
+                              <span className="text-xs text-slate-500 flex items-center gap-1">
+                                <Calendar size={12} />
+                                {new Date(tarea.dueDate).toLocaleDateString('es-MX', { 
+                                  day: 'numeric', 
+                                  month: 'short' 
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={`text-lg font-bold ${
+                              tarea.diasRetraso > 7 ? 'text-red-500' :
+                              tarea.diasRetraso > 3 ? 'text-orange-400' :
+                              'text-yellow-400'
+                            }`}>
+                              {tarea.diasRetraso} días
+                            </span>
+                            <p className="text-xs text-slate-500">de retraso</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <div className="text-center py-12">
+                    <CheckCircle className="text-green-400 mx-auto mb-4" size={48} />
+                    <p className="text-green-400 font-bold text-lg">¡Excelente!</p>
+                    <p className="text-slate-500">No hay tareas retrasadas en esta área</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer del modal */}
+            <div className="p-4 border-t border-slate-700 bg-slate-900/50">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-slate-400">
+                  <span className="text-red-400 font-bold">{lider.totalTareasRetrasadas || 0}</span> tareas pendientes de completar
+                </div>
+                <button
+                  onClick={() => {
+                    setShowTareasModal(false);
+                    setSelectedArea(null);
+                  }}
+                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-semibold transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

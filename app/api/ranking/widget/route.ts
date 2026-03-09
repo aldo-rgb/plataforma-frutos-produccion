@@ -85,13 +85,13 @@ export async function GET() {
       where: {
         userId: userId,
         status: 'ACCEPTED',
-        captaincy: {
+        TribeCaptaincy: {
           visionId: activeVision.id,
           isActive: true
         }
       },
       include: {
-        captaincy: {
+        TribeCaptaincy: {
           select: {
             roleType: true
           }
@@ -116,8 +116,8 @@ export async function GET() {
     };
 
     const userCaptaincies = captainAssignments.map(a => ({
-      role: a.captaincy.roleType,
-      name: captaincyNames[a.captaincy.roleType] || a.captaincy.roleType
+      role: a.TribeCaptaincy.roleType,
+      name: captaincyNames[a.TribeCaptaincy.roleType] || a.TribeCaptaincy.roleType
     }));
 
     // Obtener todos los usuarios de la misma visión, ordenados por puntos

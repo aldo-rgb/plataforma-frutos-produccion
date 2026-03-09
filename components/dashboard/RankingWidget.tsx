@@ -34,12 +34,17 @@ export default function RankingWidget() {
     const fetchRanking = async () => {
       try {
         const response = await fetch('/api/ranking/widget');
+        console.log('[RankingWidget] Response status:', response.status);
         if (response.ok) {
           const data = await response.json();
+          console.log('[RankingWidget] Data received:', data);
           setRankingData(data);
+        } else {
+          const errorText = await response.text();
+          console.error('[RankingWidget] API error:', response.status, errorText);
         }
       } catch (error) {
-        console.error('Error fetching ranking:', error);
+        console.error('[RankingWidget] Error fetching ranking:', error);
       } finally {
         setLoading(false);
       }
@@ -70,6 +75,60 @@ export default function RankingWidget() {
         </div>
         <div className="text-3xl font-bold text-slate-100">
           -- <span className="text-lg text-slate-500 font-normal">Global</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Vista para cuando no hay ranking pero sí hay capitanías
+  if ((!rankingData.userRank || rankingData.topUsers.length === 0) && !rankingData.isLoboSolitario) {
+    return (
+      <div className="bg-gradient-to-br from-slate-900 via-amber-900/10 to-slate-900 border border-amber-500/30 rounded-2xl overflow-hidden shadow-xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 px-4 py-3 border-b border-amber-500/30">
+          <div className="flex items-center justify-between">
+            <h3 className="text-slate-200 font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+              <Shield className="w-4 h-4 text-amber-400" />
+              Tus Capitanías
+            </h3>
+            <Link 
+              href="/dashboard/ranking"
+              className="text-xs text-amber-400 hover:text-amber-300 transition-colors font-medium"
+            >
+              Ver Ranking →
+            </Link>
+          </div>
+        </div>
+
+        {/* Contenido */}
+        <div className="p-5">
+          {rankingData.captaincies && rankingData.captaincies.length > 0 ? (
+            <div className="space-y-3">
+              {rankingData.captaincies.map((cap, idx) => (
+                <div 
+                  key={idx}
+                  className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl"
+                >
+                  <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white font-semibold text-sm">{cap.name}</p>
+                    <p className="text-xs text-amber-400/70">Responsabilidad activa</p>
+                  </div>
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Shield className="w-8 h-8 text-slate-600" />
+              </div>
+              <p className="text-slate-400 font-medium mb-1">Sin capitanías asignadas</p>
+              <p className="text-xs text-slate-500">Las capitanías se asignan en tu visión</p>
+            </div>
+          )}
         </div>
       </div>
     );

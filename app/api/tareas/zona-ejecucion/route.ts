@@ -19,7 +19,17 @@ export async function GET(req: Request) {
     }
 
     const userId = session.user.id;
+    const userIdNum = typeof userId === 'string' ? parseInt(userId) : userId;
     logger.debug('🔍 Cargando tareas para usuario:', userId);
+
+    // Obtener información del usuario incluyendo racha
+    const currentUser = await prisma.usuario.findUnique({
+      where: { id: userIdNum },
+      select: {
+        completionStreak: true,
+        lastCompletionDate: true
+      }
+    });
 
     // Verificar si el usuario está marcado como DROP
     const visionEnrollment = await prisma.vision_enrollments.findFirst({
@@ -573,6 +583,8 @@ export async function GET(req: Request) {
       tareasRetrasadas,
       totalHoy: tareasHoy.length,
       totalRetrasadas: tareasRetrasadas.length,
+      streak: currentUser?.completionStreak || 0,
+      lastCompletionDate: currentUser?.lastCompletionDate,
       breakdown: {
         arquetipos: tareasArquetipos.length,
         eventos: eventosHoy.length,
