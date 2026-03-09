@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, XCircle, AlertTriangle, User, RefreshCw, Heart, Flame, Timer, Shield, X } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertTriangle, User, RefreshCw, Heart, Flame, Timer, Shield, X, History, Calendar } from 'lucide-react';
 
 interface Participante {
   id: number;
@@ -29,6 +29,23 @@ interface Participante {
     attendanceStatus: string;
     status: string;
   } | null;
+}
+
+interface LlamadaHistorial {
+  id: number;
+  scheduledAt: string;
+  weekNumber: number;
+  status: string;
+  attendanceStatus: string;
+  completedAt: string | null;
+  notes: string | null;
+}
+
+interface HistorialModal {
+  show: boolean;
+  participante: Participante | null;
+  llamadas: LlamadaHistorial[];
+  loading: boolean;
 }
 
 interface CountdownTime {
@@ -68,6 +85,7 @@ export default function WidgetDisciplinaV2() {
   const [strikeAlert, setStrikeAlert] = useState<StrikeAlert>({ show: false, type: 'success', totalStrikes: 0, maxStrikes: 3 });
   const [confirmModal, setConfirmModal] = useState<ConfirmModal>({ show: false, bookingId: null, participanteId: null, participanteNombre: '' });
   const [changeStatusModal, setChangeStatusModal] = useState<ChangeStatusModal>({ show: false, bookingId: null, participanteId: null, participanteNombre: '', currentStatus: null });
+  const [historialModal, setHistorialModal] = useState<HistorialModal>({ show: false, participante: null, llamadas: [], loading: false });
 
   useEffect(() => {
     cargarParticipantes();
@@ -75,6 +93,68 @@ export default function WidgetDisciplinaV2() {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const abrirHistorial = async (participante: Participante) => {
+    setHistorialModal({ show: true, participante, llamadas: [], loading: true });
+    
+    try {
+      const res = await fetch(`/api/mentor/disciplina/historial?participanteId=${participante.id}`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setHistorialModal(prev => ({ ...prev, llamadas: data.llamadas, loading: false }));
+      } else {
+        console.error('Error cargando historial:', data.error);
+        setHistorialModal(prev => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      console.error('Error cargando historial:', error);
+      setHistorialModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const calificarLlamadaHistorial = async (bookingId: number, presente: boolean) => {
+    setProcesando(bookingId);
+    
+    try {
+      if (presente) {
+        const res = await fetch('/api/mentor/disciplina/asistencia', {
+          method: 'POST',
+          body: JSON.stringify({ bookingId, present: true }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+      } else {
+        const res = await fetch('/api/mentor/disciplina/strike', {
+          method: 'POST',
+          body: JSON.stringify({ bookingId }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        
+        if (data.suspended) {
+          setStrikeAlert({
+            show: true,
+            type: 'suspended',
+            totalStrikes: data.totalStrikes,
+            maxStrikes: data.maxStrikes
+          });
+        }
+      }
+      
+      // Recargar historial y participantes
+      if (historialModal.participante) {
+        abrirHistorial(historialModal.participante);
+      }
+      await cargarParticipantes();
+    } catch (error: any) {
+      alert(error.message || 'Error al calificar llamada');
+    } finally {
+      setProcesando(null);
+    }
+  };
 
   const cargarParticipantes = async () => {
     try {
@@ -265,7 +345,8 @@ export default function WidgetDisciplinaV2() {
             return (
               <div 
                 key={participante.id} 
-                className={`p-4 transition-all ${
+                onClick={() => abrirHistorial(participante)}
+                className={`p-4 transition-all cursor-pointer ${
                   llamadaPendiente 
                     ? countdown?.isPast 
                       ? 'bg-red-900/20 border-l-4 border-red-500' 
@@ -375,9 +456,9 @@ export default function WidgetDisciplinaV2() {
 
                   {/* ACCIONES */}
                   {tieneLlamadaHoy && participante.llamadaHoy!.attendanceStatus === 'PENDING' && (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
                       <button 
-                        onClick={() => marcarAsistencia(participante.llamadaHoy!.id)}
+                        onClick={(e) => { e.stopPropagation(); marcarAsistencia(participante.llamadaHoy!.id); }}
                         disabled={procesando === participante.llamadaHoy!.id}
                         className="px-3 py-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white transition-all border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold flex items-center gap-1"
                         title="Confirmar Asistencia"
@@ -386,7 +467,7 @@ export default function WidgetDisciplinaV2() {
                         Asistió
                       </button>
                       <button 
-                        onClick={() => registrarStrike(participante.llamadaHoy!.id, participante.id)}
+                        onClick={(e) => { e.stopPropagation(); registrarStrike(participante.llamadaHoy!.id, participante.id); }}
                         disabled={procesando === participante.llamadaHoy!.id}
                         className="px-3 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold flex items-center gap-1"
                         title="Registrar Falta (Strike)"
@@ -399,7 +480,8 @@ export default function WidgetDisciplinaV2() {
                   
                   {tieneLlamadaHoy && participante.llamadaHoy!.attendanceStatus !== 'PENDING' && (
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         const currentStatus = participante.llamadaHoy!.attendanceStatus;
                         setChangeStatusModal({
                           show: true,
@@ -755,6 +837,182 @@ export default function WidgetDisciplinaV2() {
                   : changeStatusModal.currentStatus === 'PRESENT' 
                     ? 'Confirmar Falta' 
                     : 'Confirmar Asistencia'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE HISTORIAL DE LLAMADAS */}
+      {historialModal.show && historialModal.participante && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-[#0f111a] border border-gray-700 rounded-2xl max-w-lg w-full shadow-2xl max-h-[80vh] flex flex-col">
+            
+            {/* Header */}
+            <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-[#151725] rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                {historialModal.participante.profileImage ? (
+                  <img 
+                    src={historialModal.participante.profileImage} 
+                    alt={historialModal.participante.nombre} 
+                    className="w-10 h-10 rounded-full border-2 border-purple-500 object-cover" 
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                    {historialModal.participante.nombre.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-white font-bold">{historialModal.participante.nombre}</h3>
+                  <p className="text-xs text-gray-400">{historialModal.participante.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setHistorialModal({ show: false, participante: null, llamadas: [], loading: false })}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Strikes Info */}
+            <div className="px-4 py-3 bg-[#1a1d2d] border-b border-gray-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400 text-sm">Vidas restantes:</span>
+                  <div className="flex gap-1">
+                    {Array.from({ length: historialModal.participante.enrollment.maxMissedAllowed }).map((_, i) => (
+                      <Heart 
+                        key={i} 
+                        size={16} 
+                        className={i < (historialModal.participante!.enrollment.maxMissedAllowed - historialModal.participante!.enrollment.missedCallsCount)
+                          ? 'text-red-500 fill-red-500' 
+                          : 'text-gray-600'
+                        } 
+                      />
+                    ))}
+                  </div>
+                  <span className="text-gray-500 text-xs">
+                    ({historialModal.participante.enrollment.maxMissedAllowed - historialModal.participante.enrollment.missedCallsCount}/{historialModal.participante.enrollment.maxMissedAllowed})
+                  </span>
+                </div>
+                <span className="text-purple-400 text-xs font-medium">
+                  {historialModal.participante.enrollment.totalWeeks} semanas totales
+                </span>
+              </div>
+            </div>
+
+            {/* Lista de Llamadas */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              <h4 className="text-sm font-bold text-gray-300 flex items-center gap-2 mb-3">
+                <History size={16} />
+                Historial de Llamadas
+              </h4>
+
+              {historialModal.loading ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">Cargando historial...</p>
+                </div>
+              ) : historialModal.llamadas.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Sin llamadas programadas</p>
+                </div>
+              ) : (
+                historialModal.llamadas.map((llamada) => {
+                  const fecha = new Date(llamada.scheduledAt);
+                  const esPasada = fecha < new Date();
+                  const pendiente = llamada.attendanceStatus === 'PENDING';
+                  const asistio = llamada.attendanceStatus === 'PRESENT' || llamada.attendanceStatus === 'ATTENDED';
+                  const falto = llamada.attendanceStatus === 'MISSED' || llamada.attendanceStatus === 'ABSENT';
+
+                  return (
+                    <div 
+                      key={llamada.id}
+                      className={`p-3 rounded-xl border ${
+                        asistio 
+                          ? 'bg-green-900/10 border-green-500/30' 
+                          : falto 
+                            ? 'bg-red-900/10 border-red-500/30'
+                            : pendiente && esPasada
+                              ? 'bg-orange-900/10 border-orange-500/30'
+                              : 'bg-gray-800/50 border-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white text-sm font-medium">
+                              Semana {llamada.weekNumber}
+                            </span>
+                            {asistio && (
+                              <span className="text-green-400 text-xs bg-green-500/20 px-2 py-0.5 rounded-full">
+                                ✓ Asistió
+                              </span>
+                            )}
+                            {falto && (
+                              <span className="text-red-400 text-xs bg-red-500/20 px-2 py-0.5 rounded-full">
+                                ✗ Faltó
+                              </span>
+                            )}
+                            {pendiente && !esPasada && (
+                              <span className="text-blue-400 text-xs bg-blue-500/20 px-2 py-0.5 rounded-full">
+                                Programada
+                              </span>
+                            )}
+                            {pendiente && esPasada && (
+                              <span className="text-orange-400 text-xs bg-orange-500/20 px-2 py-0.5 rounded-full animate-pulse">
+                                Sin calificar
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })} • {fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+
+                        {/* Botones de calificación para llamadas pasadas sin calificar */}
+                        {pendiente && esPasada && (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                calificarLlamadaHistorial(llamada.id, true);
+                              }}
+                              disabled={procesando === llamada.id}
+                              className="p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white transition-all border border-green-500/30 disabled:opacity-50"
+                              title="Marcar como Asistió"
+                            >
+                              <CheckCircle size={16} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                calificarLlamadaHistorial(llamada.id, false);
+                              }}
+                              disabled={procesando === llamada.id}
+                              className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/30 disabled:opacity-50"
+                              title="Marcar como Faltó"
+                            >
+                              <XCircle size={16} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-800 bg-[#151725] rounded-b-2xl">
+              <button
+                onClick={() => setHistorialModal({ show: false, participante: null, llamadas: [], loading: false })}
+                className="w-full py-2 rounded-xl font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 transition-all"
+              >
+                Cerrar
               </button>
             </div>
           </div>
