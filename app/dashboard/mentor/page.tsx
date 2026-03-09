@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Calendar, CheckCircle, Clock, AlertTriangle, FileText, Phone, DollarSign } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, AlertTriangle, FileText, Phone, DollarSign, Users } from 'lucide-react';
 import ProfileAlert from '@/components/dashboard/mentor/ProfileAlert';
 import NotificacionSesionesPendientes from '@/components/dashboard/mentor/NotificacionSesionesPendientes';
 import WidgetDisciplinaV2 from '@/components/dashboard/mentor/WidgetDisciplinaV2';
@@ -176,6 +176,9 @@ export default async function MentorDashboard() {
         </Link>
         <Link href="/dashboard/mentor/comisiones" className="pb-3 hover:text-slate-300 transition-colors flex items-center gap-2 whitespace-nowrap">
           <DollarSign className="w-4 h-4" /> Mis Comisiones
+        </Link>
+        <Link href="/dashboard/mentor/participantes" className="pb-3 hover:text-slate-300 transition-colors flex items-center gap-2 whitespace-nowrap">
+          <Users className="w-4 h-4" /> Mis Participantes
         </Link>
       </div>
 
