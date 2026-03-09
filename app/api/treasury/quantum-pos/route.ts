@@ -22,7 +22,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    // Obtener organización del usuario
+    const user = await prisma.usuario.findUnique({
+      where: { id: parseInt(session.user.id) },
+      select: { organizationId: true }
+    });
+
+    if (!user?.organizationId) {
+      return NextResponse.json({ error: 'Usuario sin organización' }, { status: 400 });
+    }
+
+    // Buscar credenciales de MercadoPago en la BD
+    const gateway = await prisma.paymentGatewayConfig.findFirst({
+      where: {
+        organizationId: user.organizationId,
+        provider: 'MERCADOPAGO',
+        isActive: true
+      }
+    });
+
+    const accessToken = gateway?.secretKey || process.env.MERCADO_PAGO_ACCESS_TOKEN;
     if (!accessToken) {
       return NextResponse.json({ 
         error: 'Mercado Pago no configurado',
@@ -90,7 +109,26 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    // Obtener organización del usuario
+    const user = await prisma.usuario.findUnique({
+      where: { id: parseInt(session.user.id) },
+      select: { organizationId: true }
+    });
+
+    if (!user?.organizationId) {
+      return NextResponse.json({ error: 'Usuario sin organización' }, { status: 400 });
+    }
+
+    // Buscar credenciales de MercadoPago en la BD
+    const gateway = await prisma.paymentGatewayConfig.findFirst({
+      where: {
+        organizationId: user.organizationId,
+        provider: 'MERCADOPAGO',
+        isActive: true
+      }
+    });
+
+    const accessToken = gateway?.secretKey || process.env.MERCADO_PAGO_ACCESS_TOKEN;
     if (!accessToken) {
       return NextResponse.json({ 
         error: 'Mercado Pago no configurado' 
@@ -205,7 +243,26 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    // Obtener organización del usuario
+    const user = await prisma.usuario.findUnique({
+      where: { id: parseInt(session.user.id) },
+      select: { organizationId: true }
+    });
+
+    if (!user?.organizationId) {
+      return NextResponse.json({ error: 'Usuario sin organización' }, { status: 400 });
+    }
+
+    // Buscar credenciales de MercadoPago en la BD
+    const gateway = await prisma.paymentGatewayConfig.findFirst({
+      where: {
+        organizationId: user.organizationId,
+        provider: 'MERCADOPAGO',
+        isActive: true
+      }
+    });
+
+    const accessToken = gateway?.secretKey || process.env.MERCADO_PAGO_ACCESS_TOKEN;
     if (!accessToken) {
       return NextResponse.json({ 
         error: 'Mercado Pago no configurado' 
