@@ -20,6 +20,7 @@ import VisionHistoryWidget from "@/components/widgets/VisionHistoryWidget";
 import GCPendingSurveyBanner from "@/components/dashboard/GCPendingSurveyBanner";
 import GCLegacyRewardBanner from "@/components/dashboard/GCLegacyRewardBanner";
 import ReferralCommissionsWidget from "@/components/dashboard/ReferralCommissionsWidget";
+import AmbassadorWalletWidget from "@/components/dashboard/AmbassadorWalletWidget";
 import GCTribeWidget from "@/components/dashboard/GCTribeWidget";
 
 export default async function GameChangerDashboardPage() {
@@ -324,6 +325,9 @@ export default async function GameChangerDashboardPage() {
           <IntensiveProgramInvite totalWeeks={totalWeeks} totalCalls={totalCalls} />
         ) : null}
       </div>
+
+      {/* WALLET DE COMISIONES POR REFERIDO */}
+      <AmbassadorWalletWidget />
 
       {/* HISTORIAL DE VISIONES (MIS ÁTOMOS) */}
       <VisionHistoryWidget />
