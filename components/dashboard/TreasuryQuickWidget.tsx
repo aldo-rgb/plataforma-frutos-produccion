@@ -166,6 +166,10 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
   const [searchParticipante, setSearchParticipante] = useState('');
   const [selectedParticipante, setSelectedParticipante] = useState<Participante | null>(null);
   
+  // Búsqueda global de usuarios (quien invita)
+  const [globalSearchResults, setGlobalSearchResults] = useState<Participante[]>([]);
+  const [loadingGlobalSearch, setLoadingGlobalSearch] = useState(false);
+  
   // Nuevo flujo de cobro: Nivel y opciones de precio
   const [selectedLevel, setSelectedLevel] = useState<'BASIC' | 'ADVANCED' | 'PL' | ''>('');
   const [organizationPrices, setOrganizationPrices] = useState<OrganizationPrices | null>(null);
@@ -310,6 +314,26 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
       console.error('Error fetching participants:', error);
     } finally {
       setLoadingParticipantes(false);
+    }
+  };
+
+  // Búsqueda global de usuarios en toda la organización (para "quien invita")
+  const searchUsersGlobally = async (query: string) => {
+    if (query.length < 2) {
+      setGlobalSearchResults([]);
+      return;
+    }
+    setLoadingGlobalSearch(true);
+    try {
+      const res = await fetch(`/api/treasury/search-users?q=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setGlobalSearchResults(data.users || []);
+      }
+    } catch (error) {
+      console.error('Error searching users globally:', error);
+    } finally {
+      setLoadingGlobalSearch(false);
     }
   };
 
@@ -1617,7 +1641,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
             {/* PASO 2: Selector de Participante - Solo cuando hay visión seleccionada */}
             {cobroForm.visionId && (
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">2️⃣ Participante (quien paga/invita)</label>
+                <label className="text-xs text-slate-400 mb-1 block">2️⃣ Quien Invita/Padrino (busca en toda la organización)</label>
                 {selectedParticipante ? (
                   <div className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                     <div className="flex items-center gap-3">
@@ -1634,6 +1658,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                         setSelectedParticipante(null);
                         setCobroForm({ ...cobroForm, participanteId: '', amount: '', reference: '' });
                         setSearchParticipante('');
+                        setGlobalSearchResults([]);
                         setSelectedLevel('');
                         setSelectedPriceOption(null);
                       }}
@@ -1646,27 +1671,29 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder={loadingParticipantes ? "Cargando participantes..." : "Buscar participante por nombre..."}
+                      placeholder="Buscar por nombre, email o teléfono..."
                       value={searchParticipante}
-                      onChange={(e) => setSearchParticipante(e.target.value)}
-                      disabled={loadingParticipantes}
-                      className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-blue-500/50 focus:outline-none disabled:opacity-50"
+                      onChange={(e) => {
+                        setSearchParticipante(e.target.value);
+                        searchUsersGlobally(e.target.value);
+                      }}
+                      className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-blue-500/50 focus:outline-none"
                     />
-                    {loadingParticipantes && (
+                    {loadingGlobalSearch && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500/30 border-t-blue-500" />
                       </div>
                     )}
-                    {/* Lista de participantes filtrados */}
-                    {searchParticipante.length >= 1 && !loadingParticipantes && (
-                      <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                        {participantes
-                          .filter(p => 
-                            p.nombre.toLowerCase().includes(searchParticipante.toLowerCase()) ||
-                            p.email.toLowerCase().includes(searchParticipante.toLowerCase())
-                          )
-                          .slice(0, 10)
-                          .map(p => (
+                    {/* Lista de usuarios encontrados globalmente */}
+                    {searchParticipante.length >= 2 && (
+                      <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                        {loadingGlobalSearch ? (
+                          <div className="px-3 py-4 text-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500/30 border-t-blue-500 mx-auto" />
+                            <p className="text-slate-400 text-xs mt-2">Buscando...</p>
+                          </div>
+                        ) : globalSearchResults.length > 0 ? (
+                          globalSearchResults.map((p: any) => (
                             <button
                               key={p.id}
                               type="button"
@@ -1674,6 +1701,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                                 setSelectedParticipante(p);
                                 setCobroForm({ ...cobroForm, participanteId: p.id.toString() });
                                 setSearchParticipante('');
+                                setGlobalSearchResults([]);
                               }}
                               className="w-full px-3 py-2 text-left hover:bg-slate-800 transition-colors border-b border-slate-800 last:border-b-0 flex items-center gap-3"
                             >
@@ -1683,23 +1711,25 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                               <div className="flex-1 min-w-0">
                                 <p className="text-white text-sm font-medium truncate">{p.nombre}</p>
                                 <p className="text-xs text-slate-400 truncate">{p.email}</p>
+                                {p.referralCode && (
+                                  <p className="text-xs text-purple-400">🎟️ {p.referralCode}</p>
+                                )}
                               </div>
+                              {p.isGraduated && (
+                                <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded">GC</span>
+                              )}
                             </button>
-                          ))}
-                        {participantes.filter(p => 
-                          p.nombre.toLowerCase().includes(searchParticipante.toLowerCase()) ||
-                          p.email.toLowerCase().includes(searchParticipante.toLowerCase())
-                        ).length === 0 && (
-                          <p className="px-3 py-2 text-slate-500 text-sm">No se encontraron participantes</p>
+                          ))
+                        ) : (
+                          <p className="px-3 py-3 text-slate-500 text-sm text-center">
+                            No se encontraron usuarios con "{searchParticipante}"
+                          </p>
                         )}
                       </div>
                     )}
-                    {/* Mostrar conteo de participantes */}
-                    {!searchParticipante && participantes.length > 0 && (
-                      <p className="mt-1 text-xs text-slate-500">
-                        {participantes.length} participante{participantes.length !== 1 ? 's' : ''} en esta visión
-                      </p>
-                    )}
+                    <p className="mt-1 text-xs text-slate-500">
+                      🔍 Busca en toda la organización, no solo en esta visión
+                    </p>
                   </div>
                 )}
               </div>
