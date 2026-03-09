@@ -344,6 +344,9 @@ export async function GET(request: NextRequest) {
         // Determinar tipo de producto
         const productType = ticketSelection === 'FULL_VISION' ? 'COMBO' : 'BASIC';
         
+        // Si se usó código de descuento, no generar comisión
+        const usedGiftCode = appliedCodes && appliedCodes.length > 0;
+        
         const ambassadorResult = await processAmbassadorCommission({
           referralCode: referrerCode,
           referredUserId: result.user.id,
@@ -351,7 +354,8 @@ export async function GET(request: NextRequest) {
           productType,
           saleAmount: amount,
           organizationId: organizationId,
-          visionId: visionId || undefined
+          visionId: visionId || undefined,
+          usedGiftCode
         });
         
         if (ambassadorResult.success) {

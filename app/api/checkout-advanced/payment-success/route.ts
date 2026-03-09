@@ -481,6 +481,9 @@ export async function GET(request: NextRequest) {
           productType = 'COMBO';
         }
 
+        // Si se usó código de descuento, no generar comisión
+        const usedGiftCode = appliedCodes && appliedCodes.length > 0;
+
         const result = await processAmbassadorCommission({
           referralCode: participant.invitedByUser.referralCode,
           referredUserId: participant.id,
@@ -488,7 +491,8 @@ export async function GET(request: NextRequest) {
           productType,
           saleAmount: amount,
           organizationId: organizationId,
-          visionId: visionId
+          visionId: visionId,
+          usedGiftCode
         });
         
         if (result.success) {

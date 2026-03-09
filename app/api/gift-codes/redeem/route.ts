@@ -215,7 +215,7 @@ export async function POST(request: Request) {
       });
 
       if (userWithReferrer?.invitedBy && userWithReferrer.invitedByUser?.referralCode) {
-        // Para gift codes, usamos el valor del código o un estimado del precio
+        // Para gift codes, NO se genera comisión porque es un código de descuento/regalo
         const estimatedValue = giftCode.type === 'PLATINUM' ? 21000 : 2500;
         const productType = giftCode.type === 'PLATINUM' ? 'COMBO' : 'BASIC';
         
@@ -226,7 +226,8 @@ export async function POST(request: Request) {
           productType,
           saleAmount: estimatedValue,
           organizationId: giftCode.organizationId,
-          visionId: parseInt(visionId)
+          visionId: parseInt(visionId),
+          usedGiftCode: true // No genera comisión para códigos de regalo
         });
         
         if (ambassadorResult.success) {

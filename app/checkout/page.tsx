@@ -948,7 +948,7 @@ function CheckoutContent() {
                   </span>
                 </button>
 
-                {/* Pago con Código */}
+                {/* Código de Descuento */}
                 <button
                   onClick={() => setPaymentMethod('GIFT_CODE')}
                   className={`p-4 rounded-xl border-2 transition-all ${
@@ -959,7 +959,7 @@ function CheckoutContent() {
                 >
                   <QrCode className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-400'}`} size={24} />
                   <span className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-300'}`}>
-                    Pago con Código
+                    Código de descuento
                   </span>
                 </button>
               </div>

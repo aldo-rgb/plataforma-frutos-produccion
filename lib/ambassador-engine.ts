@@ -147,11 +147,20 @@ export async function processAmbassadorCommission(params: {
   saleAmount: number; // Monto real pagado (después de descuentos)
   organizationId: number;
   visionId?: number;
+  usedGiftCode?: boolean; // Si se usó código de descuento, no generar comisión
 }): Promise<AmbassadorCommissionResult> {
-  const { referralCode, referredUserId, ticketId, productType, saleAmount, organizationId, visionId } = params;
+  const { referralCode, referredUserId, ticketId, productType, saleAmount, organizationId, visionId, usedGiftCode } = params;
 
   try {
-    // 0. Verificar si las comisiones están habilitadas para esta organización
+    // 0. Si se usó código de descuento, no generar comisión
+    if (usedGiftCode) {
+      return {
+        success: false,
+        message: 'No se genera comisión cuando se usa código de descuento'
+      };
+    }
+
+    // 1. Verificar si las comisiones están habilitadas para esta organización
     const organization = await prisma.organization.findUnique({
       where: { id: organizationId },
       select: {
@@ -170,7 +179,7 @@ export async function processAmbassadorCommission(params: {
       };
     }
 
-    // 1. Verificar elegibilidad del embajador
+    // 2. Verificar elegibilidad del embajador
     const eligibility = await findEligibleAmbassador(referralCode);
     
     if (!eligibility.eligible || !eligibility.ambassadorId) {
@@ -180,7 +189,7 @@ export async function processAmbassadorCommission(params: {
       };
     }
 
-    // 2. Verificar que no sea auto-referido
+    // 3. Verificar que no sea auto-referido
     if (eligibility.ambassadorId === referredUserId) {
       return {
         success: false,
@@ -188,7 +197,7 @@ export async function processAmbassadorCommission(params: {
       };
     }
 
-    // 3. Verificar que no exista ya una comisión por este ticket
+    // 4. Verificar que no exista ya una comisión por este ticket
     if (ticketId) {
       const existingCommission = await prisma.ambassador_wallet_transactions.findFirst({
         where: { ticketId }
@@ -202,7 +211,7 @@ export async function processAmbassadorCommission(params: {
       }
     }
 
-    // 4. Obtener el porcentaje de comisión de la configuración de la organización
+    // 5. Obtener el porcentaje de comisión de la configuración de la organización
     let commissionPercent: number;
     switch (productType) {
       case 'BASIC':
