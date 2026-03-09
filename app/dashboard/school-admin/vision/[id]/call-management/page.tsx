@@ -82,7 +82,7 @@ export default function CallManagementPage() {
   const [filterMyList, setFilterMyList] = useState(false);
   const [filterActiveHours, setFilterActiveHours] = useState(false);
   const [filterByStatus, setFilterByStatus] = useState<'ALL' | 'PENDING' | 'ASISTE' | 'NO_ASISTE'>('PENDING');
-  const [excludeUnpaid, setExcludeUnpaid] = useState(true); // Por defecto excluir usuarios sin pago
+  const [excludeUnpaid, setExcludeUnpaid] = useState(false); // Desactivado - usuarios siempre tienen pago al registrarse
   const [selectedLevel, setSelectedLevel] = useState<'BASIC' | 'ADVANCED' | 'PL'>(initialLevel);
   const [selectedCard, setSelectedCard] = useState<CallTrackingData | null>(null);
   const [showCallModal, setShowCallModal] = useState(false);
@@ -633,15 +633,7 @@ export default function CallManagementPage() {
                 <span className="text-white text-xs md:text-sm font-medium">🕒 Solo Disponibles</span>
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer bg-slate-900/50 px-3 md:px-4 py-2 md:py-3 rounded-lg border border-red-500/50 hover:border-red-500 transition-all">
-                <input
-                  type="checkbox"
-                  checked={excludeUnpaid}
-                  onChange={(e) => setExcludeUnpaid(e.target.checked)}
-                  className="w-4 h-4 md:w-5 md:h-5 accent-red-500"
-                />
-                <span className="text-white text-xs md:text-sm font-medium">💳 Excluir Sin Pago</span>
-              </label>
+
             </div>
 
             {/* Filtros por status de asistencia */}
