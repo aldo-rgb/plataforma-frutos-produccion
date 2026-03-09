@@ -15,6 +15,9 @@ import {
   ToggleLeft,
   ToggleRight,
   AlertTriangle,
+  Users,
+  UserPlus,
+  Percent,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -61,6 +64,24 @@ export default function DefaultPricesPage() {
     saving: false,
   });
 
+  // Configuración de comisiones
+  const [commissionsConfig, setCommissionsConfig] = useState({
+    // Comisiones de equipo (coordinadores)
+    teamEnabled: false,
+    teamBasicSeated: 300,
+    teamAdvancedSeated: 500,
+    teamAdvancedCombo: 700,
+    teamPLStart: 400,
+    teamSaving: false,
+    // Comisiones por referencia (embajadores/GCs)
+    referralEnabled: false,
+    referralBasicPercent: 20,
+    referralAdvancedPercent: 10,
+    referralPLPercent: 10,
+    referralComboPercent: 15,
+    referralSaving: false,
+  });
+
   // Estado global de moneda
   const [globalCurrency, setGlobalCurrency] = useState<'MXN' | 'USD'>('MXN');
 
@@ -83,6 +104,7 @@ export default function DefaultPricesPage() {
       fetchDefaultPrices();
       fetchAnticiposConfig();
       fetchTransfersConfig();
+      fetchCommissionsConfig();
     }
   }, [status, session]);
 
@@ -163,6 +185,85 @@ export default function DefaultPricesPage() {
       showNotification('error', 'Error al guardar configuración');
     } finally {
       setTransfersConfig(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  // Funciones para comisiones
+  const fetchCommissionsConfig = async () => {
+    try {
+      const res = await fetch('/api/school-admin/commissions-config');
+      const data = await res.json();
+      if (data.success && data.config) {
+        setCommissionsConfig(prev => ({
+          ...prev,
+          teamEnabled: data.config.teamCommissionsEnabled || false,
+          teamBasicSeated: data.config.teamCommissionBasicSeated || 300,
+          teamAdvancedSeated: data.config.teamCommissionAdvancedSeated || 500,
+          teamAdvancedCombo: data.config.teamCommissionAdvancedCombo || 700,
+          teamPLStart: data.config.teamCommissionPLStart || 400,
+          referralEnabled: data.config.referralCommissionsEnabled || false,
+          referralBasicPercent: data.config.referralCommissionBasicPercent || 20,
+          referralAdvancedPercent: data.config.referralCommissionAdvancedPercent || 10,
+          referralPLPercent: data.config.referralCommissionPLPercent || 10,
+          referralComboPercent: data.config.referralCommissionComboPercent || 15,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching commissions config:', error);
+    }
+  };
+
+  const handleSaveTeamCommissions = async () => {
+    setCommissionsConfig(prev => ({ ...prev, teamSaving: true }));
+    try {
+      const res = await fetch('/api/school-admin/commissions-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamCommissionsEnabled: commissionsConfig.teamEnabled,
+          teamCommissionBasicSeated: commissionsConfig.teamBasicSeated,
+          teamCommissionAdvancedSeated: commissionsConfig.teamAdvancedSeated,
+          teamCommissionAdvancedCombo: commissionsConfig.teamAdvancedCombo,
+          teamCommissionPLStart: commissionsConfig.teamPLStart,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification('success', '✅ Comisiones de equipo guardadas');
+      } else {
+        showNotification('error', data.error || 'Error al guardar');
+      }
+    } catch (error) {
+      showNotification('error', 'Error al guardar configuración');
+    } finally {
+      setCommissionsConfig(prev => ({ ...prev, teamSaving: false }));
+    }
+  };
+
+  const handleSaveReferralCommissions = async () => {
+    setCommissionsConfig(prev => ({ ...prev, referralSaving: true }));
+    try {
+      const res = await fetch('/api/school-admin/commissions-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          referralCommissionsEnabled: commissionsConfig.referralEnabled,
+          referralCommissionBasicPercent: commissionsConfig.referralBasicPercent,
+          referralCommissionAdvancedPercent: commissionsConfig.referralAdvancedPercent,
+          referralCommissionPLPercent: commissionsConfig.referralPLPercent,
+          referralCommissionComboPercent: commissionsConfig.referralComboPercent,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification('success', '✅ Comisiones por referencia guardadas');
+      } else {
+        showNotification('error', data.error || 'Error al guardar');
+      }
+    } catch (error) {
+      showNotification('error', 'Error al guardar configuración');
+    } finally {
+      setCommissionsConfig(prev => ({ ...prev, referralSaving: false }));
     }
   };
 
@@ -598,6 +699,313 @@ export default function DefaultPricesPage() {
           {!transfersConfig.enabled && (
             <p className="text-slate-500 text-sm italic">
               Activa las transferencias para permitir que los usuarios cedan sus tickets
+            </p>
+          )}
+        </div>
+
+        {/* ========================================= */}
+        {/* SECCIÓN DE COMISIONES */}
+        {/* ========================================= */}
+        
+        {/* Comisiones para el Equipo (Coordinadores) */}
+        <div className="mb-8 bg-gradient-to-br from-emerald-900/30 to-slate-900/50 border-2 border-emerald-500/30 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="text-4xl">👥</div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-white">Comisiones para el Equipo</h3>
+              <p className="text-slate-400 text-sm">
+                Comisiones fijas por sentado para coordinadores (Básico, Avanzado, PL)
+              </p>
+            </div>
+            <button
+              onClick={() => setCommissionsConfig(prev => ({ ...prev, teamEnabled: !prev.teamEnabled }))}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
+            >
+              {commissionsConfig.teamEnabled ? (
+                <ToggleRight className="w-10 h-10 text-emerald-400" />
+              ) : (
+                <ToggleLeft className="w-10 h-10 text-slate-500" />
+              )}
+            </button>
+          </div>
+
+          {commissionsConfig.teamEnabled && (
+            <div className="space-y-4 mt-4 pt-4 border-t border-emerald-500/20">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Comisión Básico Sentado */}
+                <div>
+                  <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                    <DollarSign size={16} />
+                    Básico Sentado (MXN)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold"
+                    value={commissionsConfig.teamBasicSeated}
+                    onChange={(e) => setCommissionsConfig(prev => ({ 
+                      ...prev, 
+                      teamBasicSeated: parseFloat(e.target.value) || 0 
+                    }))}
+                    min="0"
+                    step="50"
+                  />
+                  <p className="text-slate-400 text-xs mt-1">Por cada asistente que se sienta en Básico</p>
+                </div>
+
+                {/* Comisión Avanzado Sentado */}
+                <div>
+                  <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                    <DollarSign size={16} />
+                    Avanzado Sentado (MXN)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold"
+                    value={commissionsConfig.teamAdvancedSeated}
+                    onChange={(e) => setCommissionsConfig(prev => ({ 
+                      ...prev, 
+                      teamAdvancedSeated: parseFloat(e.target.value) || 0 
+                    }))}
+                    min="0"
+                    step="50"
+                  />
+                  <p className="text-slate-400 text-xs mt-1">Por cada asistente que se sienta en Avanzado</p>
+                </div>
+
+                {/* Comisión Avanzado Combo */}
+                <div>
+                  <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                    <DollarSign size={16} />
+                    Avanzado Combo (MXN)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold"
+                    value={commissionsConfig.teamAdvancedCombo}
+                    onChange={(e) => setCommissionsConfig(prev => ({ 
+                      ...prev, 
+                      teamAdvancedCombo: parseFloat(e.target.value) || 0 
+                    }))}
+                    min="0"
+                    step="50"
+                  />
+                  <p className="text-slate-400 text-xs mt-1">Por combo Avanzado + PL</p>
+                </div>
+
+                {/* Comisión PL Inicio */}
+                <div>
+                  <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                    <DollarSign size={16} />
+                    PL Inicio (MXN)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold"
+                    value={commissionsConfig.teamPLStart}
+                    onChange={(e) => setCommissionsConfig(prev => ({ 
+                      ...prev, 
+                      teamPLStart: parseFloat(e.target.value) || 0 
+                    }))}
+                    min="0"
+                    step="50"
+                  />
+                  <p className="text-slate-400 text-xs mt-1">Por cada inicio de Programa de Liderato</p>
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Users className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-emerald-200/80">
+                    <p className="font-semibold text-emerald-300 mb-1">¿Cómo funciona?</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Las comisiones se generan automáticamente al hacer check-in</li>
+                      <li>Los coordinadores ven sus comisiones en su Wallet de Comisiones</li>
+                      <li>El director puede aprobar y pagar comisiones desde Gestión de Comisiones</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón Guardar */}
+              <button
+                onClick={handleSaveTeamCommissions}
+                disabled={commissionsConfig.teamSaving}
+                className="w-full py-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2"
+              >
+                {commissionsConfig.teamSaving ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    Guardar Comisiones de Equipo
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {!commissionsConfig.teamEnabled && (
+            <p className="text-slate-500 text-sm italic">
+              Activa las comisiones de equipo para recompensar a tus coordinadores
+            </p>
+          )}
+        </div>
+
+        {/* Comisiones por Referencia (Embajadores/GCs) */}
+        <div className="mb-8 bg-gradient-to-br from-purple-900/30 to-slate-900/50 border-2 border-purple-500/30 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="text-4xl">🎁</div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-white">Comisiones por Referencia</h3>
+              <p className="text-slate-400 text-sm">
+                Porcentaje de comisión para Game Changers y embajadores por referir nuevos participantes
+              </p>
+            </div>
+            <button
+              onClick={() => setCommissionsConfig(prev => ({ ...prev, referralEnabled: !prev.referralEnabled }))}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
+            >
+              {commissionsConfig.referralEnabled ? (
+                <ToggleRight className="w-10 h-10 text-purple-400" />
+              ) : (
+                <ToggleLeft className="w-10 h-10 text-slate-500" />
+              )}
+            </button>
+          </div>
+
+          {commissionsConfig.referralEnabled && (
+            <div className="space-y-4 mt-4 pt-4 border-t border-purple-500/20">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Comisión Básico */}
+                <div>
+                  <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                    <Percent size={16} />
+                    Básico (%)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold"
+                    value={commissionsConfig.referralBasicPercent}
+                    onChange={(e) => setCommissionsConfig(prev => ({ 
+                      ...prev, 
+                      referralBasicPercent: parseFloat(e.target.value) || 0 
+                    }))}
+                    min="0"
+                    max="50"
+                    step="1"
+                  />
+                  <p className="text-slate-400 text-xs mt-1">% del precio de Básico</p>
+                </div>
+
+                {/* Comisión Avanzado */}
+                <div>
+                  <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                    <Percent size={16} />
+                    Avanzado (%)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold"
+                    value={commissionsConfig.referralAdvancedPercent}
+                    onChange={(e) => setCommissionsConfig(prev => ({ 
+                      ...prev, 
+                      referralAdvancedPercent: parseFloat(e.target.value) || 0 
+                    }))}
+                    min="0"
+                    max="50"
+                    step="1"
+                  />
+                  <p className="text-slate-400 text-xs mt-1">% del precio de Avanzado</p>
+                </div>
+
+                {/* Comisión PL */}
+                <div>
+                  <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                    <Percent size={16} />
+                    Programa de Liderato (%)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold"
+                    value={commissionsConfig.referralPLPercent}
+                    onChange={(e) => setCommissionsConfig(prev => ({ 
+                      ...prev, 
+                      referralPLPercent: parseFloat(e.target.value) || 0 
+                    }))}
+                    min="0"
+                    max="50"
+                    step="1"
+                  />
+                  <p className="text-slate-400 text-xs mt-1">% del precio de PL</p>
+                </div>
+
+                {/* Comisión Combo */}
+                <div>
+                  <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                    <Percent size={16} />
+                    Combo Completo (%)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold"
+                    value={commissionsConfig.referralComboPercent}
+                    onChange={(e) => setCommissionsConfig(prev => ({ 
+                      ...prev, 
+                      referralComboPercent: parseFloat(e.target.value) || 0 
+                    }))}
+                    min="0"
+                    max="50"
+                    step="1"
+                  />
+                  <p className="text-slate-400 text-xs mt-1">% del precio del combo completo</p>
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <UserPlus className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-purple-200/80">
+                    <p className="font-semibold text-purple-300 mb-1">¿Cómo funciona?</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Cuando alguien se registra usando el código de referido de un GC</li>
+                      <li>Al completar el pago, se genera la comisión automáticamente</li>
+                      <li>El GC ve su balance en "Wallet de Comisiones" en su dashboard</li>
+                      <li>Puede solicitar retiro cuando acumule suficiente saldo</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón Guardar */}
+              <button
+                onClick={handleSaveReferralCommissions}
+                disabled={commissionsConfig.referralSaving}
+                className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2"
+              >
+                {commissionsConfig.referralSaving ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    Guardar Comisiones por Referencia
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {!commissionsConfig.referralEnabled && (
+            <p className="text-slate-500 text-sm italic">
+              Activa las comisiones por referencia para incentivar que tus GCs inviten más personas
             </p>
           )}
         </div>

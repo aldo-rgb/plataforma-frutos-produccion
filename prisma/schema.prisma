@@ -2427,6 +2427,18 @@ model Organization {
   anticiposEnabled                                      Boolean                         @default(false)
   transferDeadlineDays                                  Int                             @default(0)
   transfersEnabled                                      Boolean                         @default(false)
+  // Comisiones para coordinadores (equipo)
+  teamCommissionsEnabled                                Boolean                         @default(false)
+  teamCommissionBasicSeated                             Decimal                         @default(300.00) @db.Decimal(10, 2)
+  teamCommissionAdvancedSeated                          Decimal                         @default(500.00) @db.Decimal(10, 2)
+  teamCommissionAdvancedCombo                           Decimal                         @default(700.00) @db.Decimal(10, 2)
+  teamCommissionPLStart                                 Decimal                         @default(400.00) @db.Decimal(10, 2)
+  // Comisiones por referencia (embajadores/GCs)
+  referralCommissionsEnabled                            Boolean                         @default(false)
+  referralCommissionBasicPercent                        Decimal                         @default(20.00) @db.Decimal(5, 2)
+  referralCommissionAdvancedPercent                     Decimal                         @default(10.00) @db.Decimal(5, 2)
+  referralCommissionPLPercent                           Decimal                         @default(10.00) @db.Decimal(5, 2)
+  referralCommissionComboPercent                        Decimal                         @default(15.00) @db.Decimal(5, 2)
   bankAccountClabe                                      String?
   bankAccountHolder                                     String?
   bankAccountNumber                                     String?
