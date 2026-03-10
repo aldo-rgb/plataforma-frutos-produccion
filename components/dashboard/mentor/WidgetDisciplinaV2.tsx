@@ -41,10 +41,24 @@ interface LlamadaHistorial {
   notes: string | null;
 }
 
+interface HorarioReservado {
+  dayOfWeek: number;
+  dayName: string;
+  time: string;
+}
+
+interface ProximaLlamadaHistorial {
+  id: number;
+  scheduledAt: string;
+  weekNumber: number;
+}
+
 interface HistorialModal {
   show: boolean;
   participante: Participante | null;
   llamadas: LlamadaHistorial[];
+  horariosReservados: HorarioReservado[];
+  proximaLlamada: ProximaLlamadaHistorial | null;
   loading: boolean;
 }
 
@@ -85,7 +99,7 @@ export default function WidgetDisciplinaV2() {
   const [strikeAlert, setStrikeAlert] = useState<StrikeAlert>({ show: false, type: 'success', totalStrikes: 0, maxStrikes: 3 });
   const [confirmModal, setConfirmModal] = useState<ConfirmModal>({ show: false, bookingId: null, participanteId: null, participanteNombre: '' });
   const [changeStatusModal, setChangeStatusModal] = useState<ChangeStatusModal>({ show: false, bookingId: null, participanteId: null, participanteNombre: '', currentStatus: null });
-  const [historialModal, setHistorialModal] = useState<HistorialModal>({ show: false, participante: null, llamadas: [], loading: false });
+  const [historialModal, setHistorialModal] = useState<HistorialModal>({ show: false, participante: null, llamadas: [], horariosReservados: [], proximaLlamada: null, loading: false });
 
   useEffect(() => {
     cargarParticipantes();
@@ -95,14 +109,31 @@ export default function WidgetDisciplinaV2() {
   }, []);
 
   const abrirHistorial = async (participante: Participante) => {
-    setHistorialModal({ show: true, participante, llamadas: [], loading: true });
+    setHistorialModal({ show: true, participante, llamadas: [], horariosReservados: [], proximaLlamada: null, loading: true });
     
     try {
       const res = await fetch(`/api/mentor/disciplina/historial?participanteId=${participante.id}`);
       const data = await res.json();
       
       if (data.success) {
-        setHistorialModal(prev => ({ ...prev, llamadas: data.llamadas, loading: false }));
+        // Actualizar participante con datos frescos del enrollment
+        const updatedParticipante: Participante = {
+          ...participante,
+          enrollment: {
+            ...participante.enrollment,
+            missedCallsCount: data.enrollment.missedCallsCount,
+            maxMissedAllowed: data.enrollment.maxMissedAllowed,
+            totalWeeks: data.enrollment.totalWeeks
+          }
+        };
+        setHistorialModal(prev => ({ 
+          ...prev, 
+          participante: updatedParticipante,
+          llamadas: data.llamadas,
+          horariosReservados: data.horariosReservados || [],
+          proximaLlamada: data.proximaLlamada || null,
+          loading: false 
+        }));
       } else {
         console.error('Error cargando historial:', data.error);
         setHistorialModal(prev => ({ ...prev, loading: false }));
@@ -868,7 +899,7 @@ export default function WidgetDisciplinaV2() {
                 </div>
               </div>
               <button
-                onClick={() => setHistorialModal({ show: false, participante: null, llamadas: [], loading: false })}
+                onClick={() => setHistorialModal({ show: false, participante: null, llamadas: [], horariosReservados: [], proximaLlamada: null, loading: false })}
                 className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-gray-400" />
@@ -897,9 +928,73 @@ export default function WidgetDisciplinaV2() {
                   </span>
                 </div>
                 <span className="text-purple-400 text-xs font-medium">
-                  {historialModal.participante.enrollment.totalWeeks} semanas totales
+                  {/* Mostrar semanas únicas basado en las llamadas */}
+                  {(() => {
+                    const numSemanas = historialModal.llamadas.length > 0 
+                      ? [...new Set(historialModal.llamadas.map(l => l.weekNumber))].length 
+                      : historialModal.participante!.enrollment.totalWeeks;
+                    return `${numSemanas} semana${numSemanas !== 1 ? 's' : ''} totales`;
+                  })()}
                 </span>
               </div>
+            </div>
+            
+            {/* Próxima Llamada y Horarios Reservados */}
+            <div className="px-4 py-3 bg-[#151725] border-b border-gray-800 space-y-3">
+              {/* Próxima Llamada */}
+              {historialModal.proximaLlamada ? (
+                <div className="flex items-center gap-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-xl">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Clock size={20} className="text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-300 font-medium">Próxima llamada</p>
+                    <p className="text-white font-bold">
+                      {new Date(historialModal.proximaLlamada.scheduledAt).toLocaleDateString('es-ES', { 
+                        weekday: 'long', 
+                        day: 'numeric', 
+                        month: 'long' 
+                      })}
+                      {' • '}
+                      {new Date(historialModal.proximaLlamada.scheduledAt).toLocaleTimeString('es-ES', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </p>
+                    <p className="text-xs text-gray-400">Semana {historialModal.proximaLlamada.weekNumber}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-3 bg-gray-800/50 border border-gray-700 rounded-xl">
+                  <div className="w-10 h-10 rounded-full bg-gray-700/50 flex items-center justify-center">
+                    <Clock size={20} className="text-gray-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Próxima llamada</p>
+                    <p className="text-gray-400">Sin llamadas programadas</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Horarios Reservados */}
+              {historialModal.horariosReservados.length > 0 && (
+                <div className="p-3 bg-purple-900/10 border border-purple-500/20 rounded-xl">
+                  <p className="text-xs text-purple-300 font-medium mb-2 flex items-center gap-2">
+                    <Calendar size={14} />
+                    Horarios reservados
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {historialModal.horariosReservados.map((horario, idx) => (
+                      <span 
+                        key={idx}
+                        className="text-xs px-2 py-1 bg-purple-500/20 text-purple-300 rounded-lg border border-purple-500/30"
+                      >
+                        {horario.dayName} {horario.time}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Lista de Llamadas */}
@@ -1009,7 +1104,7 @@ export default function WidgetDisciplinaV2() {
             {/* Footer */}
             <div className="p-4 border-t border-gray-800 bg-[#151725] rounded-b-2xl">
               <button
-                onClick={() => setHistorialModal({ show: false, participante: null, llamadas: [], loading: false })}
+                onClick={() => setHistorialModal({ show: false, participante: null, llamadas: [], horariosReservados: [], proximaLlamada: null, loading: false })}
                 className="w-full py-2 rounded-xl font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 transition-all"
               >
                 Cerrar

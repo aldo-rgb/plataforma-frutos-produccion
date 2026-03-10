@@ -80,6 +80,34 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Extraer horarios reservados únicos (día de la semana + hora)
+    const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const horariosMap = new Map<string, { dayOfWeek: number; dayName: string; time: string }>();
+    
+    llamadas.forEach(llamada => {
+      const fecha = new Date(llamada.scheduledAt);
+      const dayOfWeek = fecha.getUTCDay();
+      const time = fecha.toISOString().split('T')[1].substring(0, 5);
+      const key = `${dayOfWeek}-${time}`;
+      
+      if (!horariosMap.has(key)) {
+        horariosMap.set(key, {
+          dayOfWeek,
+          dayName: DIAS_SEMANA[dayOfWeek],
+          time
+        });
+      }
+    });
+
+    const horariosReservados = Array.from(horariosMap.values())
+      .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.time.localeCompare(b.time));
+
+    // Encontrar la próxima llamada (futura y pendiente)
+    const ahora = new Date();
+    const proximaLlamada = llamadas
+      .filter(l => new Date(l.scheduledAt) > ahora && l.attendanceStatus === 'PENDING')
+      .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0] || null;
+
     return NextResponse.json({
       success: true,
       participante: {
@@ -96,6 +124,12 @@ export async function GET(request: NextRequest) {
         totalWeeks: enrollment.totalWeeks,
         status: enrollment.status,
       },
+      horariosReservados,
+      proximaLlamada: proximaLlamada ? {
+        id: proximaLlamada.id,
+        scheduledAt: proximaLlamada.scheduledAt,
+        weekNumber: proximaLlamada.weekNumber
+      } : null,
       llamadas: llamadas.map(llamada => ({
         id: llamada.id,
         scheduledAt: llamada.scheduledAt,
