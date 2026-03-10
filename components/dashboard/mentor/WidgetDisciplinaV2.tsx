@@ -1094,6 +1094,40 @@ export default function WidgetDisciplinaV2() {
                             </button>
                           </div>
                         )}
+
+                        {/* Botón para modificar asistencia ya calificada */}
+                        {(asistio || falto) && (
+                          <div className="flex gap-1">
+                            {asistio && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  calificarLlamadaHistorial(llamada.id, false);
+                                }}
+                                disabled={procesando === llamada.id}
+                                className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/30 disabled:opacity-50 text-xs flex items-center gap-1"
+                                title="Cambiar a Faltó"
+                              >
+                                <XCircle size={14} />
+                                <span className="hidden sm:inline">Cambiar</span>
+                              </button>
+                            )}
+                            {falto && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  calificarLlamadaHistorial(llamada.id, true);
+                                }}
+                                disabled={procesando === llamada.id}
+                                className="p-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white transition-all border border-green-500/30 disabled:opacity-50 text-xs flex items-center gap-1"
+                                title="Cambiar a Asistió"
+                              >
+                                <CheckCircle size={14} />
+                                <span className="hidden sm:inline">Cambiar</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
