@@ -2,8 +2,8 @@
 
 ## Guía Completa de Desarrollo y Arquitectura
 
-**Versión:** 3.5  
-**Fecha:** 06 Marzo 2026  
+**Versión:** 3.6  
+**Fecha:** 09 Marzo 2026  
 **Plataforma:** Quantum Frutos - Sistema de Transformación Personal
 
 ---
@@ -1687,6 +1687,128 @@ Organizaciones: Múltiples
 ---
 
 # 21. HISTORIAL DE CAMBIOS
+
+## v3.6 - 09/03/2026 (Modal Historial Disciplina + Mejoras Dashboard Mentor)
+
+### 🎯 Resumen de Sesión
+
+Esta sesión se enfocó en mejorar el **Sistema de Llamadas de Disciplina** para mentores y el dashboard:
+
+1. **Modal de Historial de Llamadas mejorado**
+   - Muestra próxima llamada con fecha y hora completa
+   - Muestra horarios reservados (días de la semana y horas)
+   - Calcula semanas totales basado en llamadas únicas
+   - Actualiza datos del enrollment en tiempo real
+
+2. **Correcciones de datos**
+   - Fix enrollment de Dora (totalWeeks: 1 → 17)
+
+---
+
+### 🔧 Mejora: Modal Historial de Llamadas de Disciplina
+
+**Archivos modificados:**
+- `app/api/mentor/disciplina/historial/route.ts`
+- `components/dashboard/mentor/WidgetDisciplinaV2.tsx`
+
+**Problema:** El modal de historial mostraba "1 semanas totales" incorrectamente y no mostraba la próxima llamada ni los horarios reservados.
+
+**Solución API (`historial/route.ts`):**
+```typescript
+// Extraer horarios reservados únicos (día de la semana + hora)
+const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const horariosMap = new Map<string, { dayOfWeek: number; dayName: string; time: string }>();
+
+llamadas.forEach(llamada => {
+  const fecha = new Date(llamada.scheduledAt);
+  const dayOfWeek = fecha.getUTCDay();
+  const time = fecha.toISOString().split('T')[1].substring(0, 5);
+  const key = `${dayOfWeek}-${time}`;
+  
+  if (!horariosMap.has(key)) {
+    horariosMap.set(key, { dayOfWeek, dayName: DIAS_SEMANA[dayOfWeek], time });
+  }
+});
+
+// Encontrar la próxima llamada (futura y pendiente)
+const ahora = new Date();
+const proximaLlamada = llamadas
+  .filter(l => new Date(l.scheduledAt) > ahora && l.attendanceStatus === 'PENDING')
+  .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0] || null;
+
+return NextResponse.json({
+  success: true,
+  // ... otros campos
+  horariosReservados,  // ← NUEVO
+  proximaLlamada: proximaLlamada ? {  // ← NUEVO
+    id: proximaLlamada.id,
+    scheduledAt: proximaLlamada.scheduledAt,
+    weekNumber: proximaLlamada.weekNumber
+  } : null,
+});
+```
+
+**Solución Frontend (`WidgetDisciplinaV2.tsx`):**
+```typescript
+// Nuevos tipos
+interface HorarioReservado {
+  dayOfWeek: number;
+  dayName: string;
+  time: string;
+}
+
+interface ProximaLlamadaHistorial {
+  id: number;
+  scheduledAt: string;
+  weekNumber: number;
+}
+
+interface HistorialModal {
+  show: boolean;
+  participante: Participante | null;
+  llamadas: LlamadaHistorial[];
+  horariosReservados: HorarioReservado[];  // ← NUEVO
+  proximaLlamada: ProximaLlamadaHistorial | null;  // ← NUEVO
+  loading: boolean;
+}
+
+// Actualizar datos frescos al abrir el modal
+const abrirHistorial = async (participante: Participante) => {
+  // ... fetch API
+  if (data.success) {
+    setHistorialModal(prev => ({ 
+      ...prev, 
+      participante: updatedParticipante,
+      llamadas: data.llamadas,
+      horariosReservados: data.horariosReservados || [],  // ← NUEVO
+      proximaLlamada: data.proximaLlamada || null,  // ← NUEVO
+      loading: false 
+    }));
+  }
+};
+```
+
+**UI del Modal:**
+- Próxima llamada: Muestra fecha completa (ej: "jueves, 13 de marzo • 07:00 - Semana 2")
+- Horarios reservados: Badges con día y hora (ej: "[Jueves 07:00] [Martes 07:00]")
+- Semanas totales: Calcula de llamadas únicas, no del enrollment
+
+---
+
+### 🔧 Fix: Cálculo de semanas totales
+
+**Problema:** Mostraba `enrollment.totalWeeks` que podía estar desactualizado.
+
+**Solución:**
+```typescript
+// Calcular semanas únicas basado en llamadas reales
+const numSemanas = historialModal.llamadas.length > 0 
+  ? [...new Set(historialModal.llamadas.map(l => l.weekNumber))].length 
+  : historialModal.participante!.enrollment.totalWeeks;
+return `${numSemanas} semana${numSemanas !== 1 ? 's' : ''} totales`;
+```
+
+---
 
 ## v3.5 - 06/03/2026 (Fixes Sistema GC y Átomos - SmallGroup)
 
@@ -3948,6 +4070,6 @@ grep -A 20 "^model NombreDelModelo" prisma/schema.prisma
 ---
 
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 3.5 - Marzo 2026*  
-*Última actualización: 06/03/2026*
+*Versión 3.6 - Marzo 2026*  
+*Última actualización: 09/03/2026*
 
