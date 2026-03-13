@@ -192,6 +192,66 @@ export async function GET(
       }
     ];
 
+    currentStep = 'find-workshops';
+    // Obtener talleres (SchoolProduct tipo EXTRA_WORKSHOP) de la organización y hermanas
+    const workshops = await prisma.schoolProduct.findMany({
+      where: {
+        organizationId: { in: siblingOrganizationIds },
+        type: 'EXTRA_WORKSHOP',
+        isActive: true,
+        trainingStatus: { in: ['PENDING', 'REGISTRATION_OPEN'] },
+        startDate: {
+          gte: now
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        startDate: true,
+        endDate: true,
+        basePrice: true,
+        promoPrice: true,
+        location: true,
+        maxCapacity: true,
+        currentEnrollment: true,
+        imageUrl: true,
+        trainingStatus: true,
+        Organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
+        }
+      },
+      orderBy: {
+        startDate: 'asc'
+      },
+      take: 6
+    });
+
+    // Formatear talleres
+    const formattedWorkshops = workshops.map(workshop => ({
+      id: workshop.id,
+      nombre: workshop.name,
+      descripcion: workshop.description,
+      startDate: workshop.startDate,
+      endDate: workshop.endDate,
+      price: workshop.promoPrice || workshop.basePrice,
+      location: workshop.location,
+      spotsAvailable: workshop.maxCapacity 
+        ? workshop.maxCapacity - workshop.currentEnrollment
+        : null,
+      imageUrl: workshop.imageUrl,
+      status: workshop.trainingStatus,
+      organization: {
+        id: workshop.Organization.id,
+        name: workshop.Organization.name,
+        slug: workshop.Organization.slug
+      }
+    }));
+
     currentStep = 'count-tickets';
     // Estadísticas de la organización
     const stats = await prisma.ticket.count({
@@ -224,6 +284,7 @@ export async function GET(
         }
       },
       upcomingTrainings: formattedTrainings,
+      workshops: formattedWorkshops,
       testimonials
     });
 

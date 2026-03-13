@@ -50,6 +50,20 @@ interface Training {
   organization?: TrainingOrganization;
 }
 
+interface Workshop {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  startDate: string;
+  endDate: string | null;
+  price: number;
+  location: string | null;
+  spotsAvailable: number | null;
+  imageUrl: string | null;
+  status: string;
+  organization?: TrainingOrganization;
+}
+
 interface Testimonial {
   id: number;
   name: string;
@@ -144,7 +158,7 @@ function ParticleField() {
 }
 
 // Hero Section
-function HeroSection({ organization, scrollToLogin }: { organization: OrgData; scrollToLogin: () => void }) {
+function HeroSection({ organization, scrollToLogin, scrollToTrainings }: { organization: OrgData; scrollToLogin: () => void; scrollToTrainings: () => void }) {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
       {/* Video Background Overlay */}
@@ -194,7 +208,7 @@ function HeroSection({ organization, scrollToLogin }: { organization: OrgData; s
         </p>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
           <button
             onClick={scrollToLogin}
             className="group relative px-8 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white font-bold text-lg rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/30"
@@ -211,6 +225,16 @@ function HeroSection({ organization, scrollToLogin }: { organization: OrgData; s
             Ver Historias de Éxito
           </button>
         </div>
+
+        {/* Secondary CTA - Ver Otros Entrenamientos */}
+        <button
+          onClick={scrollToTrainings}
+          className="mb-12 px-6 py-3 bg-amber-500/20 border border-amber-500/40 text-amber-300 font-semibold rounded-xl hover:bg-amber-500/30 hover:border-amber-400 transition-all flex items-center gap-2 mx-auto"
+        >
+          <Calendar className="w-5 h-5" />
+          Ver Otros Entrenamientos
+          <ChevronDown className="w-4 h-4" />
+        </button>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
@@ -910,8 +934,8 @@ function TestimonialsSection({ testimonials }: { testimonials: Testimonial[] }) 
 }
 
 // Upcoming Trainings Section
-function UpcomingTrainingsSection({ trainings }: { trainings: Training[] }) {
-  if (trainings.length === 0) return null;
+function UpcomingTrainingsSection({ trainings, workshops }: { trainings: Training[]; workshops: Workshop[] }) {
+  if (trainings.length === 0 && workshops.length === 0) return null;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -949,50 +973,122 @@ function UpcomingTrainingsSection({ trainings }: { trainings: Training[] }) {
           </h2>
         </div>
 
-        {/* Training Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {trainings.map((training) => (
-            <div 
-              key={training.id}
-              className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-shadow"
-            >
-              <div className="p-6">
-                {/* Sede Badge */}
-                {training.organization && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-50 border border-cyan-200 rounded-full text-xs font-medium text-cyan-700 mb-3">
-                    <MapPin className="w-3 h-3" />
-                    {training.organization.name}
-                  </div>
-                )}
-                
-                <h3 className="text-xl font-bold text-slate-900 mb-2">{training.nombre}</h3>
-                {training.descripcion && training.descripcion !== 'Visión completa generada con Vision Builder' && (
-                  <p className="text-slate-600 text-sm mb-4">{training.descripcion}</p>
-                )}
-
-                {/* Levels */}
-                <div className="space-y-3">
-                  {training.levels.map((level) => (
-                    <div 
-                      key={level.level}
-                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${getLevelColor(level.level)}`} />
-                        <span className="font-medium text-slate-800">{level.name}</span>
-                      </div>
-                      <span className="text-sm text-slate-500">
-                        {formatDate(level.startDate)}
-                      </span>
+        {/* Training Cards - Visiones */}
+        {trainings.length > 0 && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {trainings.map((training) => (
+              <div 
+                key={training.id}
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-shadow"
+              >
+                <div className="p-6">
+                  {/* Sede Badge */}
+                  {training.organization && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-50 border border-cyan-200 rounded-full text-xs font-medium text-cyan-700 mb-3">
+                      <MapPin className="w-3 h-3" />
+                      {training.organization.name}
                     </div>
-                  ))}
+                  )}
+                  
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">{training.nombre}</h3>
+                  {training.descripcion && training.descripcion !== 'Visión completa generada con Vision Builder' && (
+                    <p className="text-slate-600 text-sm mb-4">{training.descripcion}</p>
+                  )}
+
+                  {/* Levels */}
+                  <div className="space-y-3">
+                    {training.levels.map((level) => (
+                      <div 
+                        key={level.level}
+                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${getLevelColor(level.level)}`} />
+                          <span className="font-medium text-slate-800">{level.name}</span>
+                        </div>
+                        <span className="text-sm text-slate-500">
+                          {formatDate(level.startDate)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-
-
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* Workshops Section */}
+        {workshops.length > 0 && (
+          <>
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 border border-amber-200 mb-4">
+                <Sparkles className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-medium text-amber-700">TALLERES ESPECIALES</span>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-800">Otros Entrenamientos Disponibles</h3>
             </div>
-          ))}
-        </div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {workshops.map((workshop) => (
+                <div 
+                  key={workshop.id}
+                  className="bg-white rounded-2xl border border-amber-200 overflow-hidden hover:shadow-xl transition-shadow"
+                >
+                  {workshop.imageUrl && (
+                    <div className="h-40 overflow-hidden">
+                      <img 
+                        src={workshop.imageUrl} 
+                        alt={workshop.nombre}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="p-6">
+                    {/* Sede Badge */}
+                    {workshop.organization && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-medium text-amber-700 mb-3">
+                        <MapPin className="w-3 h-3" />
+                        {workshop.organization.name}
+                      </div>
+                    )}
+                    
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">{workshop.nombre}</h3>
+                    {workshop.descripcion && (
+                      <p className="text-slate-600 text-sm mb-4 line-clamp-2">{workshop.descripcion}</p>
+                    )}
+
+                    {/* Date and Location */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <Calendar className="w-4 h-4 text-amber-500" />
+                        <span>{formatDate(workshop.startDate)}</span>
+                      </div>
+                      {workshop.location && (
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <MapPin className="w-4 h-4 text-amber-500" />
+                          <span>{workshop.location}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Price and Spots */}
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                      <span className="text-lg font-bold text-amber-600">
+                        ${workshop.price.toLocaleString()} MXN
+                      </span>
+                      {workshop.spotsAvailable !== null && (
+                        <span className="text-xs text-slate-500">
+                          {workshop.spotsAvailable} lugares
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </section>
   );
@@ -1246,10 +1342,12 @@ export default function OrgLandingPage() {
   const slug = params.slug as string;
   const refCode = searchParams.get('ref');
   const loginRef = useRef<HTMLDivElement>(null);
+  const trainingsRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<OrgData | null>(null);
   const [trainings, setTrainings] = useState<Training[]>([]);
+  const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -1267,6 +1365,7 @@ export default function OrgLandingPage() {
       if (data.success) {
         setOrganization(data.organization);
         setTrainings(data.upcomingTrainings);
+        setWorkshops(data.workshops || []);
         setTestimonials(data.testimonials);
       } else {
         setError(data.error);
@@ -1281,6 +1380,10 @@ export default function OrgLandingPage() {
 
   const scrollToLogin = () => {
     loginRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const scrollToTrainings = () => {
+    trainingsRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   if (loading) {
@@ -1316,12 +1419,14 @@ export default function OrgLandingPage() {
 
   return (
     <main className="overflow-x-hidden">
-      <HeroSection organization={organization} scrollToLogin={scrollToLogin} />
+      <HeroSection organization={organization} scrollToLogin={scrollToLogin} scrollToTrainings={scrollToTrainings} />
       <OriginSection />
       <HeroPathSection />
       <PlatformFeaturesSection />
       {testimonials.length > 0 && <TestimonialsSection testimonials={testimonials} />}
-      {trainings.length > 0 && <UpcomingTrainingsSection trainings={trainings} />}
+      <div ref={trainingsRef}>
+        {(trainings.length > 0 || workshops.length > 0) && <UpcomingTrainingsSection trainings={trainings} workshops={workshops} />}
+      </div>
       <FooterSection organization={organization} loginRef={loginRef} slug={slug} refCode={refCode} />
     </main>
   );
