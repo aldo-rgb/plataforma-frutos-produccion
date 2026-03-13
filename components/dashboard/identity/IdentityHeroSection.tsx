@@ -131,25 +131,25 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
 
   return (
     <div className="space-y-4">
-      {/* Identity Badge + Evolution Bar (ocultar EvolutionBar si ya está graduado) */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`grid grid-cols-1 ${!isGraduated ? 'md:grid-cols-2' : ''} gap-4`}
-      >
-        <IdentityBadge 
-          level={level} 
-          userName={data.userName}
-        />
-        {!isGraduated && (
+      {/* Identity Badge + Evolution Bar (ocultar ambos si ya está graduado) */}
+      {!isGraduated && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        >
+          <IdentityBadge 
+            level={level} 
+            userName={data.userName}
+          />
           <EvolutionBar
             currentLevel={level}
             nextMilestone={currentLevelInfo.nextMilestone || undefined}
             onUpgradeClick={handleUpgradeClick}
             isDropped={isDropped}
           />
-        )}
-      </motion.div>
+        </motion.div>
+      )}
 
       {/* Level-Specific Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
