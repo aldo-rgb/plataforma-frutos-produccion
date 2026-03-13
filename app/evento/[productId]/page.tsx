@@ -435,7 +435,7 @@ export default function EventoPage() {
                 {event.name}
               </h1>
 
-              <p className="text-base sm:text-lg text-slate-300 mb-6 leading-relaxed line-clamp-4 sm:line-clamp-none">
+              <p className="text-base sm:text-lg text-slate-300 mb-6 leading-relaxed">
                 {event.description || 'Un espacio para descubrir, compartir ideas y abrir nuevas posibilidades de transformación en tu vida.'}
               </p>
 
