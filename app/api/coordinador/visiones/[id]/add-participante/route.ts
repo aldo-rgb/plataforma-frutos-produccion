@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { generateReferralCode } from '@/lib/referralCode';
 import logger from '@/lib/logger';
 import { shouldAutoGraduate } from '@/lib/auto-graduate-config';
+import { autoCreateMedicalFormIfRequired } from '@/lib/medical-form-helper';
 
 export async function POST(
   request: NextRequest,
@@ -150,6 +151,16 @@ export async function POST(
       }
     } catch (error) {
       logger.error('Error asignando licencia automática:', error);
+    }
+
+    // Auto-crear formulario médico si la visión lo requiere
+    try {
+      const medicalFormResult = await autoCreateMedicalFormIfRequired(participanteId, visionId);
+      if (medicalFormResult.created) {
+        logger.debug(`🏥 Formulario médico auto-creado para participante ${participanteId}`);
+      }
+    } catch (error) {
+      logger.error('Error creando formulario médico automático:', error);
     }
 
     return NextResponse.json({

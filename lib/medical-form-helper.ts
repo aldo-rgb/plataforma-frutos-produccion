@@ -4,13 +4,14 @@
  * Funciones auxiliares para gestión automática de formularios médicos.
  * 
  * Visiones configuradas para auto-completar formulario médico:
+ * - Vision ID 11: Auto-completa el formulario médico al inscribir
  * - Vision ID 12: Auto-completa el formulario médico al inscribir
  */
 
 import { prisma } from './prisma';
 
 // IDs de visiones que auto-completan el formulario médico
-const VISION_IDS_AUTO_MEDICAL_FORM = [12];
+const VISION_IDS_AUTO_MEDICAL_FORM = [11, 12];
 
 interface AutoMedicalFormResult {
   success: boolean;

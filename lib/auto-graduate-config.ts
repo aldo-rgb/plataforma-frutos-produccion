@@ -5,11 +5,13 @@
  * automáticamente como graduados (isGraduated: true), lo que les
  * permite acceder al sistema de comisiones por referidos (Quantum Ambassadors).
  * 
+ * Vision 11: Visión especial de líderes ya graduados
  * Vision 12: "Tu Vida en Equilibrio" - Team de líderes ya graduados
  */
 
 // IDs de visiones que auto-gradúan usuarios
 export const AUTO_GRADUATE_VISION_IDS: number[] = [
+  11, // Visión especial de líderes
   12, // Tu Vida en Equilibrio
 ];
 
