@@ -1059,7 +1059,7 @@ function UpcomingTrainingsSection({ trainings, workshops }: { trainings: Trainin
                     )}
 
                     {/* Date and Location */}
-                    <div className="space-y-2 mb-4">
+                    <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <Calendar className="w-4 h-4 text-amber-500" />
                         <span>{formatDate(workshop.startDate)}</span>
@@ -1069,18 +1069,6 @@ function UpcomingTrainingsSection({ trainings, workshops }: { trainings: Trainin
                           <MapPin className="w-4 h-4 text-amber-500" />
                           <span>{workshop.location}</span>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Price and Spots */}
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                      <span className="text-lg font-bold text-amber-600">
-                        ${workshop.price.toLocaleString()} MXN
-                      </span>
-                      {workshop.spotsAvailable !== null && (
-                        <span className="text-xs text-slate-500">
-                          {workshop.spotsAvailable} lugares
-                        </span>
                       )}
                     </div>
                   </div>
