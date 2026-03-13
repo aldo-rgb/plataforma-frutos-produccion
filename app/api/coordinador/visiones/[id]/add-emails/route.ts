@@ -7,6 +7,7 @@ import { generateMagicLinkToken, sendVisionMagicLinkMessage } from '@/lib/whatsa
 import { sendVisionMagicLinkEmail } from '@/lib/email';
 import { generateReferralCode } from '@/lib/referralCode';
 import logger from '@/lib/logger';
+import { shouldAutoGraduate } from '@/lib/auto-graduate-config';
 
 const DEFAULT_PASSWORD = 'Quantum123';
 
@@ -98,7 +99,9 @@ export async function POST(
           magicLinkToken: magicToken,
           magicLinkExpiry: tokenExpiry,
           temporaryPassword: DEFAULT_PASSWORD,
-          referralCode: referralCode
+          referralCode: referralCode,
+          // Si es Vision 12 (Tu Vida en Equilibrio), marcar como graduado
+          ...(shouldAutoGraduate(visionId) && { isGraduated: true })
         },
         select: { id: true, email: true, nombre: true, telefono: true, referralCode: true }
       });
@@ -186,14 +189,26 @@ export async function POST(
     }
 
     // Generar referralCode para usuarios existentes que no tienen
+    // Si es Vision 12 (Tu Vida en Equilibrio), también marcarlos como graduados
     for (const user of [...usersInSameOrg, ...usersWithoutOrg]) {
+      const updateData: { referralCode?: string; isGraduated?: boolean } = {};
+      
       if (!user.referralCode) {
-        const newReferralCode = generateReferralCode(user.nombre || user.email.split('@')[0], visionId);
+        updateData.referralCode = generateReferralCode(user.nombre || user.email.split('@')[0], visionId);
+        logger.debug(`🎟️ ReferralCode generado para usuario existente ${user.email}: ${updateData.referralCode}`);
+      }
+      
+      // Si es Vision 12, marcar como graduado
+      if (shouldAutoGraduate(visionId)) {
+        updateData.isGraduated = true;
+        logger.debug(`🎓 Usuario ${user.email} marcado como graduado (Vision 12)`);
+      }
+      
+      if (Object.keys(updateData).length > 0) {
         await prisma.usuario.update({
           where: { id: user.id },
-          data: { referralCode: newReferralCode }
+          data: updateData
         });
-        logger.debug(`🎟️ ReferralCode generado para usuario existente ${user.email}: ${newReferralCode}`);
       }
     }
 

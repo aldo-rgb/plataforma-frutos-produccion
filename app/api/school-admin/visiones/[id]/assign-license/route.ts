@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { shouldAutoGraduate } from '@/lib/auto-graduate-config';
 
 // Función para generar código de licencia único
 function generateLicenseCode(): string {
@@ -166,11 +167,13 @@ export async function POST(
     // Realizar la transacción: asignar licencia y actualizar créditos
     const result = await prisma.$transaction(async (tx) => {
       // Actualizar participante con licencia y tier STANDARD
+      // Si es Vision 12 (Tu Vida en Equilibrio), también marcar como graduado
       const updatedParticipante = await tx.usuario.update({
         where: { id: participanteId },
         data: {
           licenseCode,
           tier: 'STANDARD',
+          ...(shouldAutoGraduate(visionId) && { isGraduated: true }),
         },
       });
 

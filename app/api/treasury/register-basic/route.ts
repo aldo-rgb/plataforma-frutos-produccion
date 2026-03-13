@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import logger from '@/lib/logger';
 import crypto from 'crypto';
 import { processAmbassadorCommission, determineProductType } from '@/lib/ambassador-engine';
+import { autoCreateMedicalFormInTransaction } from '@/lib/medical-form-helper';
 
 /**
  * POST /api/treasury/register-basic
@@ -295,6 +296,12 @@ export async function POST(request: NextRequest) {
       }
 
       logger.info(`✅ [Treasury] ${ticketLevels.length} enrollments creados${padrinoData ? ` (invitado por ${padrinoData.nombre})` : ''}`);
+
+      // 5.5. Auto-crear formulario médico si es visión 12
+      const medicalFormResult = await autoCreateMedicalFormInTransaction(tx, newUser.id, vision.id);
+      if (medicalFormResult.created) {
+        logger.info(`✅ [Treasury] Formulario médico auto-creado para usuario ${newUser.id}`);
+      }
 
       // 6. También crear registro en VisionParticipante (legacy, para compatibilidad)
       try {

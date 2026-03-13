@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import crypto from 'crypto';
 import { processAmbassadorCommission } from '@/lib/ambassador-engine';
+import { autoCreateMedicalFormInTransaction } from '@/lib/medical-form-helper';
 
 const ALLOWED_ROLES = ['ADMIN', 'SUPER_ADMIN', 'COORDINADOR', 'TESORERO', 'DIRECTOR', 'SUBDIRECTOR', 'SCHOOL_ADMIN'];
 
@@ -621,6 +622,12 @@ export async function POST(request: NextRequest) {
       });
 
       logger.info(`✅ [Treasury] PaymentCode creado: ${paymentCode.code}`);
+
+      // Auto-crear formulario médico si es visión 12
+      const medicalFormResult = await autoCreateMedicalFormInTransaction(tx, participantId, visionId);
+      if (medicalFormResult.created) {
+        logger.info(`✅ [Treasury] Formulario médico auto-creado para usuario ${participantId}`);
+      }
 
       return {
         participant,

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateReferralCode } from '@/lib/referralCode';
 import logger from '@/lib/logger';
+import { shouldAutoGraduate } from '@/lib/auto-graduate-config';
 
 export async function POST(
   request: NextRequest,
@@ -82,18 +83,32 @@ export async function POST(
     }
 
     // Verificar si el participante tiene referralCode, si no, generarlo
+    // Si es Vision 12 (Tu Vida en Equilibrio), también marcar como graduado
     const participante = await prisma.usuario.findUnique({
       where: { id: participanteId },
-      select: { id: true, nombre: true, referralCode: true }
+      select: { id: true, nombre: true, referralCode: true, isGraduated: true }
     });
 
-    if (participante && !participante.referralCode) {
-      const newReferralCode = generateReferralCode(participante.nombre || 'Usuario', visionId);
-      await prisma.usuario.update({
-        where: { id: participanteId },
-        data: { referralCode: newReferralCode }
-      });
-      logger.debug(`🎟️ ReferralCode generado para participante ${participante.nombre}: ${newReferralCode}`);
+    if (participante) {
+      const updateData: { referralCode?: string; isGraduated?: boolean } = {};
+      
+      if (!participante.referralCode) {
+        updateData.referralCode = generateReferralCode(participante.nombre || 'Usuario', visionId);
+        logger.debug(`🎫 ReferralCode generado para participante ${participante.nombre}: ${updateData.referralCode}`);
+      }
+      
+      // Si es Vision 12, marcar como graduado
+      if (shouldAutoGraduate(visionId) && !participante.isGraduated) {
+        updateData.isGraduated = true;
+        logger.debug(`🎓 Usuario ${participante.nombre} marcado como graduado (Vision 12)`);
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        await prisma.usuario.update({
+          where: { id: participanteId },
+          data: updateData
+        });
+      }
     }
 
     // Agregar participante a la visión

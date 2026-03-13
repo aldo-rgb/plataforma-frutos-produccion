@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { processAmbassadorCommission } from '@/lib/ambassador-engine';
+import { autoCreateMedicalFormInTransaction } from '@/lib/medical-form-helper';
 
 /**
  * GET /api/checkout-advanced/payment-success
@@ -456,6 +457,12 @@ export async function GET(request: NextRequest) {
 
           logger.debug(`✅ Ticket PL PROMO_RESERVABLE creado para usuario ${userId}`);
         }
+      }
+
+      // Auto-crear formulario médico si es visión 12
+      const medicalFormResult = await autoCreateMedicalFormInTransaction(tx, userId, visionId);
+      if (medicalFormResult.created) {
+        logger.debug(`✅ Formulario médico auto-creado para usuario ${userId}`);
       }
     });
 
