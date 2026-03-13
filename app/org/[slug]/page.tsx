@@ -1036,7 +1036,7 @@ function UpcomingTrainingsSection({ trainings, workshops }: { trainings: Trainin
                   className="bg-white rounded-2xl border border-amber-200 overflow-hidden hover:shadow-xl transition-shadow"
                 >
                   {workshop.imageUrl && (
-                    <div className="h-56 overflow-hidden">
+                    <div className="h-72 overflow-hidden">
                       <img 
                         src={workshop.imageUrl} 
                         alt={workshop.nombre}
