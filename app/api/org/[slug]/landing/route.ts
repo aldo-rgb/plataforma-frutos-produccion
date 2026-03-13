@@ -67,8 +67,9 @@ export async function GET(
 
     currentStep = 'find-trainings';
     // Obtener próximos entrenamientos vigentes de TODAS las organizaciones hermanas
+    // Solo mostrar UNA visión por organización (la del básico más próximo)
     const now = new Date();
-    const upcomingTrainings = await prisma.vision.findMany({
+    const allUpcomingTrainings = await prisma.vision.findMany({
       where: {
         organizationId: { in: siblingOrganizationIds },
         isActive: true,
@@ -88,6 +89,7 @@ export async function GET(
         plWeekend1EndDate: true,
         enabledLevels: true,
         maxParticipantes: true,
+        organizationId: true,
         Organization: {
           select: {
             id: true,
@@ -107,8 +109,17 @@ export async function GET(
       },
       orderBy: {
         startDate: 'asc'
-      },
-      take: 6 // Aumentado a 6 para mostrar más entrenamientos de diferentes sedes
+      }
+    });
+
+    // Filtrar para mostrar solo UNA visión por organización (la del básico más próximo)
+    const seenOrganizations = new Set<number>();
+    const upcomingTrainings = allUpcomingTrainings.filter(training => {
+      if (seenOrganizations.has(training.organizationId)) {
+        return false;
+      }
+      seenOrganizations.add(training.organizationId);
+      return true;
     });
 
     currentStep = 'format-trainings';
