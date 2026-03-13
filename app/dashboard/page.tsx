@@ -23,6 +23,7 @@ import LegacyCaptureBlockingModal from '@/components/dashboard/LegacyCaptureBloc
 import ParticipantSurveyBanner from '@/components/surveys/ParticipantSurveyBanner';
 import AmbassadorWalletWidget from '@/components/dashboard/AmbassadorWalletWidget';
 import TrainingsCarouselWidget from '@/components/dashboard/identity/widgets/TrainingsCarouselWidget';
+import MyBusinessWidget from '@/components/dashboard/MyBusinessWidget';
 
 interface DashboardPageProps {
   searchParams: Promise<{ view?: string }>;
@@ -570,12 +571,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* ALERTA DE RE-AGENDAMIENTO */}
       <AlertaReagendamiento />
 
-      {/* WIDGET: CARTA F.R.U.T.O.S. - Solo para ADVANCED/PL/LOBO */}
-      <CartaWizardWidget 
-        hasCompletedCarta={hasCompletedCarta}
-        cartaStatus={carta?.estado as any}
-        userLevel={userLevel}
-      />
+      {/* WIDGETS: CARTA F.R.U.T.O.S. + MI NEGOCIO (para graduados) */}
+      {/* Para graduados: Grid de 2 columnas con Carta y Mi Negocio */}
+      {/* Para no graduados: Solo muestra CartaWizardWidget */}
+      {(usuario.isGraduated || usuario.graduatedAt) ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CartaWizardWidget 
+            hasCompletedCarta={hasCompletedCarta}
+            cartaStatus={carta?.estado as any}
+            userLevel={userLevel}
+          />
+          <MyBusinessWidget />
+        </div>
+      ) : (
+        <CartaWizardWidget 
+          hasCompletedCarta={hasCompletedCarta}
+          cartaStatus={carta?.estado as any}
+          userLevel={userLevel}
+        />
+      )}
 
       {/* WIDGET: FORMULARIO MÉDICO - Solo para usuarios de Vision */}
       {isVisionUser && (
