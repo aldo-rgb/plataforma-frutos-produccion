@@ -554,7 +554,7 @@ export default function EventoPage() {
                   className="group relative bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 overflow-hidden hover:border-orange-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10"
                 >
                   {/* Image */}
-                  <div className="relative h-48 overflow-hidden">
+                  <div className="relative h-80 overflow-hidden">
                     {training.imageUrl ? (
                       <Image
                         src={training.imageUrl}
