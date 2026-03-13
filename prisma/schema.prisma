@@ -1185,11 +1185,15 @@ model EventRegistration {
   comoTeEnteraste  String?
   invitedByUserId  Int?
   amountPaid       Decimal?                @db.Decimal(10, 2)
-  status           EventRegistrationStatus @default(REGISTERED)
+  status           EventRegistrationStatus @default(PENDING_PAYMENT)
+  paymentStatus    String?                 @default("PENDING") // PENDING, PAID, FAILED
+  paymentProvider  String?                 // stripe, mercadopago
+  paymentSessionId String?                 // ID de sesión de pago
+  paidAt           DateTime?
   confirmedAt      DateTime?
   attendedAt       DateTime?
   createdAt        DateTime                @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime                @updatedAt
   Organization     Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   SchoolProduct    SchoolProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
   InvitedByUser    Usuario?                @relation("EventInvitations", fields: [invitedByUserId], references: [id])
@@ -1199,6 +1203,7 @@ model EventRegistration {
   @@index([organizationId])
   @@index([productId])
   @@index([invitedByUserId])
+  @@index([paymentStatus])
 }
 
 model Evidencia {
@@ -5889,6 +5894,7 @@ enum EstadoSuscripcion {
 }
 
 enum EventRegistrationStatus {
+  PENDING_PAYMENT
   REGISTERED
   CONFIRMED
   ATTENDED
@@ -6686,6 +6692,7 @@ enum AmbassadorProductType {
   COMBO           // 20% (Jornada Completa)
   ADVANCED        // 10%
   PL              // 10%
+  WORKSHOP        // 20% (Talleres)
 }
 
 enum AmbassadorTxStatus {

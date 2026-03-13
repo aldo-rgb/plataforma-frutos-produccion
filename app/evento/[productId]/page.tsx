@@ -29,6 +29,9 @@ import {
   Crown,
   Rocket,
   Gift,
+  CreditCard,
+  ArrowLeft,
+  Shield,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -209,6 +212,10 @@ export default function EventoPage() {
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   
+  // Payment method selection
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'mercadopago' | null>(null);
+  
   // Share
   const [copied, setCopied] = useState(false);
   const [showShareOptions, setShowShareOptions] = useState(false);
@@ -270,30 +277,65 @@ export default function EventoPage() {
     if (!registerForm.nombre.trim() || !registerForm.email.trim()) {
       return;
     }
+    
+    // Mostrar opciones de pago
+    setShowPaymentOptions(true);
+  };
+
+  const handlePaymentSelection = async (provider: 'stripe' | 'mercadopago') => {
+    if (!registerForm.nombre.trim() || !registerForm.email.trim()) {
+      return;
+    }
 
     try {
       setRegistering(true);
-      const res = await fetch(`/api/public/evento/${productId}/registro`, {
+      setSelectedPaymentMethod(provider);
+      
+      const res = await fetch(`/api/public/evento/${productId}/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...registerForm,
-          invitedByUserId: selectedInviter?.id || null
+          nombre: registerForm.nombre,
+          email: registerForm.email,
+          telefono: registerForm.telefono,
+          invitedByUserId: selectedInviter?.id || null,
+          provider: provider
         })
       });
       
       const data = await res.json();
       
-      if (data.success) {
-        setRegistered(true);
+      if (data.success && data.url) {
+        // Redirigir a la pasarela de pago
+        window.location.href = data.url;
       } else {
-        alert(data.error || 'Error al registrarse');
+        alert(data.error || 'Error al procesar el pago');
+        setRegistering(false);
       }
     } catch (err) {
-      alert('Error al registrarse');
-    } finally {
+      alert('Error al procesar el pago');
       setRegistering(false);
     }
+  };
+
+  // Calcular precio actual
+  const getCurrentPrice = () => {
+    if (!event) return 0;
+    const now = new Date();
+    if (event.promoPrice && event.promoPrice < event.basePrice) {
+      // Por ahora asumimos que si hay promoPrice, está vigente
+      return event.promoPrice;
+    }
+    return event.basePrice;
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
   };
 
   const handleShare = (platform: string) => {
@@ -1096,33 +1138,101 @@ export default function EventoPage() {
                     </div>
                   </div>
 
-                  <div className="mt-6 space-y-3">
-                    <button
-                      onClick={handleRegister}
-                      disabled={registering || !registerForm.nombre.trim() || !registerForm.email.trim()}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {registering ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Registrando...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="w-5 h-5" />
-                          Confirmar Registro
-                        </>
-                      )}
-                    </button>
-                    
-                    <button
-                      onClick={() => setShowRegisterModal(false)}
-                      disabled={registering}
-                      className="w-full px-6 py-3 bg-slate-800 text-slate-300 rounded-xl font-medium hover:bg-slate-700 transition-colors disabled:opacity-50"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
+                  {/* Botones de acción o selección de pago */}
+                  {!showPaymentOptions ? (
+                    <div className="mt-6 space-y-3">
+                      <button
+                        onClick={handleRegister}
+                        disabled={registering || !registerForm.nombre.trim() || !registerForm.email.trim()}
+                        className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                        Continuar al Pago
+                      </button>
+                      
+                      <button
+                        onClick={() => setShowRegisterModal(false)}
+                        disabled={registering}
+                        className="w-full px-6 py-3 bg-slate-800 text-slate-300 rounded-xl font-medium hover:bg-slate-700 transition-colors disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-6 space-y-4">
+                      {/* Resumen del precio */}
+                      <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-slate-400">Total a pagar:</span>
+                          <span className="text-2xl font-bold text-white">{formatPrice(getCurrentPrice())}</span>
+                        </div>
+                        <p className="text-xs text-slate-500">Impuestos incluidos</p>
+                      </div>
+
+                      {/* Opciones de pago */}
+                      <div className="space-y-3">
+                        <p className="text-sm text-slate-400 font-medium">Selecciona tu método de pago:</p>
+                        
+                        {/* Stripe - Tarjeta */}
+                        <button
+                          onClick={() => handlePaymentSelection('stripe')}
+                          disabled={registering}
+                          className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl hover:border-cyan-500/50 hover:bg-slate-700/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl">
+                              <CreditCard className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="flex-1 text-left">
+                              <p className="font-semibold text-white group-hover:text-cyan-400 transition-colors">
+                                Tarjeta de Crédito/Débito
+                              </p>
+                              <p className="text-xs text-slate-400">Visa, Mastercard, AMEX</p>
+                            </div>
+                            {registering && selectedPaymentMethod === 'stripe' ? (
+                              <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
+                            ) : (
+                              <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+                            )}
+                          </div>
+                        </button>
+
+                        {/* MercadoPago - MSI */}
+                        <button
+                          onClick={() => handlePaymentSelection('mercadopago')}
+                          disabled={registering}
+                          className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl hover:border-blue-500/50 hover:bg-slate-700/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-gradient-to-br from-blue-500 to-sky-400 rounded-xl">
+                              <Shield className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="flex-1 text-left">
+                              <p className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                                Meses sin Intereses
+                              </p>
+                              <p className="text-xs text-slate-400">3, 6, 9 o 12 MSI con MercadoPago</p>
+                            </div>
+                            {registering && selectedPaymentMethod === 'mercadopago' ? (
+                              <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                            ) : (
+                              <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-blue-400 transition-colors" />
+                            )}
+                          </div>
+                        </button>
+                      </div>
+
+                      {/* Botón volver */}
+                      <button
+                        onClick={() => setShowPaymentOptions(false)}
+                        disabled={registering}
+                        className="w-full px-6 py-3 bg-slate-800 text-slate-300 rounded-xl font-medium hover:bg-slate-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Volver
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </motion.div>
