@@ -46,11 +46,23 @@ export default function TrainingsCarouselWidget() {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Autoplay del carrusel
+  useEffect(() => {
+    if (slides.length <= 1 || isPaused) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % slides.length);
+    }, 5000); // Cambiar cada 5 segundos
+
+    return () => clearInterval(interval);
+  }, [slides.length, isPaused]);
 
   useEffect(() => {
     // Procesar productos en slides
@@ -62,7 +74,21 @@ export default function TrainingsCarouselWidget() {
     const coreTrainings = products.filter(p => p.type === 'CORE_TRAINING');
     const workshops = products.filter(p => p.type === 'EXTRA_WORKSHOP');
     
-    // Agrupar por visión
+    // PRIMERO: Agregar talleres como slides individuales (ordenados por fecha)
+    const sortedWorkshops = [...workshops].sort((a, b) => {
+      const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+      const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
+      return dateA - dateB;
+    });
+    
+    sortedWorkshops.forEach(workshop => {
+      newSlides.push({
+        type: 'workshop',
+        workshop,
+      });
+    });
+
+    // DESPUÉS: Agrupar visiones por visionId
     const visionMap = new Map<number, Product[]>();
     coreTrainings.forEach(p => {
       if (p.visionId) {
@@ -73,7 +99,6 @@ export default function TrainingsCarouselWidget() {
       }
     });
 
-    // Agregar la próxima visión como primer slide (solo 1)
     // Ordenar visiones por fecha de inicio del básico
     const sortedVisions = Array.from(visionMap.entries()).sort((a, b) => {
       const basicA = a[1].find(p => p.levelType === 'BASIC');
@@ -100,14 +125,6 @@ export default function TrainingsCarouselWidget() {
         products: visionProducts,
       });
     }
-
-    // Agregar talleres como slides individuales
-    workshops.forEach(workshop => {
-      newSlides.push({
-        type: 'workshop',
-        workshop,
-      });
-    });
 
     setSlides(newSlides);
   }, [products]);
@@ -369,6 +386,8 @@ export default function TrainingsCarouselWidget() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-2xl p-4 sm:p-5 border border-slate-700/50 relative overflow-hidden"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">

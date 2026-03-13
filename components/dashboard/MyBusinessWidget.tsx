@@ -82,7 +82,7 @@ export default function MyBusinessWidget() {
             </h3>
             
             <p className="text-white/90 text-sm mb-6 leading-relaxed">
-              Publica tu negocio en el Directorio de Talentos y crea tu página web profesional con IA.
+              Publica tu negocio en el Directorio de Servicios y crea tu página web profesional con IA.
             </p>
 
             <div className="inline-flex items-center gap-2 bg-white text-slate-900 px-6 py-2.5 rounded-xl font-bold hover:bg-white/90 transition-colors shadow-lg">
