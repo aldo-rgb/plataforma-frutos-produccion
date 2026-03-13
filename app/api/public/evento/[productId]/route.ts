@@ -61,7 +61,7 @@ export async function GET(
       );
     }
 
-    // Obtener otros entrenamientos de la misma organización
+    // Obtener otros talleres de la misma organización (solo EXTRA_WORKSHOP)
     let otherTrainings: any[] = [];
     if (product.organizationId) {
       otherTrainings = await prisma.schoolProduct.findMany({
@@ -69,6 +69,7 @@ export async function GET(
           organizationId: product.organizationId,
           isActive: true,
           id: { not: product.id }, // Excluir el producto actual
+          type: 'EXTRA_WORKSHOP', // Solo talleres
         },
         select: {
           id: true,
@@ -82,7 +83,6 @@ export async function GET(
           location: true,
         },
         orderBy: [
-          { type: 'asc' }, // CORE_TRAINING primero
           { startDate: 'asc' },
         ],
       });

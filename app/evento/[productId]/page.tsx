@@ -520,25 +520,25 @@ export default function EventoPage() {
         </div>
       </section>
 
-      {/* Other Trainings Section - Dynamic */}
+      {/* Other Workshops Section - Dynamic */}
       {otherTrainings.length > 0 && (
         <section className="relative z-10 py-20 px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 mb-6">
-                <Zap className="w-4 h-4 text-cyan-400" />
-                <span className="text-sm font-medium text-cyan-300">DESCUBRE MÁS</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 mb-6">
+                <Sparkles className="w-4 h-4 text-orange-400" />
+                <span className="text-sm font-medium text-orange-300">PRÓXIMOS EVENTOS</span>
               </div>
               
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6">
                 Otros
-                <span className="block bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
-                  Entrenamientos
+                <span className="block bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
+                  Talleres
                 </span>
               </h2>
               
               <p className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto">
-                Conoce todos los entrenamientos disponibles de {event?.Organization?.name || 'nuestra organización'}
+                Conoce todos los talleres disponibles de {event?.Organization?.name || 'nuestra organización'}
               </p>
             </div>
 
@@ -551,7 +551,7 @@ export default function EventoPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.1 }}
-                  className="group relative bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 overflow-hidden hover:border-cyan-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10"
+                  className="group relative bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 overflow-hidden hover:border-orange-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10"
                 >
                   {/* Image */}
                   <div className="relative h-48 overflow-hidden">
