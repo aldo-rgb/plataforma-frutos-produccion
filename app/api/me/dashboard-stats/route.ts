@@ -354,6 +354,7 @@ export async function GET() {
         isLoboSolitario: currentLevel === 'LOBO_SOLITARIO',
         hasVision: !!vision,
         isDropped, // Indica si el usuario fue marcado como DROP
+        isGraduated: usuario.isGraduated || false, // Para mostrar entrenamientos en lugar de BuddySystem
       }
     });
 

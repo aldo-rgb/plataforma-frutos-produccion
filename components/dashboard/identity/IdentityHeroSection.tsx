@@ -12,6 +12,7 @@ import ZonaEjecucionMiniWidget from './widgets/ZonaEjecucionMiniWidget';
 import JoinVisionWidget from './widgets/JoinVisionWidget';
 import GCCallWidget from './widgets/GCCallWidget';
 import PersonalQRWidget from '../PersonalQRWidget';
+import TrainingsCarouselWidget from './widgets/TrainingsCarouselWidget';
 
 interface DashboardStatsResponse {
   success: boolean;
@@ -60,6 +61,7 @@ interface DashboardStatsResponse {
     isLoboSolitario: boolean;
     hasVision: boolean;
     isDropped?: boolean; // Indica si el usuario fue marcado como DROP
+    isGraduated?: boolean; // Para mostrar entrenamientos en lugar de BuddySystem
   };
 }
 
@@ -119,7 +121,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
 
   if (!data) return null;
 
-  const { currentLevelInfo, tribeStats, isLoboSolitario, isDropped } = data;
+  const { currentLevelInfo, tribeStats, isLoboSolitario, isDropped, isGraduated } = data;
   const level = currentLevelInfo.levelName;
 
   const handleUpgradeClick = () => {
@@ -163,16 +165,16 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
           </>
         )}
 
-        {/* ADVANCED: Mostrar BuddySystemWidget + ZonaEjecucionMini + GCCallWidget */}
+        {/* ADVANCED: Mostrar BuddySystemWidget o TrainingsCarousel (si graduado) + ZonaEjecucionMini + GCCallWidget */}
         {level === 'ADVANCED' && (
           <>
-            <BuddySystemWidget />
+            {isGraduated ? <TrainingsCarouselWidget /> : <BuddySystemWidget />}
             <ZonaEjecucionMiniWidget />
             <GCCallWidget />
           </>
         )}
 
-        {/* PL: Mostrar TribeManagementWidget + ZonaEjecucionMini + BuddySystemWidget (al final) */}
+        {/* PL: Mostrar TribeManagementWidget + ZonaEjecucionMini + BuddySystemWidget o TrainingsCarousel (si graduado) */}
         {level === 'PL' && (
           <>
             <TribeManagementWidget 
@@ -183,7 +185,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
               tribeMission={data?.tribeMission}
             />
             <ZonaEjecucionMiniWidget />
-            <BuddySystemWidget />
+            {isGraduated ? <TrainingsCarouselWidget /> : <BuddySystemWidget />}
           </>
         )}
 
