@@ -257,51 +257,64 @@ export default function TrainingsCarouselWidget() {
     
     return (
       <div className="bg-gradient-to-br from-violet-500/20 to-purple-500/20 p-0.5 rounded-xl">
-        <div className="bg-slate-900/95 rounded-xl p-3">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold px-2 py-1 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white">
-              🎯 Próxima Visión
-            </span>
-            {basicProduct && (
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusBadge(basicProduct.trainingStatus).color}`}>
-                {getStatusBadge(basicProduct.trainingStatus).label}
+        <div className="bg-slate-900/95 rounded-xl overflow-hidden relative">
+          {/* Background Image */}
+          <div className="absolute inset-0">
+            <Image
+              src="/assets/CORO1.png"
+              alt="Vision Background"
+              fill
+              className="object-cover opacity-30"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-slate-900/40" />
+          </div>
+          
+          <div className="relative p-3">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold px-2 py-1 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white">
+                🎯 Próxima Visión
               </span>
+              {basicProduct && (
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusBadge(basicProduct.trainingStatus).color}`}>
+                  {getStatusBadge(basicProduct.trainingStatus).label}
+                </span>
+              )}
+            </div>
+
+            {/* Vision Name */}
+            <h4 className="font-bold text-white text-base mb-3">
+              {slide.visionName}
+            </h4>
+
+            {/* Levels Timeline - Ordenado: Básico, Avanzado, Liderato */}
+            <div className="space-y-2">
+              {sortedProducts.map((product) => (
+                <div 
+                  key={product.id} 
+                  className={`flex items-center justify-between p-2 rounded-lg bg-gradient-to-r ${getLevelColor(product.levelType)}/10 border border-${product.levelType === 'BASIC' ? 'emerald' : product.levelType === 'ADVANCED' ? 'violet' : 'amber'}-500/20 backdrop-blur-sm`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded bg-gradient-to-r ${getLevelColor(product.levelType)} text-white`}>
+                      {getLevelLabel(product.levelType)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <Calendar className="w-3 h-3" />
+                    <span>{formatDate(product.startDate)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Location */}
+            {basicProduct?.location && (
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2">
+                <MapPin className="w-3.5 h-3.5" />
+                <span className="truncate">{basicProduct.location}</span>
+              </div>
             )}
           </div>
-
-          {/* Vision Name */}
-          <h4 className="font-bold text-white text-base mb-3">
-            {slide.visionName}
-          </h4>
-
-          {/* Levels Timeline - Ordenado: Básico, Avanzado, Liderato */}
-          <div className="space-y-2">
-            {sortedProducts.map((product) => (
-              <div 
-                key={product.id} 
-                className={`flex items-center justify-between p-2 rounded-lg bg-gradient-to-r ${getLevelColor(product.levelType)}/10 border border-${product.levelType === 'BASIC' ? 'emerald' : product.levelType === 'ADVANCED' ? 'violet' : 'amber'}-500/20`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded bg-gradient-to-r ${getLevelColor(product.levelType)} text-white`}>
-                    {getLevelLabel(product.levelType)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <Calendar className="w-3 h-3" />
-                  <span>{formatDate(product.startDate)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Location */}
-          {basicProduct?.location && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2">
-              <MapPin className="w-3.5 h-3.5" />
-              <span className="truncate">{basicProduct.location}</span>
-            </div>
-          )}
         </div>
       </div>
     );
