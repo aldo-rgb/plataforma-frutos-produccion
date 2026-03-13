@@ -45,11 +45,24 @@ interface EventProduct {
   maxCapacity: number | null;
   currentEnrollment: number;
   isActive: boolean;
+  type: string;
   Organization: {
     name: string;
     logoUrl: string | null;
     brandColor: string | null;
   } | null;
+}
+
+interface OtherTraining {
+  id: number;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  type: string;
+  basePrice: number;
+  promoPrice: number | null;
+  startDate: string | null;
+  location: string | null;
 }
 
 // Nivel de transformación data
@@ -164,6 +177,7 @@ export default function EventoPage() {
   const productId = params.productId as string;
   
   const [event, setEvent] = useState<EventProduct | null>(null);
+  const [otherTrainings, setOtherTrainings] = useState<OtherTraining[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -197,6 +211,7 @@ export default function EventoPage() {
       
       if (data.success) {
         setEvent(data.product);
+        setOtherTrainings(data.otherTrainings || []);
       } else {
         setError(data.error || 'Evento no encontrado');
       }
@@ -505,7 +520,110 @@ export default function EventoPage() {
         </div>
       </section>
 
-      {/* The 3 Levels Section */}
+      {/* Other Trainings Section - Dynamic */}
+      {otherTrainings.length > 0 && (
+        <section className="relative z-10 py-20 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 mb-6">
+                <Zap className="w-4 h-4 text-cyan-400" />
+                <span className="text-sm font-medium text-cyan-300">DESCUBRE MÁS</span>
+              </div>
+              
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6">
+                Otros
+                <span className="block bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+                  Entrenamientos
+                </span>
+              </h2>
+              
+              <p className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto">
+                Conoce todos los entrenamientos disponibles de {event?.Organization?.name || 'nuestra organización'}
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {otherTrainings.map((training, index) => (
+                <motion.a
+                  key={training.id}
+                  href={`/evento/${training.id}`}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="group relative bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 overflow-hidden hover:border-cyan-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10"
+                >
+                  {/* Image */}
+                  <div className="relative h-48 overflow-hidden">
+                    {training.imageUrl ? (
+                      <Image
+                        src={training.imageUrl}
+                        alt={training.name}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-cyan-500/20 to-violet-500/20 flex items-center justify-center">
+                        <Sparkles className="w-12 h-12 text-cyan-400" />
+                      </div>
+                    )}
+                    
+                    {/* Type Badge */}
+                    <div className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold ${
+                      training.type === 'CORE_TRAINING' 
+                        ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white' 
+                        : 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
+                    }`}>
+                      {training.type === 'CORE_TRAINING' ? '🎯 ENTRENAMIENTO' : '🎪 TALLER'}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-5">
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors line-clamp-2">
+                      {training.name}
+                    </h3>
+                    
+                    {training.description && (
+                      <p className="text-slate-400 text-sm mb-4 line-clamp-2">
+                        {training.description}
+                      </p>
+                    )}
+                    
+                    <div className="space-y-2">
+                      {training.startDate && (
+                        <div className="flex items-center gap-2 text-slate-300 text-sm">
+                          <Calendar className="w-4 h-4 text-cyan-400" />
+                          <span>{new Date(training.startDate).toLocaleDateString('es-MX', { 
+                            day: 'numeric', 
+                            month: 'short', 
+                            year: 'numeric' 
+                          })}</span>
+                        </div>
+                      )}
+                      
+                      {training.location && (
+                        <div className="flex items-center gap-2 text-slate-300 text-sm">
+                          <MapPin className="w-4 h-4 text-violet-400" />
+                          <span className="truncate">{training.location.split(',')[0]}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-4 flex items-center justify-between">
+                      <span className="text-cyan-400 font-semibold text-sm group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                        Ver detalles <ArrowRight className="w-4 h-4" />
+                      </span>
+                    </div>
+                  </div>
+                </motion.a>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* The 3 Levels Section - Static info about the methodology */}
       <section className="relative z-10 py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
@@ -514,14 +632,14 @@ export default function EventoPage() {
               <span className="text-sm font-medium text-cyan-300">EL CAMINO DEL HÉROE</span>
             </div>
             
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6">
               3 Niveles de
               <span className="block bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
                 Transformación
               </span>
             </h2>
             
-            <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10">
+            <p className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10">
               Cada nivel está diseñado para llevarte al siguiente escalón de tu evolución personal y profesional.
             </p>
 
@@ -545,7 +663,7 @@ export default function EventoPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.15 }}
-                className={`group relative bg-slate-900/50 backdrop-blur-sm rounded-2xl border ${level.borderColor} p-8 hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10`}
+                className={`group relative bg-slate-900/50 backdrop-blur-sm rounded-2xl border ${level.borderColor} p-6 sm:p-8 hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10`}
               >
                 {/* Level number */}
                 <div className="absolute -top-4 -right-4 w-10 h-10 rounded-full bg-gradient-to-r from-slate-800 to-slate-700 border border-slate-600 flex items-center justify-center text-white font-bold">
@@ -553,26 +671,26 @@ export default function EventoPage() {
                 </div>
 
                 {/* Icon */}
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-r ${level.bgGradient} flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-transform`}>
+                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-r ${level.bgGradient} flex items-center justify-center text-2xl sm:text-3xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform`}>
                   {level.icon}
                 </div>
 
                 {/* Content */}
-                <h3 className={`text-xl font-bold bg-gradient-to-r ${level.gradient} bg-clip-text text-transparent mb-2`}>
+                <h3 className={`text-lg sm:text-xl font-bold bg-gradient-to-r ${level.gradient} bg-clip-text text-transparent mb-2`}>
                   {level.level}
                 </h3>
                 
-                <p className="text-sm text-slate-400 mb-4 flex items-center gap-1">
+                <p className="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4 flex items-center gap-1">
                   <Clock className="w-4 h-4" />
                   {level.duration}
                 </p>
 
-                <p className="text-slate-300 mb-6">{level.description}</p>
+                <p className="text-slate-300 text-sm sm:text-base mb-4 sm:mb-6">{level.description}</p>
 
                 {/* Includes */}
                 <ul className="space-y-2">
                   {level.includes.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-slate-400">
+                    <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-slate-400">
                       <Star className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
                       {item}
                     </li>

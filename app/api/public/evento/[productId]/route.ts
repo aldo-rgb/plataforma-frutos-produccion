@@ -35,6 +35,7 @@ export async function GET(
         location: true,
         videoUrl: true,
         isActive: true,
+        organizationId: true,
         Organization: {
           select: {
             id: true,
@@ -60,9 +61,37 @@ export async function GET(
       );
     }
 
+    // Obtener otros entrenamientos de la misma organización
+    let otherTrainings: any[] = [];
+    if (product.organizationId) {
+      otherTrainings = await prisma.schoolProduct.findMany({
+        where: {
+          organizationId: product.organizationId,
+          isActive: true,
+          id: { not: product.id }, // Excluir el producto actual
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          imageUrl: true,
+          type: true,
+          basePrice: true,
+          promoPrice: true,
+          startDate: true,
+          location: true,
+        },
+        orderBy: [
+          { type: 'asc' }, // CORE_TRAINING primero
+          { startDate: 'asc' },
+        ],
+      });
+    }
+
     return NextResponse.json({
       success: true,
       product,
+      otherTrainings,
     });
   } catch (error) {
     console.error('Error fetching public event:', error);
