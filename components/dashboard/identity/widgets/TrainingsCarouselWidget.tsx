@@ -316,7 +316,7 @@ export default function TrainingsCarouselWidget() {
         <div className="bg-slate-900/95 rounded-xl overflow-hidden">
           {/* Workshop Image */}
           {workshop.imageUrl ? (
-            <div className="relative h-48 sm:h-56 md:h-64 w-full">
+            <div className="relative h-96 sm:h-[28rem] md:h-[32rem] w-full">
               <Image
                 src={workshop.imageUrl}
                 alt={workshop.name}
