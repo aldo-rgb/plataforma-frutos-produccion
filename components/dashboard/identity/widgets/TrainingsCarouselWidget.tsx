@@ -231,6 +231,13 @@ export default function TrainingsCarouselWidget() {
   const renderVisionSlide = (slide: Slide) => {
     const basicProduct = slide.products?.find(p => p.levelType === 'BASIC');
     
+    // Ordenar productos: BASIC primero, luego ADVANCED, luego PL
+    const levelOrder = { 'BASIC': 0, 'ADVANCED': 1, 'PL': 2 };
+    const sortedProducts = [...(slide.products || [])].sort((a, b) => 
+      (levelOrder[a.levelType as keyof typeof levelOrder] ?? 3) - 
+      (levelOrder[b.levelType as keyof typeof levelOrder] ?? 3)
+    );
+    
     return (
       <div className="bg-gradient-to-br from-violet-500/20 to-purple-500/20 p-0.5 rounded-xl">
         <div className="bg-slate-900/95 rounded-xl p-3">
@@ -251,9 +258,9 @@ export default function TrainingsCarouselWidget() {
             {slide.visionName}
           </h4>
 
-          {/* Levels Timeline */}
+          {/* Levels Timeline - Ordenado: Básico, Avanzado, Liderato */}
           <div className="space-y-2">
-            {slide.products?.map((product) => (
+            {sortedProducts.map((product) => (
               <div 
                 key={product.id} 
                 className={`flex items-center justify-between p-2 rounded-lg bg-gradient-to-r ${getLevelColor(product.levelType)}/10 border border-${product.levelType === 'BASIC' ? 'emerald' : product.levelType === 'ADVANCED' ? 'violet' : 'amber'}-500/20`}
