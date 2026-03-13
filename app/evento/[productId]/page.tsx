@@ -1072,8 +1072,8 @@ export default function EventoPage() {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-white font-medium truncate">{user.nombre}</p>
-                                    {user.organizationName && (
-                                      <p className="text-slate-400 text-xs truncate">{user.organizationName}</p>
+                                    {user.referralCode && (
+                                      <p className="text-slate-400 text-xs truncate font-mono">Código: {user.referralCode}</p>
                                     )}
                                   </div>
                                   {user.isGraduated && (
