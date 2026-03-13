@@ -112,9 +112,11 @@ export async function GET() {
       // Continuar sin capitanías
     }
 
-    // Obtener todos los usuarios de la misma visión, ordenados por puntos
+    // Obtener todos los usuarios ACTIVOS de la misma visión, ordenados por puntos
     const usersInVision = await prisma.usuario.findMany({
       where: {
+        isActive: true,
+        rol: { in: ['PARTICIPANTE', 'GAMECHANGER'] },
         VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           some: {
             visionId: activeVision.id,

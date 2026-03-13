@@ -101,14 +101,14 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Ranking Global: Todos los usuarios activos
+ * Ranking Global: Todos los usuarios activos (PARTICIPANTES y GAMECHANGERS)
  */
 async function getGlobalRanking(startDate?: Date) {
   try {
     const users = await prisma.usuario.findMany({
       where: {
         isActive: true,
-        rol: 'PARTICIPANTE',
+        rol: { in: ['PARTICIPANTE', 'GAMECHANGER'] },
       },
       select: {
         id: true,
@@ -247,7 +247,7 @@ async function getSchoolRanking(organizationId: number, startDate?: Date) {
 }
 
 /**
- * Ranking por Visión: Solo participantes de una visión específica
+ * Ranking por Visión: Solo participantes ACTIVOS de una visión específica
  */
 async function getVisionRanking(visionId: number, startDate?: Date) {
   const participants = await prisma.visionParticipante.findMany({
@@ -265,6 +265,8 @@ async function getVisionRanking(visionId: number, startDate?: Date) {
           rangoActual: true,
           completionStreak: true,
           badges: true,
+          isActive: true,
+          rol: true,
           EvidenciaAccion: {
             where: {
               highQuality: true,
@@ -296,8 +298,11 @@ async function getVisionRanking(visionId: number, startDate?: Date) {
     }
   });
 
+  // Filtrar solo usuarios activos con rol PARTICIPANTE o GAMECHANGER
+  const allowedRoles = ['PARTICIPANTE', 'GAMECHANGER'];
   const users = participants
     .map(p => p.Usuario_VisionParticipante_participanteIdToUsuario)
+    .filter(user => user.isActive === true && allowedRoles.includes(user.rol))
     .sort((a, b) => {
       if (b.puntosCuanticos !== a.puntosCuanticos) {
         return b.puntosCuanticos - a.puntosCuanticos;

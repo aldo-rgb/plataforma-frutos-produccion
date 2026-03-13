@@ -5,8 +5,12 @@ export const dynamic = 'force-dynamic'; // Importante para que no se guarde en c
 
 export async function GET() {
   try {
-    // 1. Buscar usuarios ordenados por puntos (Mayor a menor)
+    // 1. Buscar usuarios ACTIVOS con rol PARTICIPANTE o GAMECHANGER, ordenados por puntos (Mayor a menor)
     const lideres = await prisma.usuario.findMany({
+      where: {
+        isActive: true,
+        rol: { in: ['PARTICIPANTE', 'GAMECHANGER'] }
+      },
       orderBy: {
         puntosCuanticos: 'desc',
       },
