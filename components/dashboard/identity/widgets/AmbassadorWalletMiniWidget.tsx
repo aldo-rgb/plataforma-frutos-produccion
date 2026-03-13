@@ -269,13 +269,13 @@ function CommissionInfoModal({ onClose }: { onClose: () => void }) {
               {/* Combo */}
               <div className="bg-gradient-to-br from-purple-900/20 to-purple-900/10 border border-purple-500/30 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-purple-400 font-semibold">Combo (B+A)</span>
+                  <span className="text-purple-400 font-semibold">Jornada Completa</span>
                   <span className="text-2xl font-bold text-white">20%</span>
                 </div>
-                <p className="text-xs text-slate-400">Básico + Avanzado juntos</p>
+                <p className="text-xs text-slate-400">Básico + Avanzado + PL juntos</p>
                 <div className="mt-2 pt-2 border-t border-purple-500/20">
-                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $10,000</p>
-                  <p className="text-sm text-green-400 font-semibold">Ganas $2,000</p>
+                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $25,000</p>
+                  <p className="text-sm text-green-400 font-semibold">Ganas $5,000</p>
                 </div>
               </div>
 
@@ -360,7 +360,7 @@ function CommissionInfoModal({ onClose }: { onClose: () => void }) {
                     <td className="p-3 text-right text-green-400 font-semibold">20%</td>
                   </tr>
                   <tr>
-                    <td className="p-3 text-slate-400">Combo Básico + Avanzado</td>
+                    <td className="p-3 text-slate-400">Jornada Completa (B+A+PL)</td>
                     <td className="p-3 text-right text-green-400 font-semibold">20%</td>
                   </tr>
                   <tr>

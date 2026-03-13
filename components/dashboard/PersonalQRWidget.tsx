@@ -12,6 +12,8 @@ interface PersonalQRWidgetProps {
   organizationName?: string;
   organizationLogo?: string | null;
   squadName?: string;
+  autoOpen?: boolean;
+  onClose?: () => void;
 }
 
 export default function PersonalQRWidget({ 
@@ -22,9 +24,11 @@ export default function PersonalQRWidget({
   organizationId: propOrganizationId,
   organizationName = 'FRUTOS',
   organizationLogo,
-  squadName
+  squadName,
+  autoOpen = false,
+  onClose
 }: PersonalQRWidgetProps) {
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(autoOpen);
   const [qrDataURL, setQrDataURL] = useState<string | null>(null);
   const [premiumCardURL, setPremiumCardURL] = useState<string | null>(null);
   const [generatingQR, setGeneratingQR] = useState(false);
@@ -440,12 +444,194 @@ export default function PersonalQRWidget({
     }
   };
 
+  const handleCloseModal = () => {
+    setShowModal(false);
+    onClose?.();
+  };
+
+  // Generar QR automáticamente cuando se abre con autoOpen
+  useEffect(() => {
+    if (autoOpen && (logoLoaded || !organizationId)) {
+      generateQR();
+    }
+  }, [autoOpen, logoLoaded, organizationId]);
+
   // Regenerar QR cuando el logo se cargue (si el modal está abierto)
   useEffect(() => {
     if (showModal && logoLoaded && !premiumCardURL) {
       generateQR();
     }
   }, [logoLoaded, showModal]);
+
+  // Si autoOpen es true, solo mostrar el modal directamente (sin el widget card)
+  if (autoOpen) {
+    return (
+      <div 
+        className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto"
+        onClick={handleCloseModal}
+      >
+        <div 
+          className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border-2 border-amber-500/30 max-w-md w-full shadow-2xl my-8 max-h-none"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header Premium */}
+          <div className="p-4 border-b border-amber-500/30 flex items-center justify-between bg-gradient-to-r from-amber-900/20 to-transparent">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-500/20 rounded-lg">
+                <span className="text-2xl">✦</span>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-amber-400">Tu Credencial</h3>
+                <p className="text-xs text-slate-400">Vista previa de tu tarjeta</p>
+              </div>
+            </div>
+            <button
+              onClick={handleCloseModal}
+              className="text-slate-400 hover:text-white transition-colors p-2"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          <div className="p-6">
+            {/* Vista previa de la tarjeta premium */}
+            <div className="relative rounded-xl overflow-hidden shadow-2xl mb-6 border border-amber-500/20">
+              {premiumCardURL ? (
+                <img 
+                  src={premiumCardURL} 
+                  alt="Credencial FRUTOS" 
+                  className="w-full"
+                />
+              ) : generatingQR ? (
+                <div className="aspect-[4/5] bg-gradient-to-br from-slate-800 to-slate-900 flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mb-4"></div>
+                  <p className="text-slate-400 text-sm">Generando tu credencial premium...</p>
+                </div>
+              ) : (
+                <div className="aspect-[4/5] bg-gradient-to-br from-slate-800 to-slate-900 flex flex-col items-center justify-center">
+                  <div className="text-6xl mb-4">✦</div>
+                  <p className="text-slate-400 text-sm">Tu credencial aparecerá aquí</p>
+                </div>
+              )}
+            </div>
+
+            {/* Info del participante */}
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-bold text-white mb-1">
+                {userName}
+              </h3>
+              <p className="text-slate-400 text-sm">
+                {userReferralCode ? `Código de referido: ${userReferralCode}` : 'Tu credencial personalizada'}
+              </p>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex gap-3">
+              <button
+                onClick={downloadQR}
+                disabled={!premiumCardURL}
+                className="flex-1 px-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-xl transition-all flex items-center justify-center gap-2"
+              >
+                <span>💾</span> Guardar QR
+              </button>
+              <button
+                onClick={() => {
+                  const invitationURL = userReferralCode
+                    ? `https://www.impactocuantico.com/auth/signup?ref=${userReferralCode}`
+                    : `https://www.impactocuantico.com/auth/signup`;
+
+                  const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
+
+✨ Entrenamiento Básico de Transformación Cuántica
+
+🌟 3 días intensivos de conciencia y romper creencias limitantes
+💫 Entrenamiento práctico para resultados reales  
+🤝 Una comunidad extraordinaria
+
+⚡ ¡QUEDAN POCOS LUGARES!
+
+👉 Conoce más y regístrate aquí:
+${invitationURL}
+
+¡Te espero! 🚀`;
+
+                  const whatsappURL = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+                  window.open(whatsappURL, '_blank');
+                }}
+                disabled={!userReferralCode && !registrationURL}
+                className="flex-1 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-xl transition-all flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                WhatsApp
+              </button>
+            </div>
+            
+            {/* Botón de compartir general */}
+            <button
+              onClick={async () => {
+                const invitationURL = userReferralCode
+                  ? `https://www.impactocuantico.com/auth/signup?ref=${userReferralCode}`
+                  : `https://www.impactocuantico.com/auth/signup`;
+
+                const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
+
+✨ Entrenamiento Básico de Transformación Cuántica
+
+🌟 3 días intensivos de conciencia y romper creencias limitantes
+💫 Entrenamiento práctico para resultados reales  
+🤝 Una comunidad extraordinaria
+
+⚡ ¡QUEDAN POCOS LUGARES!
+
+👉 Conoce más y regístrate aquí:
+${invitationURL}
+
+¡Te espero! 🚀`;
+
+                if (navigator.share) {
+                  try {
+                    await navigator.share({
+                      title: `Invitación al Entrenamiento Básico`,
+                      text: shareText
+                    });
+                  } catch (err) {
+                    await navigator.clipboard.writeText(shareText);
+                    showCopiedNotification();
+                  }
+                } else {
+                  await navigator.clipboard.writeText(shareText);
+                  showCopiedNotification();
+                }
+              }}
+              disabled={!userReferralCode && !registrationURL}
+              className="w-full mt-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-slate-900 font-bold rounded-xl shadow-xl transition-all flex items-center justify-center gap-2"
+            >
+              <span>🔗</span> Compartir
+            </button>
+
+            {/* Tip informativo */}
+            <div className="mt-6 p-4 bg-gradient-to-r from-amber-900/20 to-orange-900/20 border border-amber-500/20 rounded-xl">
+              <p className="text-amber-200/80 text-sm text-center">
+                ✨ <strong>Tu Credencial de Transformación</strong> incluye tu QR único para que otros se registren con tu código de referido
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Toast de copiado */}
+        {showCopiedToast && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl shadow-2xl border border-emerald-400/30">
+              <span className="text-xl">✅</span>
+              <span className="font-medium">Mensaje copiado al portapapeles</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -480,7 +666,7 @@ export default function PersonalQRWidget({
       {showModal && (
         <div 
           className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto"
-          onClick={() => setShowModal(false)}
+          onClick={handleCloseModal}
         >
           <div 
             className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border-2 border-amber-500/30 max-w-md w-full shadow-2xl my-8 max-h-none"
@@ -498,7 +684,7 @@ export default function PersonalQRWidget({
                 </div>
               </div>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={handleCloseModal}
                 className="text-slate-400 hover:text-white transition-colors p-2"
               >
                 <X size={24} />
@@ -547,7 +733,7 @@ export default function PersonalQRWidget({
                   <span>💾</span> Guardar QR
                 </button>
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     // URL fija de producción .com con código de referido
                     const invitationURL = referralCode
                       ? `https://www.impactocuantico.com/auth/signup?ref=${referralCode}`
@@ -568,30 +754,65 @@ ${invitationURL}
 
 ¡Te espero! 🚀`;
 
-                    // Usar Web Share API
-                    if (navigator.share) {
-                      try {
-                        await navigator.share({
-                          title: `Invitación al Entrenamiento Básico`,
-                          text: shareText
-                        });
-                      } catch (err) {
-                        // Usuario canceló o error - copiar al portapapeles
-                        await navigator.clipboard.writeText(shareText);
-                        showCopiedNotification();
-                      }
-                    } else {
-                      // Copiar al portapapeles como fallback
+                    const whatsappURL = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+                    window.open(whatsappURL, '_blank');
+                  }}
+                  disabled={!referralCode && !registrationURL}
+                  className="flex-1 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  WhatsApp
+                </button>
+              </div>
+              
+              {/* Botón de compartir general */}
+              <button
+                onClick={async () => {
+                  // URL fija de producción .com con código de referido
+                  const invitationURL = referralCode
+                    ? `https://www.impactocuantico.com/auth/signup?ref=${referralCode}`
+                    : `https://www.impactocuantico.com/auth/signup`;
+
+                  const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
+
+✨ Entrenamiento Básico de Transformación Cuántica
+
+🌟 3 días intensivos de conciencia y romper creencias limitantes
+💫 Entrenamiento práctico para resultados reales  
+🤝 Una comunidad extraordinaria
+
+⚡ ¡QUEDAN POCOS LUGARES!
+
+👉 Conoce más y regístrate aquí:
+${invitationURL}
+
+¡Te espero! 🚀`;
+
+                  // Usar Web Share API
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({
+                        title: `Invitación al Entrenamiento Básico`,
+                        text: shareText
+                      });
+                    } catch (err) {
+                      // Usuario canceló o error - copiar al portapapeles
                       await navigator.clipboard.writeText(shareText);
                       showCopiedNotification();
                     }
-                  }}
-                  disabled={!referralCode && !registrationURL}
-                  className="flex-1 px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-slate-900 font-bold rounded-xl shadow-xl transition-all flex items-center justify-center gap-2"
-                >
-                  <span>🔗</span> Compartir
-                </button>
-              </div>
+                  } else {
+                    // Copiar al portapapeles como fallback
+                    await navigator.clipboard.writeText(shareText);
+                    showCopiedNotification();
+                  }
+                }}
+                disabled={!referralCode && !registrationURL}
+                className="w-full mt-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-slate-900 font-bold rounded-xl shadow-xl transition-all flex items-center justify-center gap-2"
+              >
+                <span>🔗</span> Compartir
+              </button>
 
               {/* Toast de copiado */}
               {showCopiedToast && (

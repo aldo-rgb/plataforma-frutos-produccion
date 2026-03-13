@@ -126,6 +126,13 @@ export async function POST(
       );
     }
 
+    // Generar código de referido único
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const nombreLimpio = nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z]/g, '').toUpperCase();
+    const prefix = nombreLimpio.substring(0, 3).padEnd(3, 'X');
+    const generatedReferralCode = `${prefix}${timestamp}${random}`;
+
     // Crear usuario con tier FREE (registro vía QR)
     const newUser = await prisma.usuario.create({
       data: {
@@ -137,6 +144,7 @@ export async function POST(
         tier: 'FREE',
         isActive: true,
         organizationId: vision.organizationId,
+        referralCode: generatedReferralCode, // 🎯 Código de referido único
         // Campos para usuarios del sistema viejo
         visionAngel: visionGraduacion || null, // Visión donde se graduó
         invitedBy: angelEnrolamientoId || null, // ID del ángel si se encontró

@@ -138,22 +138,17 @@ export default function GCTribeWidget({
         </motion.button>
       </motion.div>
 
-      {/* Modal de QR */}
+      {/* Modal de QR - Abre directamente el QR sin paso intermedio */}
       {showQRModal && (
-        <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setShowQRModal(false)}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <PersonalQRWidget
-              userName={userName}
-              userId={userId}
-              userEmail={userEmail}
-              referralCode={referralCode}
-              organizationId={organizationId}
-            />
-          </div>
-        </div>
+        <PersonalQRWidget
+          userName={userName}
+          userId={userId}
+          userEmail={userEmail}
+          referralCode={referralCode}
+          organizationId={organizationId}
+          autoOpen={true}
+          onClose={() => setShowQRModal(false)}
+        />
       )}
     </>
   );

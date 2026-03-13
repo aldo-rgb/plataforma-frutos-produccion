@@ -62,6 +62,7 @@ export default function TrainingsCarouselWidget() {
     try {
       const res = await fetch('/api/me');
       const data = await res.json();
+      console.log('🔍 ReferralCode del usuario:', data.user?.referralCode);
       if (data.user?.referralCode) {
         setUserReferralCode(data.user.referralCode);
       }
@@ -70,14 +71,44 @@ export default function TrainingsCarouselWidget() {
     }
   };
 
-  // Función para compartir por WhatsApp
-  const handleShareWorkshop = (workshop: Product) => {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  // Función para compartir taller usando Web Share API nativo
+  const handleShareWorkshop = async (workshop: Product) => {
+    // Usar URL fija de producción con referral code
+    const baseUrl = 'https://www.impactocuantico.com';
     const referralParam = userReferralCode ? `?ref=${userReferralCode}` : '';
     const shareUrl = `${baseUrl}/evento/${workshop.id}${referralParam}`;
-    const message = `🎪 ¡Te invito al taller "${workshop.name}"!\n\n📅 ${formatDate(workshop.startDate)}\n📍 ${workshop.location || 'Por confirmar'}\n\n👉 Regístrate aquí: ${shareUrl}`;
     
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    const shareTitle = `¡Te invito al taller "${workshop.name}"!`;
+    const shareText = `🎪 ¡Te invito al taller "${workshop.name}"!
+
+📅 ${formatDate(workshop.startDate)}
+📍 ${workshop.location || 'Por confirmar'}
+
+👉 Regístrate aquí: ${shareUrl}`;
+
+    // Intentar usar Web Share API nativo (funciona en móviles)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl
+        });
+        return; // Éxito, no hacer nada más
+      } catch (error) {
+        // Usuario canceló o error - continuar con fallback
+        console.log('Share cancelled or failed, using fallback');
+      }
+    }
+    
+    // Fallback: Copiar al portapapeles y mostrar mensaje
+    try {
+      await navigator.clipboard.writeText(shareText);
+      alert('¡Mensaje copiado! Pégalo en WhatsApp o cualquier app para compartir.');
+    } catch (error) {
+      // Último recurso: abrir WhatsApp web
+      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+    }
   };
 
   // Autoplay del carrusel
@@ -284,7 +315,7 @@ export default function TrainingsCarouselWidget() {
     
     return (
       <div className="bg-gradient-to-br from-violet-500/20 to-purple-500/20 p-0.5 rounded-xl">
-        <div className="bg-slate-900/95 rounded-xl overflow-hidden relative">
+        <div className="bg-slate-900/95 rounded-xl overflow-hidden relative h-48 sm:h-56 md:h-64">
           {/* Background Image */}
           <div className="absolute inset-0">
             <Image
@@ -296,9 +327,9 @@ export default function TrainingsCarouselWidget() {
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-slate-900/40" />
           </div>
           
-          <div className="relative p-3">
+          <div className="relative p-3 h-full flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold px-2 py-1 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white">
                 🎯 Próxima Visión
               </span>
@@ -310,16 +341,16 @@ export default function TrainingsCarouselWidget() {
             </div>
 
             {/* Vision Name */}
-            <h4 className="font-bold text-white text-base mb-3">
+            <h4 className="font-bold text-white text-sm mb-2 line-clamp-1">
               {slide.visionName}
             </h4>
 
             {/* Levels Timeline - Ordenado: Básico, Avanzado, Liderato */}
-            <div className="space-y-2">
+            <div className="space-y-1.5 flex-1 overflow-hidden">
               {sortedProducts.map((product) => (
                 <div 
                   key={product.id} 
-                  className={`flex items-center justify-between p-2 rounded-lg bg-gradient-to-r ${getLevelColor(product.levelType)}/10 border border-${product.levelType === 'BASIC' ? 'emerald' : product.levelType === 'ADVANCED' ? 'violet' : 'amber'}-500/20 backdrop-blur-sm`}
+                  className={`flex items-center justify-between p-1.5 rounded-lg bg-gradient-to-r ${getLevelColor(product.levelType)}/10 border border-${product.levelType === 'BASIC' ? 'emerald' : product.levelType === 'ADVANCED' ? 'violet' : 'amber'}-500/20 backdrop-blur-sm`}
                 >
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-medium px-1.5 py-0.5 rounded bg-gradient-to-r ${getLevelColor(product.levelType)} text-white`}>
@@ -336,7 +367,7 @@ export default function TrainingsCarouselWidget() {
 
             {/* Location */}
             {basicProduct?.location && (
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1.5">
                 <MapPin className="w-3.5 h-3.5" />
                 <span className="truncate">{basicProduct.location}</span>
               </div>
@@ -354,78 +385,73 @@ export default function TrainingsCarouselWidget() {
     return (
       <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 p-0.5 rounded-xl">
         <div className="bg-slate-900/95 rounded-xl overflow-hidden">
-          {/* Workshop Image */}
-          {workshop.imageUrl ? (
-            <div className="relative h-48 sm:h-56 md:h-64 w-full">
+          {/* Workshop Image with all content inside */}
+          <div className="relative h-48 sm:h-56 md:h-64 w-full">
+            {workshop.imageUrl ? (
               <Image
                 src={workshop.imageUrl}
                 alt={workshop.name}
                 fill
                 className="object-cover object-top"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
-              <div className="absolute bottom-2 left-2">
-                <span className="text-xs font-bold px-2 py-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white">
-                  🎪 Taller
-                </span>
-              </div>
-              <div className="absolute bottom-2 right-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${statusBadge.color}`}>
-                  {statusBadge.label}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between p-2">
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/30 to-red-500/30" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
+            
+            {/* Top badges */}
+            <div className="absolute top-2 left-2">
               <span className="text-xs font-bold px-2 py-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white">
                 🎪 Taller
               </span>
+            </div>
+            <div className="absolute top-2 right-2">
               <span className={`text-xs px-2 py-0.5 rounded-full border ${statusBadge.color}`}>
                 {statusBadge.label}
               </span>
             </div>
-          )}
+            
+            {/* Content at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 p-3">
+              <h4 className="font-bold text-white text-sm mb-2 line-clamp-1">
+                {workshop.name}
+              </h4>
 
-          {/* Content */}
-          <div className="p-3">
-            <h4 className="font-bold text-white text-sm mb-2 line-clamp-1">
-              {workshop.name}
-            </h4>
-
-            {/* Info Grid */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                <span>{formatDate(workshop.startDate)}</span>
-              </div>
-              
-              {workshop.location && (
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="truncate">{workshop.location.split(',')[0]}</span>
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                <div className="flex items-center gap-1.5 text-slate-200">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{formatDate(workshop.startDate)}</span>
                 </div>
-              )}
-            </div>
+                
+                {workshop.location && (
+                  <div className="flex items-center gap-1.5 text-slate-200">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="truncate">{workshop.location.split(',')[0]}</span>
+                  </div>
+                )}
+              </div>
 
-            {/* CTA Buttons */}
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => window.location.href = `/evento/${workshop.id}`}
-                className="flex-1 py-1.5 px-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
-              >
-                <span>Ver detalles</span>
-                <ExternalLink className="w-3 h-3" />
-              </button>
-              
-              {/* Share Button */}
-              <button
-                onClick={() => handleShareWorkshop(workshop)}
-                className="py-1.5 px-3 bg-green-500 hover:bg-green-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
-                title="Compartir por WhatsApp"
-              >
-                <MessageCircle className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Invitar</span>
-              </button>
+              {/* CTA Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.location.href = `/evento/${workshop.id}`}
+                  className="flex-1 py-1.5 px-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
+                >
+                  <span>Ver detalles</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+                
+                {/* Share Button */}
+                <button
+                  onClick={() => handleShareWorkshop(workshop)}
+                  className="py-1.5 px-3 bg-green-500 hover:bg-green-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
+                  title="Compartir por WhatsApp"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Invitar</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
