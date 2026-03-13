@@ -508,7 +508,7 @@ export default function EventoPage() {
       {/* The 3 Levels Section */}
       <section className="relative z-10 py-20 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 mb-6">
               <Zap className="w-4 h-4 text-cyan-400" />
               <span className="text-sm font-medium text-cyan-300">EL CAMINO DEL HÉROE</span>
@@ -521,9 +521,20 @@ export default function EventoPage() {
               </span>
             </h2>
             
-            <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10">
               Cada nivel está diseñado para llevarte al siguiente escalón de tu evolución personal y profesional.
             </p>
+
+            {/* Banner Image */}
+            <div className="relative rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl shadow-violet-500/10 mb-16">
+              <Image
+                src="/assets/impacto-cuantico-niveles.png"
+                alt="Los 3 Niveles de Transformación - Básico, Avanzado, Programa de Liderazgo"
+                width={1200}
+                height={400}
+                className="w-full h-auto object-cover"
+              />
+            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
