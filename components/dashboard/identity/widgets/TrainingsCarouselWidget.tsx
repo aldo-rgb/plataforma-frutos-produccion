@@ -4,9 +4,10 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, Calendar, MapPin, Users, ChevronLeft, ChevronRight,
-  Sparkles, Clock, Ticket, ExternalLink
+  Sparkles, Clock, Ticket, ExternalLink, Share2, MessageCircle
 } from 'lucide-react';
 import Image from 'next/image';
+import { useSession } from 'next-auth/react';
 
 interface Product {
   id: number;
@@ -42,16 +43,42 @@ interface Slide {
 }
 
 export default function TrainingsCarouselWidget() {
+  const { data: session } = useSession();
   const [products, setProducts] = useState<Product[]>([]);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [userReferralCode, setUserReferralCode] = useState<string | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchProducts();
+    fetchUserReferralCode();
   }, []);
+
+  // Obtener el referralCode del usuario actual
+  const fetchUserReferralCode = async () => {
+    try {
+      const res = await fetch('/api/me');
+      const data = await res.json();
+      if (data.user?.referralCode) {
+        setUserReferralCode(data.user.referralCode);
+      }
+    } catch (error) {
+      console.error('Error fetching user referral code:', error);
+    }
+  };
+
+  // Función para compartir por WhatsApp
+  const handleShareWorkshop = (workshop: Product) => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const referralParam = userReferralCode ? `?ref=${userReferralCode}` : '';
+    const shareUrl = `${baseUrl}/evento/${workshop.id}${referralParam}`;
+    const message = `🎪 ¡Te invito al taller "${workshop.name}"!\n\n📅 ${formatDate(workshop.startDate)}\n📍 ${workshop.location || 'Por confirmar'}\n\n👉 Regístrate aquí: ${shareUrl}`;
+    
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
 
   // Autoplay del carrusel
   useEffect(() => {
@@ -380,14 +407,26 @@ export default function TrainingsCarouselWidget() {
               )}
             </div>
 
-            {/* CTA */}
-            <button
-              onClick={() => window.location.href = `/evento/${workshop.id}`}
-              className="w-full mt-2 py-1.5 px-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
-            >
-              <span>Ver detalles</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
+            {/* CTA Buttons */}
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => window.location.href = `/evento/${workshop.id}`}
+                className="flex-1 py-1.5 px-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
+              >
+                <span>Ver detalles</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+              
+              {/* Share Button */}
+              <button
+                onClick={() => handleShareWorkshop(workshop)}
+                className="py-1.5 px-3 bg-green-500 hover:bg-green-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
+                title="Compartir por WhatsApp"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Invitar</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

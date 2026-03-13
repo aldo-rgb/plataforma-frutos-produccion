@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar,
@@ -177,7 +177,9 @@ const testimonials = [
 export default function EventoPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const productId = params.productId as string;
+  const refCode = searchParams.get('ref'); // Código de referido desde URL
   
   const [event, setEvent] = useState<EventProduct | null>(null);
   const [otherTrainings, setOtherTrainings] = useState<OtherTraining[]>([]);
@@ -226,6 +228,26 @@ export default function EventoPage() {
   useEffect(() => {
     fetchEvent();
   }, [productId]);
+
+  // Buscar usuario por código de referido cuando viene en la URL
+  useEffect(() => {
+    const fetchInviterByRefCode = async () => {
+      if (!refCode) return;
+      
+      try {
+        const res = await fetch(`/api/public/search-users?refCode=${encodeURIComponent(refCode)}`);
+        const data = await res.json();
+        if (data.success && data.users && data.users.length > 0) {
+          const inviter = data.users[0];
+          setSelectedInviter({ id: inviter.id, nombre: inviter.nombre });
+        }
+      } catch (err) {
+        console.error('Error fetching inviter by ref code:', err);
+      }
+    };
+
+    fetchInviterByRefCode();
+  }, [refCode]);
 
   // Buscar usuarios cuando cambia el query
   useEffect(() => {
