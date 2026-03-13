@@ -4,10 +4,11 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, Calendar, MapPin, Users, ChevronLeft, ChevronRight,
-  Sparkles, Clock, Ticket, ExternalLink, Share2, MessageCircle
+  Sparkles, Clock, Ticket, ExternalLink, Share2, MessageCircle, UserPlus
 } from 'lucide-react';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
+import PersonalQRWidget from './PersonalQRWidget';
 
 interface Product {
   id: number;
@@ -50,6 +51,7 @@ export default function TrainingsCarouselWidget() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [userReferralCode, setUserReferralCode] = useState<string | null>(null);
+  const [showQRModal, setShowQRModal] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -365,13 +367,23 @@ export default function TrainingsCarouselWidget() {
               ))}
             </div>
 
-            {/* Location */}
-            {basicProduct?.location && (
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1.5">
-                <MapPin className="w-3.5 h-3.5" />
-                <span className="truncate">{basicProduct.location}</span>
-              </div>
-            )}
+            {/* Location and Share Button */}
+            <div className="flex items-center justify-between mt-1.5">
+              {basicProduct?.location && (
+                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span className="truncate">{basicProduct.location}</span>
+                </div>
+              )}
+              {/* Botón Invitar */}
+              <button
+                onClick={() => setShowQRModal(true)}
+                className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500 text-white text-xs font-medium rounded-lg transition-all"
+              >
+                <UserPlus className="w-3 h-3" />
+                <span>Invitar</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -533,6 +545,19 @@ export default function TrainingsCarouselWidget() {
             />
           ))}
         </div>
+      )}
+
+      {/* Modal de QR para invitar */}
+      {showQRModal && session?.user && (
+        <PersonalQRWidget
+          userName={session.user.name || 'Usuario'}
+          userId={parseInt(session.user.id || '0')}
+          userEmail={session.user.email || ''}
+          referralCode={userReferralCode || undefined}
+          organizationId={session.user.organizationId ? parseInt(session.user.organizationId) : null}
+          autoOpen={true}
+          onClose={() => setShowQRModal(false)}
+        />
       )}
     </motion.div>
   );
