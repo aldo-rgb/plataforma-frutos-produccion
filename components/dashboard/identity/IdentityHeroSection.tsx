@@ -12,7 +12,7 @@ import ZonaEjecucionMiniWidget from './widgets/ZonaEjecucionMiniWidget';
 import JoinVisionWidget from './widgets/JoinVisionWidget';
 import GCCallWidget from './widgets/GCCallWidget';
 import PersonalQRWidget from '../PersonalQRWidget';
-import TrainingsCarouselWidget from './widgets/TrainingsCarouselWidget';
+import AmbassadorWalletMiniWidget from './widgets/AmbassadorWalletMiniWidget';
 
 interface DashboardStatsResponse {
   success: boolean;
@@ -165,16 +165,16 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
           </>
         )}
 
-        {/* ADVANCED: Mostrar BuddySystemWidget o TrainingsCarousel (si graduado) + ZonaEjecucionMini + GCCallWidget */}
+        {/* ADVANCED: Mostrar BuddySystemWidget o AmbassadorWalletMini (si graduado) + ZonaEjecucionMini + GCCallWidget */}
         {level === 'ADVANCED' && (
           <>
-            {isGraduated ? <TrainingsCarouselWidget /> : <BuddySystemWidget />}
+            {isGraduated ? <AmbassadorWalletMiniWidget /> : <BuddySystemWidget />}
             <ZonaEjecucionMiniWidget />
             <GCCallWidget />
           </>
         )}
 
-        {/* PL: Mostrar TribeManagementWidget + ZonaEjecucionMini + BuddySystemWidget o TrainingsCarousel (si graduado) */}
+        {/* PL: Mostrar TribeManagementWidget + ZonaEjecucionMini + BuddySystemWidget o AmbassadorWalletMini (si graduado) */}
         {level === 'PL' && (
           <>
             <TribeManagementWidget 
@@ -185,7 +185,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
               tribeMission={data?.tribeMission}
             />
             <ZonaEjecucionMiniWidget />
-            {isGraduated ? <TrainingsCarouselWidget /> : <BuddySystemWidget />}
+            {isGraduated ? <AmbassadorWalletMiniWidget /> : <BuddySystemWidget />}
           </>
         )}
 

@@ -22,6 +22,7 @@ import BitacoraAlertWidget from "@/components/dashboard/BitacoraAlertWidget";
 import LegacyCaptureBlockingModal from '@/components/dashboard/LegacyCaptureBlockingModal';
 import ParticipantSurveyBanner from '@/components/surveys/ParticipantSurveyBanner';
 import AmbassadorWalletWidget from '@/components/dashboard/AmbassadorWalletWidget';
+import TrainingsCarouselWidget from '@/components/dashboard/identity/widgets/TrainingsCarouselWidget';
 
 interface DashboardPageProps {
   searchParams: Promise<{ view?: string }>;
@@ -597,11 +598,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <IdentityHeroSection cartaData={cartaDataForIdentity} />
 
       {/* ============================================ */}
-      {/* AMBASSADOR WALLET: Invita y Gana            */}
+      {/* TRAININGS CAROUSEL: Entrenamientos          */}
       {/* Solo se muestra si el usuario es graduado   */}
       {/* ============================================ */}
       {(usuario.isGraduated || usuario.graduatedAt) && (
-        <AmbassadorWalletWidget />
+        <TrainingsCarouselWidget />
       )}
 
       {/* ============================================ */}
