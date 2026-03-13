@@ -380,9 +380,28 @@ export default function EventoPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 py-12 md:py-20 px-4">
+      <section className="relative z-10 py-8 md:py-20 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Mobile: Image first */}
+          <div className="lg:hidden mb-6">
+            <div className="relative rounded-2xl overflow-hidden border border-slate-700/50 shadow-xl shadow-cyan-500/10">
+              {event.imageUrl ? (
+                <Image
+                  src={event.imageUrl}
+                  alt={event.name}
+                  width={600}
+                  height={400}
+                  className="w-full h-auto object-cover"
+                />
+              ) : (
+                <div className="w-full aspect-video bg-gradient-to-br from-cyan-500/20 to-violet-500/20 flex items-center justify-center">
+                  <Sparkles className="w-16 h-16 text-cyan-400" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Left: Event Info */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
@@ -390,41 +409,41 @@ export default function EventoPage() {
               transition={{ duration: 0.6 }}
             >
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 mb-4">
                 <Gift className="w-4 h-4 text-cyan-400" />
-                <span className="text-sm font-medium text-cyan-300">
+                <span className="text-xs sm:text-sm font-medium text-cyan-300">
                   {isFree ? 'EVENTO GRATUITO' : 'EVENTO ESPECIAL'}
                 </span>
               </div>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 leading-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-4 leading-tight">
                 {event.name}
               </h1>
 
-              <p className="text-xl text-slate-300 mb-8 leading-relaxed">
+              <p className="text-base sm:text-lg text-slate-300 mb-6 leading-relaxed line-clamp-4 sm:line-clamp-none">
                 {event.description || 'Un espacio para descubrir, compartir ideas y abrir nuevas posibilidades de transformación en tu vida.'}
               </p>
 
               {/* Event Details */}
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center gap-4 text-slate-300">
-                  <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-cyan-400" />
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-3 text-slate-300">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
                   </div>
                   <div>
-                    <p className="text-white font-semibold">{formatDate(event.startDate)}</p>
-                    {event.startDate && <p className="text-slate-400 text-sm">{formatTime(event.startDate)}</p>}
+                    <p className="text-white font-semibold text-sm sm:text-base">{formatDate(event.startDate)}</p>
+                    {event.startDate && <p className="text-slate-400 text-xs sm:text-sm">{formatTime(event.startDate)}</p>}
                   </div>
                 </div>
 
                 {event.location && (
-                  <div className="flex items-center gap-4 text-slate-300">
-                    <div className="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center">
-                      <MapPin className="w-6 h-6 text-violet-400" />
+                  <div className="flex items-start gap-3 text-slate-300">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+                      <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-violet-400" />
                     </div>
-                    <div>
-                      <p className="text-white font-semibold">{event.location}</p>
-                      <p className="text-slate-400 text-sm">Ver ubicación</p>
+                    <div className="min-w-0">
+                      <p className="text-white font-semibold text-sm sm:text-base break-words">{event.location}</p>
+                      <p className="text-slate-400 text-xs sm:text-sm">Ver ubicación</p>
                     </div>
                   </div>
                 )}
@@ -435,7 +454,7 @@ export default function EventoPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowRegisterModal(true)}
-                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-2xl font-bold text-lg shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all flex items-center justify-center gap-2"
+                className="w-full px-6 py-3 sm:py-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-5 h-5" />
                 {isFree ? 'Reservar mi lugar GRATIS' : 'Inscribirme ahora'}
@@ -443,19 +462,19 @@ export default function EventoPage() {
               </motion.button>
 
               {isFree && (
-                <p className="text-slate-400 text-sm mt-4 flex items-center gap-2">
+                <p className="text-slate-400 text-xs sm:text-sm mt-3 flex items-center justify-center gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-400" />
                   Sin costo • Sin compromiso • Cupo limitado
                 </p>
               )}
             </motion.div>
 
-            {/* Right: Event Image */}
+            {/* Right: Event Image - Desktop only */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative"
+              className="relative hidden lg:block"
             >
               <div className="relative rounded-3xl overflow-hidden border border-slate-700/50 shadow-2xl shadow-cyan-500/10">
                 {event.imageUrl ? (
