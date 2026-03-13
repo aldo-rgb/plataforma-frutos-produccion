@@ -1176,25 +1176,29 @@ model DisponibilidadSemanal {
 }
 
 model EventRegistration {
-  id              Int                     @id @default(autoincrement())
-  productId       Int
-  organizationId  Int
-  nombre          String
-  email           String
-  telefono        String?
-  comoTeEnteraste String?
-  status          EventRegistrationStatus @default(REGISTERED)
-  confirmedAt     DateTime?
-  attendedAt      DateTime?
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime
-  Organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  SchoolProduct   SchoolProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id               Int                     @id @default(autoincrement())
+  productId        Int
+  organizationId   Int
+  nombre           String
+  email            String
+  telefono         String?
+  comoTeEnteraste  String?
+  invitedByUserId  Int?
+  amountPaid       Decimal?                @db.Decimal(10, 2)
+  status           EventRegistrationStatus @default(REGISTERED)
+  confirmedAt      DateTime?
+  attendedAt       DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime
+  Organization     Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  SchoolProduct    SchoolProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  InvitedByUser    Usuario?                @relation("EventInvitations", fields: [invitedByUserId], references: [id])
 
   @@unique([productId, email])
   @@index([email])
   @@index([organizationId])
   @@index([productId])
+  @@index([invitedByUserId])
 }
 
 model Evidencia {
@@ -5116,6 +5120,8 @@ model Usuario {
   ambassador_wallet_as_referred                                             ambassador_wallet_transactions[] @relation("ambassador_wallet_referred")
   ambassador_withdrawals                                                    ambassador_withdrawal_requests[] @relation("ambassador_withdrawals")
   ambassador_withdrawal_approvals                                           ambassador_withdrawal_requests[] @relation("ambassador_withdrawal_approver")
+  // Event invitations (talleres)
+  EventInvitations                                                          EventRegistration[]              @relation("EventInvitations")
 
   @@index([communityOrganizationId])
 }

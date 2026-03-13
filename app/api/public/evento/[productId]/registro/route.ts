@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// Modelo para registros de eventos (usaremos una tabla existente o crearemos un registro temporal)
-// Por ahora guardamos en ProductRegistration o similiar
+// Tasa de comisión para talleres: 20%
+const WORKSHOP_COMMISSION_RATE = 0.20;
 
 // POST - Registrar a alguien en un evento
 export async function POST(
@@ -21,7 +21,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { nombre, email, telefono, comoTeEnteraste } = body;
+    const { nombre, email, telefono, comoTeEnteraste, invitedByUserId } = body;
 
     // Validaciones
     if (!nombre?.trim()) {
@@ -48,6 +48,9 @@ export async function POST(
         maxCapacity: true,
         currentEnrollment: true,
         organizationId: true,
+        basePrice: true,
+        promoPrice: true,
+        type: true,
       },
     });
 
@@ -88,6 +91,27 @@ export async function POST(
       );
     }
 
+    // Verificar el usuario que invitó (si se proporcionó)
+    let invitedBy: number | null = null;
+    let inviterData: { id: number; referralCode: string | null; isGraduated: boolean } | null = null;
+    
+    if (invitedByUserId) {
+      const inviter = await prisma.usuario.findUnique({
+        where: { id: parseInt(invitedByUserId) },
+        select: { 
+          id: true, 
+          referralCode: true, 
+          isGraduated: true,
+          nombre: true 
+        },
+      });
+      
+      if (inviter) {
+        invitedBy = inviter.id;
+        inviterData = inviter;
+      }
+    }
+
     // Crear el registro
     const registration = await prisma.eventRegistration.create({
       data: {
@@ -97,6 +121,7 @@ export async function POST(
         email: email.trim().toLowerCase(),
         telefono: telefono?.trim() || null,
         comoTeEnteraste: comoTeEnteraste || null,
+        invitedByUserId: invitedBy,
         status: 'REGISTERED',
       },
     });
@@ -121,6 +146,7 @@ export async function POST(
         id: registration.id,
         nombre: registration.nombre,
         email: registration.email,
+        invitedBy: inviterData?.nombre || null,
       },
     });
   } catch (error) {

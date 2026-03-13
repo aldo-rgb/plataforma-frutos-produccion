@@ -192,6 +192,23 @@ export default function EventoPage() {
     comoTeEnteraste: ''
   });
   
+  // Búsqueda de usuarios (quien te invitó)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: number;
+    nombre: string;
+    imagen: string | null;
+    referralCode: string | null;
+    isGraduated: boolean;
+    organizationName: string | null;
+  }>>([]);
+  const [selectedInviter, setSelectedInviter] = useState<{
+    id: number;
+    nombre: string;
+  } | null>(null);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  
   // Share
   const [copied, setCopied] = useState(false);
   const [showShareOptions, setShowShareOptions] = useState(false);
@@ -202,6 +219,33 @@ export default function EventoPage() {
   useEffect(() => {
     fetchEvent();
   }, [productId]);
+
+  // Buscar usuarios cuando cambia el query
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (searchQuery.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+      
+      setSearchingUsers(true);
+      try {
+        const res = await fetch(`/api/public/search-users?q=${encodeURIComponent(searchQuery)}`);
+        const data = await res.json();
+        if (data.success) {
+          setSearchResults(data.users);
+          setShowSearchResults(true);
+        }
+      } catch (err) {
+        console.error('Error searching users:', err);
+      } finally {
+        setSearchingUsers(false);
+      }
+    };
+
+    const debounce = setTimeout(searchUsers, 300);
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
 
   const fetchEvent = async () => {
     try {
@@ -232,7 +276,10 @@ export default function EventoPage() {
       const res = await fetch(`/api/public/evento/${productId}/registro`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(registerForm)
+        body: JSON.stringify({
+          ...registerForm,
+          invitedByUserId: selectedInviter?.id || null
+        })
       });
       
       const data = await res.json();
@@ -967,17 +1014,85 @@ export default function EventoPage() {
                       />
                     </div>
 
-                    <div>
+                    <div className="relative">
                       <label className="block text-sm font-medium text-slate-300 mb-2">
                         ¿Quién te invitó?
                       </label>
-                      <input
-                        type="text"
-                        value={registerForm.comoTeEnteraste}
-                        onChange={(e) => setRegisterForm({ ...registerForm, comoTeEnteraste: e.target.value })}
-                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
-                        placeholder="Nombre de quien te invitó"
-                      />
+                      {selectedInviter ? (
+                        <div className="flex items-center gap-3 px-4 py-3 bg-slate-800 border border-cyan-500/50 rounded-xl">
+                          <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-violet-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                            {selectedInviter.nombre.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-white flex-1">{selectedInviter.nombre}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedInviter(null);
+                              setSearchQuery('');
+                            }}
+                            className="text-slate-400 hover:text-white transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                              placeholder="Buscar por nombre..."
+                            />
+                            {searchingUsers && (
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Search Results Dropdown */}
+                          {showSearchResults && searchResults.length > 0 && (
+                            <div className="absolute z-10 w-full mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                              {searchResults.map((user) => (
+                                <button
+                                  key={user.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedInviter({ id: user.id, nombre: user.nombre });
+                                    setSearchQuery('');
+                                    setShowSearchResults(false);
+                                  }}
+                                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-700/50 transition-colors text-left"
+                                >
+                                  <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-violet-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                                    {user.nombre.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-white font-medium truncate">{user.nombre}</p>
+                                    {user.organizationName && (
+                                      <p className="text-slate-400 text-xs truncate">{user.organizationName}</p>
+                                    )}
+                                  </div>
+                                  {user.isGraduated && (
+                                    <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
+                                      ✓ Graduado
+                                    </span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {showSearchResults && searchQuery.length >= 2 && searchResults.length === 0 && !searchingUsers && (
+                            <div className="absolute z-10 w-full mt-2 bg-slate-800 border border-slate-700 rounded-xl p-4 text-center">
+                              <p className="text-slate-400 text-sm">No se encontraron usuarios</p>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
 
