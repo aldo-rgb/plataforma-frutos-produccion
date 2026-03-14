@@ -321,7 +321,7 @@ export async function PATCH(request: NextRequest) {
       where: { userId },
       data: updateData,
       include: {
-        category: true,
+        BusinessCategory: true,
       }
     });
 

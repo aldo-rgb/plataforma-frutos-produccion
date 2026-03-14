@@ -34,32 +34,32 @@ export async function GET(
     const profile = await prisma.businessProfile.findUnique({
       where: { id: profileId },
       include: {
-        user: {
+        Usuario: {
           select: {
             id: true,
             nombre: true,
             imagen: true,
           }
         },
-        category: true,
-        organization: {
+        BusinessCategory: true,
+        Organization: {
           select: { id: true, name: true }
         },
-        vision: {
+        Vision: {
           select: { id: true, nombre: true }
         },
-        reviews: {
+        ServiceReview: {
           where: { isPublic: true },
           orderBy: { createdAt: 'desc' },
           take: 20,
           include: {
-            author: {
+            Usuario: {
               select: { id: true, nombre: true, imagen: true }
             }
           }
         },
         _count: {
-          select: { reviews: true }
+          select: { ServiceReview: true }
         }
       }
     });
