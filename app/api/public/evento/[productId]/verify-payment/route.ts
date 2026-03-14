@@ -4,9 +4,92 @@ import { getPaymentGateway } from '@/lib/payment-gateway';
 import Stripe from 'stripe';
 import { Decimal } from '@prisma/client/runtime/library';
 import { EventRegistrationStatus, AmbassadorProductType } from '@prisma/client';
+import { createEventInvoice, getFacturapiConfig } from '@/lib/facturapi';
+import logger from '@/lib/logger';
 
 // Tasa de comisión para talleres: 20%
 const WORKSHOP_COMMISSION_RATE = 0.20;
+
+// Helper function para procesar facturación
+async function processInvoice(registration: any, amountPaid: number, paymentProvider: string) {
+  if (!registration.requiresInvoice) return null;
+  
+  console.log('📄 Procesando factura para registro:', registration.id);
+  
+  // Verificar si Facturapi está configurado para esta organización
+  const facturapiConfig = await getFacturapiConfig(registration.organizationId);
+  
+  if (!facturapiConfig || !facturapiConfig.isActive) {
+    console.log('⚠️ Facturapi no configurado para esta organización - factura quedará pendiente');
+    await prisma.eventRegistration.update({
+      where: { id: registration.id },
+      data: { invoiceStatus: 'PENDING' },
+    });
+    return { status: 'PENDING', message: 'Sistema de facturación no configurado' };
+  }
+
+  if (!registration.invoiceRfc || !registration.invoiceName) {
+    console.log('⚠️ Datos de facturación incompletos');
+    await prisma.eventRegistration.update({
+      where: { id: registration.id },
+      data: { 
+        invoiceStatus: 'ERROR',
+        invoiceError: 'Datos de facturación incompletos (RFC o nombre faltante)',
+      },
+    });
+    return { status: 'ERROR', message: 'Datos de facturación incompletos' };
+  }
+
+  try {
+    const result = await createEventInvoice({
+      registrationId: registration.id,
+      organizationId: registration.organizationId,
+      rfc: registration.invoiceRfc,
+      legalName: registration.invoiceName,
+      taxSystem: registration.invoiceRegime || '616',
+      zipCode: registration.invoiceZipCode || '00000',
+      cfdiUse: registration.invoiceCfdiUse || 'G03',
+      productName: registration.SchoolProduct.name,
+      amount: amountPaid,
+      email: registration.email,
+      paymentProvider,
+    });
+
+    if (result.success) {
+      await prisma.eventRegistration.update({
+        where: { id: registration.id },
+        data: {
+          invoiceId: result.invoiceId,
+          invoiceStatus: 'COMPLETED',
+          invoicePdfUrl: result.pdfUrl,
+          invoiceXmlUrl: result.xmlUrl,
+        },
+      });
+      console.log('✅ Factura generada:', result.invoiceId);
+      return { status: 'COMPLETED', invoiceId: result.invoiceId, pdfUrl: result.pdfUrl };
+    } else {
+      await prisma.eventRegistration.update({
+        where: { id: registration.id },
+        data: {
+          invoiceStatus: 'ERROR',
+          invoiceError: result.error,
+        },
+      });
+      console.log('❌ Error generando factura:', result.error);
+      return { status: 'ERROR', message: result.error };
+    }
+  } catch (error: any) {
+    console.error('❌ Error en facturación:', error);
+    await prisma.eventRegistration.update({
+      where: { id: registration.id },
+      data: {
+        invoiceStatus: 'ERROR',
+        invoiceError: error.message || 'Error interno al generar factura',
+      },
+    });
+    return { status: 'ERROR', message: error.message };
+  }
+}
 
 // POST - Verificar pago y actualizar registro
 export async function POST(
@@ -201,17 +284,8 @@ export async function POST(
         }
       }
 
-      // TODO: Procesar factura si requiresInvoice es true
-      if (registration.requiresInvoice) {
-        console.log('📄 Usuario requiere factura - Datos:', {
-          rfc: registration.invoiceRfc,
-          name: registration.invoiceName,
-          zipCode: registration.invoiceZipCode,
-          regime: registration.invoiceRegime,
-          cfdiUse: registration.invoiceCfdiUse,
-        });
-        // Aquí iría la llamada a createInvoice() cuando esté listo
-      }
+      // Procesar factura si es requerida
+      const invoiceResult = await processInvoice(registration, amountPaid, 'simulated');
 
       return NextResponse.json({
         success: true,
@@ -226,6 +300,7 @@ export async function POST(
           requiresInvoice: registration.requiresInvoice,
           ticketCode,
           userId: payerUser.id,
+          invoice: invoiceResult,
         }
       });
     }
@@ -353,6 +428,9 @@ export async function POST(
               }
             }
 
+            // Procesar factura si es requerida
+            const invoiceResult = await processInvoice(registration, amountPaid, 'stripe');
+
             return NextResponse.json({
               success: true,
               data: {
@@ -363,6 +441,7 @@ export async function POST(
                 location: registration.SchoolProduct.location,
                 ticketCode,
                 userId: payerUser.id,
+                invoice: invoiceResult,
               }
             });
           }
@@ -506,6 +585,9 @@ export async function POST(
                 }
               }
 
+              // Procesar factura si es requerida
+              const invoiceResult = await processInvoice(registration, amountPaid, 'mercadopago');
+
               return NextResponse.json({
                 success: true,
                 data: {
@@ -516,6 +598,7 @@ export async function POST(
                   location: registration.SchoolProduct.location,
                   ticketCode,
                   userId: payerUser.id,
+                  invoice: invoiceResult,
                 }
               });
             }

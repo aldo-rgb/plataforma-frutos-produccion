@@ -11,7 +11,6 @@ import {
   Mail,
   Phone,
   Search,
-  Download,
   CheckCircle,
   XCircle,
   Clock,
@@ -25,6 +24,7 @@ import {
   ExternalLink,
   Copy,
   Check,
+  CreditCard,
 } from 'lucide-react';
 
 interface EventRegistration {
@@ -33,10 +33,12 @@ interface EventRegistration {
   email: string;
   telefono: string | null;
   comoTeEnteraste: string | null;
-  status: 'REGISTERED' | 'CONFIRMED' | 'ATTENDED' | 'NO_SHOW' | 'CANCELLED';
+  status: 'PENDING_PAYMENT' | 'REGISTERED' | 'CONFIRMED' | 'ATTENDED' | 'NO_SHOW' | 'CANCELLED';
   confirmedAt: string | null;
   attendedAt: string | null;
   createdAt: string;
+  paymentStatus?: string | null;
+  ticketCode?: string | null;
 }
 
 interface Product {
@@ -49,8 +51,9 @@ interface Product {
   currentEnrollment: number;
 }
 
-const statusConfig = {
-  REGISTERED: { label: 'Registrado', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Clock },
+const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+  PENDING_PAYMENT: { label: 'Pendiente de pago', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: CreditCard },
+  REGISTERED: { label: 'Pagado', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Clock },
   CONFIRMED: { label: 'Confirmado', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', icon: CheckCircle },
   ATTENDED: { label: 'Asistió', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: UserCheck },
   NO_SHOW: { label: 'No asistió', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: UserX },
@@ -70,6 +73,13 @@ export default function RegistrosProductoPage() {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [updating, setUpdating] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Modal de confirmación para eliminar
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; registrationId: number | null; registrationName: string }>({
+    show: false,
+    registrationId: null,
+    registrationName: '',
+  });
 
   // Toast
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -140,8 +150,6 @@ export default function RegistrosProductoPage() {
   };
 
   const handleDeleteRegistration = async (registrationId: number) => {
-    if (!confirm('¿Estás seguro de eliminar este registro?')) return;
-
     try {
       setUpdating(registrationId);
       const res = await fetch(`/api/school-admin/products/${productId}/registrations/${registrationId}`, {
@@ -160,7 +168,12 @@ export default function RegistrosProductoPage() {
       showToast('error', 'Error al eliminar');
     } finally {
       setUpdating(null);
+      setDeleteModal({ show: false, registrationId: null, registrationName: '' });
     }
+  };
+
+  const openDeleteModal = (registrationId: number, name: string) => {
+    setDeleteModal({ show: true, registrationId, registrationName: name });
   };
 
   const copyEventLink = () => {
@@ -169,26 +182,6 @@ export default function RegistrosProductoPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     showToast('success', 'Enlace copiado');
-  };
-
-  const exportToCSV = () => {
-    const headers = ['Nombre', 'Email', 'Teléfono', 'Quién invitó', 'Estado', 'Fecha registro'];
-    const rows = filteredRegistrations.map(r => [
-      r.nombre,
-      r.email,
-      r.telefono || '',
-      r.comoTeEnteraste || '',
-      statusConfig[r.status].label,
-      new Date(r.createdAt).toLocaleDateString('es-MX'),
-    ]);
-
-    const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `registros-${product?.name || 'evento'}-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
   };
 
   // Filtrar registros
@@ -270,13 +263,6 @@ export default function RegistrosProductoPage() {
               <ExternalLink className="w-4 h-4" />
               Ver página
             </a>
-            <button
-              onClick={exportToCSV}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm flex items-center gap-2 transition-all"
-            >
-              <Download className="w-4 h-4" />
-              Exportar CSV
-            </button>
           </div>
         </div>
 
@@ -462,7 +448,7 @@ export default function RegistrosProductoPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button
-                            onClick={() => handleDeleteRegistration(registration.id)}
+                            onClick={() => openDeleteModal(registration.id, registration.nombre)}
                             disabled={updating === registration.id}
                             className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                             title="Eliminar registro"
@@ -488,6 +474,66 @@ export default function RegistrosProductoPage() {
           Mostrando {filteredRegistrations.length} de {registrations.length} registros
         </div>
       </div>
+
+      {/* Modal de confirmación de eliminación */}
+      {deleteModal.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setDeleteModal({ show: false, registrationId: null, registrationName: '' })}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* Icono de advertencia */}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
+                <Trash2 className="w-8 h-8 text-red-400" />
+              </div>
+            </div>
+
+            {/* Título */}
+            <h3 className="text-xl font-semibold text-white text-center mb-2">
+              Eliminar registro
+            </h3>
+
+            {/* Mensaje */}
+            <p className="text-slate-400 text-center mb-6">
+              ¿Estás seguro de eliminar el registro de{' '}
+              <span className="text-white font-medium">{deleteModal.registrationName}</span>?
+              Esta acción no se puede deshacer.
+            </p>
+
+            {/* Botones */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteModal({ show: false, registrationId: null, registrationName: '' })}
+                className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => deleteModal.registrationId && handleDeleteRegistration(deleteModal.registrationId)}
+                disabled={updating === deleteModal.registrationId}
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {updating === deleteModal.registrationId ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Eliminar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

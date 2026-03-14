@@ -7,7 +7,7 @@ import {
   Users, TrendingUp, Target, Ticket, Award, BarChart3, Download,
   AlertTriangle, CheckCircle, XCircle, Plus, X, CreditCard, Clock,
   DollarSign, ShoppingCart, Building2, UserCheck, Activity, Zap,
-  Shield, BookOpen, GraduationCap, Star, Phone, Heart
+  Shield, BookOpen, GraduationCap, Star, Phone, Heart, FileText
 } from 'lucide-react';
 import Link from 'next/link';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
@@ -1152,6 +1152,28 @@ export default function SchoolAdminDashboard() {
                 </div>
                 <p className="text-xs text-slate-400">
                   Genera códigos de regalo para tickets de acceso a tus visiones
+                </p>
+              </div>
+            </Link>
+
+            {/* Widget Gestión de Facturas - VERDE/CORAZÓN */}
+            <Link href="/dashboard/school-admin/facturas" className="block">
+              <div className="bg-gradient-to-br from-emerald-900/50 via-teal-900/40 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-emerald-500/20 group-hover:bg-emerald-500/30 rounded-xl transition-colors">
+                    <FileText size={24} className="text-emerald-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Gestión de Facturas
+                    </h3>
+                    <p className="text-xs text-emerald-300">
+                      CFDI 4.0 SAT
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Administra las facturas electrónicas de talleres y eventos
                 </p>
               </div>
             </Link>

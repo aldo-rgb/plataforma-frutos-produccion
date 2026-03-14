@@ -36,7 +36,7 @@ export async function PATCH(
         productId: parseInt(productId),
       },
       include: {
-        product: {
+        SchoolProduct: {
           select: { organizationId: true },
         },
       },
@@ -53,7 +53,7 @@ export async function PATCH(
         select: { organizationId: true },
       });
 
-      if (admin?.organizationId !== registration.product.organizationId) {
+      if (admin?.organizationId !== registration.SchoolProduct.organizationId) {
         return NextResponse.json({ success: false, error: 'Sin acceso' }, { status: 403 });
       }
     }
@@ -107,7 +107,7 @@ export async function DELETE(
         productId: parseInt(productId),
       },
       include: {
-        product: {
+        SchoolProduct: {
           select: { organizationId: true },
         },
       },
@@ -124,7 +124,7 @@ export async function DELETE(
         select: { organizationId: true },
       });
 
-      if (admin?.organizationId !== registration.product.organizationId) {
+      if (admin?.organizationId !== registration.SchoolProduct.organizationId) {
         return NextResponse.json({ success: false, error: 'Sin acceso' }, { status: 403 });
       }
     }

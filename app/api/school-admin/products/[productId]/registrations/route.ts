@@ -52,16 +52,34 @@ export async function GET(
       }
     }
 
-    // Obtener registros
+    // Obtener registros con información del usuario que invitó
     const registrations = await prisma.eventRegistration.findMany({
       where: { productId: parseInt(productId) },
       orderBy: { createdAt: 'desc' },
+      include: {
+        InvitedByUser: {
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            email: true,
+          },
+        },
+      },
     });
+
+    // Mapear registros para incluir el nombre del invitador
+    const mappedRegistrations = registrations.map(reg => ({
+      ...reg,
+      comoTeEnteraste: reg.InvitedByUser 
+        ? `${reg.InvitedByUser.nombre} ${reg.InvitedByUser.apellido || ''}`.trim()
+        : reg.comoTeEnteraste,
+    }));
 
     return NextResponse.json({
       success: true,
       product,
-      registrations,
+      registrations: mappedRegistrations,
     });
   } catch (error) {
     console.error('Error fetching registrations:', error);
