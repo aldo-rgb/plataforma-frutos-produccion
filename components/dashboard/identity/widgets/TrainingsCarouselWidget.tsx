@@ -81,8 +81,29 @@ export default function TrainingsCarouselWidget() {
     const referralParam = userReferralCode ? `?ref=${userReferralCode}` : '';
     const shareUrl = `${baseUrl}/evento/${workshop.id}${referralParam}`;
     
-    const shareTitle = `¡Te invito a "${workshop.name}"!`;
-    const shareText = `¡Te invito a "${workshop.name}"!
+    // Mensaje especial para Samurai Game
+    const isSamuraiGame = workshop.name.toLowerCase().includes('samurai');
+    
+    let shareTitle: string;
+    let shareText: string;
+    
+    if (isSamuraiGame) {
+      shareTitle = 'Samurai Game';
+      shareText = `Te hago una pregunta...
+
+Si durante 48 horas pusieras a prueba tu disciplina, tu palabra y tu liderazgo…
+
+¿Descubrirías a un ser comprometido o a tus excusas?
+
+Abrimos lugares para Samurai Game.
+
+📅 ${formatDate(workshop.startDate)}
+📍 ${workshop.location || 'Por confirmar'}
+
+Si quieres ver de qué se trata: ${shareUrl}`;
+    } else {
+      shareTitle = `¡Te invito a "${workshop.name}"!`;
+      shareText = `¡Te invito a "${workshop.name}"!
 
 Un espacio para abrir posibilidades a tu vida.
 
@@ -90,6 +111,7 @@ Un espacio para abrir posibilidades a tu vida.
 📍 ${workshop.location || 'Por confirmar'}
 
 👉 Regístrate aquí: ${shareUrl}`;
+    }
 
     // Intentar usar Web Share API nativo (funciona en móviles)
     if (navigator.share) {
