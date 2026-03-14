@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
       userData, // { nombre, email, apodo, telefono }
       appliedCodes = [],
       paymentMethod, // 'STRIPE' | 'MERCADOPAGO' (opcional, si no se envía usa la primera activa)
+      requiresInvoice = false,
+      invoiceData,
     } = validation.data;
 
     // Determinar qué pasarela usar basándose en la selección del usuario
@@ -150,6 +152,9 @@ export async function POST(request: NextRequest) {
       productTitle,
       productDescription,
       type: 'REGISTRATION', // Para identificar que es un registro
+      // Datos de facturación
+      requiresInvoice,
+      invoiceData: requiresInvoice ? invoiceData : null,
     };
 
     let paymentUrl = '';

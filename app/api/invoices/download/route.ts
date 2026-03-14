@@ -7,6 +7,7 @@ import prisma from '@/lib/prisma';
  * GET - Descargar factura (PDF o XML) de Facturapi
  * Query params:
  * - registrationId: ID del registro de evento
+ * - invoiceRequestId: ID de la solicitud de factura de visión
  * - type: 'pdf' o 'xml'
  */
 export async function GET(request: NextRequest) {
@@ -22,51 +23,82 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const registrationId = searchParams.get('registrationId');
+    const invoiceRequestId = searchParams.get('invoiceRequestId');
     const type = searchParams.get('type') || 'pdf';
 
-    if (!registrationId) {
+    if (!registrationId && !invoiceRequestId) {
       return NextResponse.json(
-        { success: false, error: 'registrationId es requerido' },
+        { success: false, error: 'registrationId o invoiceRequestId es requerido' },
         { status: 400 }
       );
     }
 
-    // Obtener el registro con sus datos de factura
-    const registration = await prisma.eventRegistration.findUnique({
-      where: { id: parseInt(registrationId) },
-      select: {
-        id: true,
-        invoiceId: true,
-        invoiceStatus: true,
-        organizationId: true,
-        email: true,
-      },
-    });
+    let invoiceId: string | null = null;
+    let organizationId: number;
+    let ownerEmail: string;
 
-    if (!registration) {
-      return NextResponse.json(
-        { success: false, error: 'Registro no encontrado' },
-        { status: 404 }
-      );
-    }
+    // Determinar tipo de factura y obtener datos
+    if (registrationId) {
+      // Factura de evento (EventRegistration)
+      const registration = await prisma.eventRegistration.findUnique({
+        where: { id: parseInt(registrationId) },
+        select: {
+          id: true,
+          invoiceId: true,
+          invoiceStatus: true,
+          organizationId: true,
+          email: true,
+        },
+      });
 
-    if (!registration.invoiceId) {
-      return NextResponse.json(
-        { success: false, error: 'Este registro no tiene factura generada' },
-        { status: 400 }
-      );
-    }
+      if (!registration) {
+        return NextResponse.json(
+          { success: false, error: 'Registro de evento no encontrado' },
+          { status: 404 }
+        );
+      }
 
-    if (registration.invoiceStatus !== 'COMPLETED') {
-      return NextResponse.json(
-        { success: false, error: 'La factura no está completada' },
-        { status: 400 }
-      );
+      if (!registration.invoiceId || registration.invoiceStatus !== 'COMPLETED') {
+        return NextResponse.json(
+          { success: false, error: 'La factura no está completada' },
+          { status: 400 }
+        );
+      }
+
+      invoiceId = registration.invoiceId;
+      organizationId = registration.organizationId;
+      ownerEmail = registration.email;
+    } else {
+      // Factura de visión (RegistrationInvoiceRequest)
+      const invoiceRequest = await prisma.registrationInvoiceRequest.findUnique({
+        where: { id: parseInt(invoiceRequestId!) },
+        include: {
+          Usuario: { select: { email: true } },
+        },
+      });
+
+      if (!invoiceRequest) {
+        return NextResponse.json(
+          { success: false, error: 'Solicitud de factura no encontrada' },
+          { status: 404 }
+        );
+      }
+
+      if (!invoiceRequest.invoiceId || invoiceRequest.invoiceStatus !== 'COMPLETED') {
+        return NextResponse.json(
+          { success: false, error: 'La factura no está completada' },
+          { status: 400 }
+        );
+      }
+
+      invoiceId = invoiceRequest.invoiceId;
+      organizationId = invoiceRequest.organizationId;
+      ownerEmail = invoiceRequest.Usuario.email;
     }
 
     // Verificar permisos: debe ser admin de la org o el usuario dueño del registro
     const isAdmin = session.user.rol === 'SCHOOL_ADMIN' || session.user.rol === 'ADMINISTRADOR';
-    const isOwner = session.user.email?.toLowerCase() === registration.email.toLowerCase();
+    const isOwner = session.user.email?.toLowerCase() === ownerEmail.toLowerCase();
     
     if (!isAdmin && !isOwner) {
       return NextResponse.json(
@@ -77,7 +109,7 @@ export async function GET(request: NextRequest) {
 
     // Obtener configuración de Facturapi de la organización
     const facturapiConfig = await prisma.facturapiConfig.findUnique({
-      where: { organizationId: registration.organizationId },
+      where: { organizationId },
     });
 
     if (!facturapiConfig || !facturapiConfig.apiKey) {
@@ -89,7 +121,7 @@ export async function GET(request: NextRequest) {
 
     // Hacer request a Facturapi para obtener el archivo
     const endpoint = type === 'xml' ? 'xml' : 'pdf';
-    const facturapiUrl = `https://www.facturapi.io/v2/invoices/${registration.invoiceId}/${endpoint}`;
+    const facturapiUrl = `https://www.facturapi.io/v2/invoices/${invoiceId}/${endpoint}`;
 
     const response = await fetch(facturapiUrl, {
       headers: {
@@ -112,7 +144,7 @@ export async function GET(request: NextRequest) {
     // Determinar content type y nombre de archivo
     const contentType = type === 'xml' ? 'application/xml' : 'application/pdf';
     const extension = type === 'xml' ? 'xml' : 'pdf';
-    const filename = `factura-${registration.invoiceId}.${extension}`;
+    const filename = `factura-${invoiceId}.${extension}`;
 
     // Devolver el archivo
     return new NextResponse(fileBuffer, {

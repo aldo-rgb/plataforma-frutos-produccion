@@ -86,6 +86,15 @@ export const checkoutCreatePaymentSchema = z.object({
     referralCode: z.string().max(50).optional().nullable().transform(v => v === '' ? undefined : v),
   }).passthrough(), // Permite campos adicionales del registro
   appliedCodes: z.array(z.string().max(50)).optional(),
+  // Datos de facturación
+  requiresInvoice: z.boolean().optional().default(false),
+  invoiceData: z.object({
+    rfc: z.string().min(12).max(13),
+    name: z.string().min(1).max(200),
+    zipCode: z.string().length(5),
+    regime: z.string().min(1).max(10),
+    cfdiUse: z.string().min(1).max(10),
+  }).optional().nullable(),
 });
 
 export const anticipoSchema = z.object({

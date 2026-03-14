@@ -6732,3 +6732,44 @@ enum WithdrawalStatus {
   REJECTED
   COMPLETED
 }
+
+// Solicitudes de factura para registros de visión (checkout normal)
+model RegistrationInvoiceRequest {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  organizationId  Int
+  visionId        Int?
+  ticketId        String?
+  
+  // Datos del pago
+  amount          Decimal   @db.Decimal(10, 2)
+  paymentProvider String?
+  paymentRef      String?
+  paidAt          DateTime?
+  
+  // Datos fiscales
+  invoiceRfc      String
+  invoiceName     String
+  invoiceZipCode  String
+  invoiceRegime   String
+  invoiceCfdiUse  String
+  
+  // Estado de la factura
+  invoiceStatus   String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, ERROR
+  invoiceId       String?   // ID en Facturapi
+  invoicePdfUrl   String?
+  invoiceXmlUrl   String?
+  invoiceError    String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  Usuario         Usuario      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Vision          Vision?      @relation(fields: [visionId], references: [id])
+  Ticket          Ticket?      @relation(fields: [ticketId], references: [id])
+  
+  @@index([userId])
+  @@index([organizationId])
+  @@index([invoiceStatus])
+}

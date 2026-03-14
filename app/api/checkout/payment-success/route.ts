@@ -110,6 +110,9 @@ export async function GET(request: NextRequest) {
       userData,
       appliedCodes,
       stripePaymentStatus,
+      // Datos de facturación
+      requiresInvoice,
+      invoiceData,
     } = orderData;
 
     // Verify payment status - MercadoPago envía status/collection_status, Stripe pasa en stripePaymentStatus
@@ -392,6 +395,34 @@ export async function GET(request: NextRequest) {
     } catch (ambassadorError) {
       logger.error('Error procesando comisión ambassador:', ambassadorError);
       // No falla el checkout si falla la comisión
+    }
+
+    // 🧾 Crear solicitud de factura si fue requerida
+    if (requiresInvoice && invoiceData) {
+      try {
+        await prisma.registrationInvoiceRequest.create({
+          data: {
+            userId: result.user.id,
+            organizationId: organizationId,
+            visionId: visionId || null,
+            ticketId: result.basicTicket.id,
+            amount: amount,
+            paymentProvider: provider || 'unknown',
+            paymentRef: paymentId || sessionId || null,
+            paidAt: new Date(),
+            invoiceRfc: invoiceData.rfc?.toUpperCase() || '',
+            invoiceName: invoiceData.name?.toUpperCase() || '',
+            invoiceZipCode: invoiceData.zipCode || '',
+            invoiceRegime: invoiceData.regime || '616',
+            invoiceCfdiUse: invoiceData.cfdiUse || 'G03',
+            invoiceStatus: 'PENDING',
+          },
+        });
+        logger.debug(`🧾 Solicitud de factura creada para usuario ${result.user.id}`);
+      } catch (invoiceError) {
+        logger.error('Error creando solicitud de factura:', invoiceError);
+        // No fallar el checkout si falla la factura
+      }
     }
 
     // Enviar notificaciones de bienvenida (Email + WhatsApp)

@@ -21,6 +21,7 @@ import {
 
 interface Invoice {
   id: number;
+  type: 'EVENT' | 'VISION';
   productId: number;
   productName: string;
   customerName: string;
@@ -121,13 +122,17 @@ export default function InvoicesPage() {
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
   };
 
-  const handleRetry = async (registrationId: number) => {
+  const handleRetry = async (invoiceId: number, type: 'EVENT' | 'VISION') => {
     try {
-      setRetrying(registrationId);
+      setRetrying(invoiceId);
       const res = await fetch('/api/invoices/retry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registrationId }),
+        body: JSON.stringify({ 
+          registrationId: type === 'EVENT' ? invoiceId : undefined,
+          invoiceRequestId: type === 'VISION' ? invoiceId : undefined,
+          type 
+        }),
       });
 
       const data = await res.json();
@@ -377,7 +382,7 @@ export default function InvoicesPage() {
                             {invoice.invoiceStatus === 'COMPLETED' && invoice.invoiceId && (
                               <>
                                 <a
-                                  href={`/api/invoices/download?registrationId=${invoice.id}&type=pdf`}
+                                  href={`/api/invoices/download?${invoice.type === 'EVENT' ? 'registrationId' : 'invoiceRequestId'}=${invoice.id}&type=pdf`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition"
@@ -387,7 +392,7 @@ export default function InvoicesPage() {
                                   PDF
                                 </a>
                                 <a
-                                  href={`/api/invoices/download?registrationId=${invoice.id}&type=xml`}
+                                  href={`/api/invoices/download?${invoice.type === 'EVENT' ? 'registrationId' : 'invoiceRequestId'}=${invoice.id}&type=xml`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition"
@@ -401,7 +406,7 @@ export default function InvoicesPage() {
                             {(invoice.invoiceStatus === 'PENDING' ||
                               invoice.invoiceStatus === 'ERROR') && (
                               <button
-                                onClick={() => handleRetry(invoice.id)}
+                                onClick={() => handleRetry(invoice.id, invoice.type)}
                                 disabled={retrying === invoice.id}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
                               >

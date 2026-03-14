@@ -1,6 +1,10 @@
 /**
  * API para listar facturas pendientes y completadas (Admin)
  * GET /api/invoices/list
+ * 
+ * Combina facturas de:
+ * - EventRegistration (eventos/talleres)
+ * - RegistrationInvoiceRequest (registro a visiones)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -30,92 +34,110 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status'); // PENDING, PROCESSING, COMPLETED, ERROR
-    const productId = searchParams.get('productId');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 
-    // Construir filtro
-    const where: any = {
-      requiresInvoice: true,
-    };
-
-    if (status) {
-      where.invoiceStatus = status;
-    }
-
-    if (productId) {
-      where.productId = parseInt(productId);
-    }
-
-    // Si es SCHOOL_ADMIN, filtrar por su organización
+    // Obtener organizationId si es SCHOOL_ADMIN
+    let orgId: number | null = null;
     if (session.user.rol === 'SCHOOL_ADMIN') {
       const admin = await prisma.usuario.findUnique({
         where: { id: parseInt(session.user.id) },
         select: { organizationId: true },
       });
-
-      if (admin?.organizationId) {
-        where.organizationId = admin.organizationId;
-      }
+      orgId = admin?.organizationId || null;
     }
 
-    // Obtener registros con paginación
-    const [registrations, total] = await Promise.all([
-      prisma.eventRegistration.findMany({
-        where,
-        include: {
-          SchoolProduct: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.eventRegistration.count({ where }),
-    ]);
+    // ============ FACTURAS DE EVENTOS (EventRegistration) ============
+    const eventWhere: any = {
+      requiresInvoice: true,
+    };
+    if (status) eventWhere.invoiceStatus = status;
+    if (orgId) eventWhere.organizationId = orgId;
 
-    // Contar por status
-    const stats = await prisma.eventRegistration.groupBy({
-      by: ['invoiceStatus'],
-      where: {
-        requiresInvoice: true,
-        ...(session.user.rol === 'SCHOOL_ADMIN' && where.organizationId 
-          ? { organizationId: where.organizationId } 
-          : {}
-        ),
+    const eventRegistrations = await prisma.eventRegistration.findMany({
+      where: eventWhere,
+      include: {
+        SchoolProduct: { select: { id: true, name: true } },
       },
-      _count: true,
+      orderBy: { createdAt: 'desc' },
     });
 
-    const statusCounts = stats.reduce((acc, item) => {
-      acc[item.invoiceStatus || 'PENDING'] = item._count;
-      return acc;
-    }, {} as Record<string, number>);
+    // ============ FACTURAS DE VISIONES (RegistrationInvoiceRequest) ============
+    const visionWhere: any = {};
+    if (status) visionWhere.invoiceStatus = status;
+    if (orgId) visionWhere.organizationId = orgId;
+
+    const visionInvoices = await prisma.registrationInvoiceRequest.findMany({
+      where: visionWhere,
+      include: {
+        Usuario: { select: { id: true, nombre: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // ============ COMBINAR Y FORMATEAR ============
+    const allInvoices = [
+      ...eventRegistrations.map(r => ({
+        id: r.id,
+        type: 'EVENT' as const,
+        productId: r.productId,
+        productName: r.SchoolProduct.name,
+        customerName: r.nombre,
+        customerEmail: r.email,
+        rfc: r.invoiceRfc,
+        legalName: r.invoiceName,
+        amount: r.amountPaid,
+        invoiceId: r.invoiceId,
+        invoiceStatus: r.invoiceStatus || 'PENDING',
+        invoicePdfUrl: r.invoicePdfUrl,
+        invoiceXmlUrl: r.invoiceXmlUrl,
+        invoiceError: r.invoiceError,
+        paidAt: r.paidAt,
+        createdAt: r.createdAt,
+      })),
+      ...visionInvoices.map(r => ({
+        id: r.id,
+        type: 'VISION' as const,
+        productId: r.visionId,
+        productName: `Registro Visión ${r.visionId || 'N/A'}`,
+        customerName: r.Usuario.nombre,
+        customerEmail: r.Usuario.email,
+        rfc: r.invoiceRfc,
+        legalName: r.invoiceName,
+        amount: r.amount,
+        invoiceId: r.invoiceId,
+        invoiceStatus: r.invoiceStatus || 'PENDING',
+        invoicePdfUrl: r.invoicePdfUrl,
+        invoiceXmlUrl: r.invoiceXmlUrl,
+        invoiceError: r.invoiceError,
+        paidAt: r.paidAt,
+        createdAt: r.createdAt,
+      })),
+    ];
+
+    // Ordenar por fecha de creación descendente
+    allInvoices.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Paginación
+    const total = allInvoices.length;
+    const paginatedInvoices = allInvoices.slice((page - 1) * limit, page * limit);
+
+    // Contar por status (combinado)
+    const statusCounts: Record<string, number> = {
+      PENDING: 0,
+      PROCESSING: 0,
+      COMPLETED: 0,
+      ERROR: 0,
+    };
+    allInvoices.forEach(inv => {
+      const s = inv.invoiceStatus || 'PENDING';
+      if (statusCounts[s] !== undefined) statusCounts[s]++;
+    });
 
     return NextResponse.json({
       success: true,
       data: {
-        invoices: registrations.map(r => ({
-          id: r.id,
-          productId: r.productId,
-          productName: r.SchoolProduct.name,
-          customerName: r.nombre,
-          customerEmail: r.email,
-          rfc: r.invoiceRfc,
-          legalName: r.invoiceName,
-          amount: r.amountPaid,
-          invoiceId: r.invoiceId,
-          invoiceStatus: r.invoiceStatus || 'PENDING',
-          invoicePdfUrl: r.invoicePdfUrl,
-          invoiceXmlUrl: r.invoiceXmlUrl,
-          invoiceError: r.invoiceError,
-          paidAt: r.paidAt,
-          createdAt: r.createdAt,
-        })),
+        invoices: paginatedInvoices,
         pagination: {
           page,
           limit,
