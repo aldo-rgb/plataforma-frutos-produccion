@@ -74,7 +74,13 @@ export async function POST(
 
     // Buscar el usuario por email
     const existingUser = await prisma.usuario.findUnique({
-      where: { email: email.toLowerCase().trim() }
+      where: { email: email.toLowerCase().trim() },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        isGraduated: true
+      }
     });
 
     if (!existingUser) {
@@ -116,6 +122,19 @@ export async function POST(
       );
     }
 
+    // Visiones especiales que marcan usuarios como graduados (Lideratos)
+    const GRADUATED_VISIONS = [11, 12];
+    const shouldMarkAsGraduated = GRADUATED_VISIONS.includes(visionId);
+
+    // Si es visión de graduados, marcar al usuario como graduado
+    if (shouldMarkAsGraduated && !existingUser.isGraduated) {
+      await prisma.usuario.update({
+        where: { id: existingUser.id },
+        data: { isGraduated: true }
+      });
+      logger.debug(`🎓 Usuario ${existingUser.email} marcado como graduado (visión ${visionId})`);
+    }
+
     // Agregar a VisionParticipante (legacy)
     await prisma.visionParticipante.create({
       data: {
@@ -145,7 +164,8 @@ export async function POST(
       message: `Te has unido exitosamente a ${vision.nombre}`,
       userId: existingUser.id,
       userName: existingUser.nombre,
-      visionName: vision.nombre
+      visionName: vision.nombre,
+      isGraduated: shouldMarkAsGraduated
     });
 
   } catch (error) {

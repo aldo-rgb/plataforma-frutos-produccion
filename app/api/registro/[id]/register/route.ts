@@ -133,6 +133,10 @@ export async function POST(
     const prefix = nombreLimpio.substring(0, 3).padEnd(3, 'X');
     const generatedReferralCode = `${prefix}${timestamp}${random}`;
 
+    // Visiones especiales que marcan usuarios como graduados (Lideratos)
+    const GRADUATED_VISIONS = [11, 12];
+    const shouldMarkAsGraduated = GRADUATED_VISIONS.includes(visionId);
+
     // Crear usuario con tier FREE (registro vía QR)
     const newUser = await prisma.usuario.create({
       data: {
@@ -145,12 +149,17 @@ export async function POST(
         isActive: true,
         organizationId: vision.organizationId,
         referralCode: generatedReferralCode, // 🎯 Código de referido único
+        isGraduated: shouldMarkAsGraduated, // 🎓 Marcar como graduado si es visión 11 o 12
         // Campos para usuarios del sistema viejo
         visionAngel: visionGraduacion || null, // Visión donde se graduó
         invitedBy: angelEnrolamientoId || null, // ID del ángel si se encontró
         invitedByText: (!angelEnrolamientoId && angelEnrolamientoNombre) ? angelEnrolamientoNombre : null // Nombre pendiente si no se encontró
       }
     });
+
+    if (shouldMarkAsGraduated) {
+      logger.debug(`🎓 Usuario ${email} marcado como graduado (visión ${visionId})`);
+    }
 
     // Asignar a la visión (legacy - VisionParticipante)
     await prisma.visionParticipante.create({
