@@ -496,13 +496,13 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
                 </div>
               </div>
               <p 
-                className="text-center text-[9px] mt-1.5 tracking-widest"
+                className="text-center text-[8px] mt-1.5 tracking-wide"
                 style={{ 
                   fontFamily: 'monospace',
                   color: isActive ? `${primaryColor}99` : '#64748b',
                 }}
               >
-                ID: {ticket.id.substring(0, 8).toUpperCase()}
+                ID: {ticket.id.toUpperCase()}
               </p>
             </>
           )}

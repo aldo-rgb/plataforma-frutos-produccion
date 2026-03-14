@@ -175,10 +175,10 @@ export function BasicTicket({ ticket, userName, userInitials, userPhoto }: Basic
             </div>
           </div>
           <p 
-            className={`text-center text-[10px] mt-2 tracking-widest ${isActive ? 'text-[#00F0FF]/60' : 'text-slate-600'}`}
+            className={`text-center text-[9px] mt-2 tracking-wide ${isActive ? 'text-[#00F0FF]/60' : 'text-slate-600'}`}
             style={{ fontFamily: 'monospace' }}
           >
-            ID: {ticket.id.substring(0, 8).toUpperCase()}
+            ID: {ticket.id.toUpperCase()}
           </p>
         </div>
 

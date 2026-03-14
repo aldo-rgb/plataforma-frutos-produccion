@@ -152,8 +152,8 @@ export function AdvancedTicket({ ticket, userName, userInitials, userPhoto }: Ad
           <div className="absolute bottom-2 left-4 right-4 flex justify-center opacity-60">
             <div className="transform scale-[0.6] origin-center">
               <Barcode 
-                value={ticket.id.substring(0, 12)} 
-                width={1.5}
+                value={ticket.id} 
+                width={1.2}
                 height={30}
                 displayValue={false}
                 background="transparent"

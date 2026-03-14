@@ -278,7 +278,7 @@ export function WorkshopTicket({
               )}
               <div>
                 <p className="text-[10px] text-slate-600">{ticket.organization.name}</p>
-                <p className="text-[8px] text-slate-700">ID: {ticket.id.substring(0, 8).toUpperCase()}</p>
+                <p className="text-[7px] text-slate-700">ID: {ticket.id.toUpperCase()}</p>
               </div>
             </div>
 

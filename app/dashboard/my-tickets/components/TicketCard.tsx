@@ -255,8 +255,8 @@ export function TicketCard({ ticket, onTransfer }: Props) {
       </div>
 
       {/* Ticket ID */}
-      <div className="relative z-10 mt-3 text-xs text-slate-600 font-mono text-center">
-        ID: {ticket.id.substring(0, 8)}...
+      <div className="relative z-10 mt-3 text-[10px] text-slate-600 font-mono text-center">
+        ID: {ticket.id.toUpperCase()}
       </div>
     </motion.div>
   );

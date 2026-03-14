@@ -25,8 +25,8 @@ export function LeadershipTicket({ ticket, userName, memberSince }: LeadershipTi
   const isActive = ticket.status === 'ACTIVE';
   const memberYear = new Date(memberSince).getFullYear();
   
-  // Format user ID like credit card
-  const formattedId = ticket.id.substring(0, 16).toUpperCase().replace(/(.{4})/g, '$1 ').trim();
+  // Format user ID like credit card - usando ID completo
+  const formattedId = ticket.id.toUpperCase().replace(/(.{4})/g, '$1 ').trim();
   
   return (
     <motion.div
