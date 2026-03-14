@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { QuantumCredential } from './tickets/QuantumCredential';
+import { EventTicket } from './tickets/EventTicket';
 
 interface Ticket {
   id: string;
@@ -17,6 +18,7 @@ interface Ticket {
   validUntil: string | null;
   purchasePrice: number | null;
   createdAt: string;
+  ticketCode?: string;
   vision: {
     id: number;
     nombre: string;
@@ -59,12 +61,13 @@ export function WalletStack({ tickets, user, onTransfer }: WalletStackProps) {
   const [direction, setDirection] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Orden de niveles: BASIC primero, luego ADVANCED, luego PL
+  // Orden de niveles: BASIC primero, luego ADVANCED, luego PL, EVENT al final
   const levelOrder: Record<string, number> = {
     'BASIC': 1,
     'ADVANCED': 2,
     'PL': 3,
     'WORKSHOP': 4,
+    'EVENT': 5,
   };
 
   // Orden de status: ACTIVE y PENDING_PAYMENT primero, USED y otros al final
@@ -188,11 +191,16 @@ export function WalletStack({ tickets, user, onTransfer }: WalletStackProps) {
   if (sortedTickets.length === 0) return null;
 
   const currentTicket = sortedTickets[currentIndex];
+  
+  // Check if it's an event ticket
+  const isEventTicket = currentTicket.level === 'EVENT' || currentTicket.type === 'EVENT' || currentTicket.id.startsWith('event-');
+  
   const getLevelLabel = (level: string) => {
     switch (level) {
       case 'BASIC': return 'Básico';
       case 'ADVANCED': return 'Avanzado';
       case 'PL': return 'Tu Vida';
+      case 'EVENT': return 'Evento';
       default: return level;
     }
   };
@@ -265,7 +273,7 @@ export function WalletStack({ tickets, user, onTransfer }: WalletStackProps) {
       {/* Contenedor del carrusel */}
       <div 
         ref={containerRef}
-        className="relative w-full max-w-sm h-[450px] overflow-hidden"
+        className="relative w-full max-w-sm h-[480px] overflow-hidden"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -285,12 +293,21 @@ export function WalletStack({ tickets, user, onTransfer }: WalletStackProps) {
             }}
             className="absolute inset-0 flex justify-center"
           >
-            <QuantumCredential
-              ticket={currentTicket}
-              userName={user?.name || 'Usuario'}
-              userInitials={user?.initials || 'US'}
-              userPhoto={user?.photo}
-            />
+            {isEventTicket ? (
+              <EventTicket
+                ticket={currentTicket}
+                userName={user?.name || 'Usuario'}
+                userInitials={user?.initials || 'US'}
+                userPhoto={user?.photo}
+              />
+            ) : (
+              <QuantumCredential
+                ticket={currentTicket}
+                userName={user?.name || 'Usuario'}
+                userInitials={user?.initials || 'US'}
+                userPhoto={user?.photo}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -308,11 +325,13 @@ export function WalletStack({ tickets, user, onTransfer }: WalletStackProps) {
               ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
               : currentTicket.level === 'ADVANCED'
               ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+              : currentTicket.level === 'EVENT' || isEventTicket
+              ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
               : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
           }`}
           style={{ fontFamily: 'Orbitron, sans-serif' }}
         >
-          {getLevelLabel(currentTicket.level)}
+          {isEventTicket ? (currentTicket.product?.name || 'Evento') : getLevelLabel(currentTicket.level)}
         </span>
         <p className="mt-2 text-slate-400 text-sm">
           {currentTicket.vision.nombre}
