@@ -355,9 +355,9 @@ Un espacio para abrir posibilidades a tu vida.
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/70 to-blue-900/30" />
           </div>
           
-          <div className="relative p-3 h-full flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-2">
+          <div className="relative p-3 h-full flex flex-col justify-end">
+            {/* Header - posicionado arriba */}
+            <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
               <span className="text-xs font-bold px-2 py-1 rounded-full bg-gradient-to-r from-blue-600 to-blue-800 text-white">
                 🎯 Próxima Visión
               </span>
@@ -374,7 +374,7 @@ Un espacio para abrir posibilidades a tu vida.
             </h4>
 
             {/* Levels Timeline - Ordenado: Básico, Avanzado, Liderato */}
-            <div className="space-y-1.5 flex-1 overflow-hidden">
+            <div className="space-y-1.5 overflow-hidden">
               {sortedProducts.map((product) => (
                 <div 
                   key={product.id} 
@@ -394,7 +394,7 @@ Un espacio para abrir posibilidades a tu vida.
             </div>
 
             {/* Location and Share Button */}
-            <div className="flex items-center justify-between mt-1.5">
+            <div className="flex items-center justify-between mt-2">
               {basicProduct?.location && (
                 <div className="flex items-center gap-1.5 text-xs text-slate-400">
                   <MapPin className="w-3.5 h-3.5" />
