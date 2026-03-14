@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import QRCode from 'react-qr-code';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Shield, Zap } from 'lucide-react';
 
 interface EventTicketProps {
   ticket: {
@@ -36,228 +36,214 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
   const isActive = ticket.status === 'ACTIVE';
   const isNonTransferable = ticket.isTransferable === false;
   
-  const primaryColor = '#00F0FF'; // Cyan color
+  const primaryColor = '#00F0FF';
+  const accentColor = '#9D4EDD';
   const eventName = ticket.product?.name || ticket.vision.nombre;
+  const ticketId = ticket.id.replace('event-', '');
   
   return (
     <motion.div
-      className="relative w-[280px] h-[420px]"
+      className="relative w-[300px] h-[520px]"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
       style={{ transformStyle: 'preserve-3d' }}
     >
+      {/* Outer Glow */}
+      <div 
+        className="absolute -inset-1 rounded-3xl opacity-50 blur-xl"
+        style={{
+          background: `linear-gradient(135deg, ${primaryColor}40 0%, ${accentColor}40 100%)`,
+        }}
+      />
+      
       {/* Main Card */}
       <div 
-        className="relative w-full h-full rounded-2xl overflow-hidden bg-gradient-to-b from-slate-950 via-[#0a1628] to-black"
+        className="relative w-full h-full rounded-2xl overflow-hidden"
         style={{
-          boxShadow: `0 0 40px ${primaryColor}30, inset 0 1px 0 ${primaryColor}30`,
-          border: '2px solid',
-          borderColor: primaryColor,
+          background: 'linear-gradient(180deg, #0a1929 0%, #051118 50%, #020a10 100%)',
+          boxShadow: `0 0 0 1px ${primaryColor}50, 0 0 30px ${primaryColor}20`,
         }}
       >
-        {/* Circuit Board Pattern Background */}
-        <div className="absolute inset-0 opacity-20">
+        {/* Animated Grid Background */}
+        <div className="absolute inset-0 opacity-30">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <pattern id={`circuit-event-${ticket.id}`} x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
-                <path d="M10 10h30M10 10v30M40 10v15M25 25h15M25 25v15M10 40h15" stroke={primaryColor} strokeWidth="0.5" fill="none"/>
-                <circle cx="10" cy="10" r="2" fill={primaryColor}/>
-                <circle cx="40" cy="10" r="2" fill={primaryColor}/>
-                <circle cx="40" cy="25" r="2" fill={primaryColor}/>
-                <circle cx="25" cy="25" r="2" fill={primaryColor}/>
-                <circle cx="25" cy="40" r="2" fill={primaryColor}/>
-                <circle cx="10" cy="40" r="2" fill={primaryColor}/>
-                {/* Additional circuit elements */}
-                <rect x="18" y="5" width="4" height="4" fill={primaryColor} opacity="0.5"/>
-                <rect x="35" y="35" width="4" height="4" fill={primaryColor} opacity="0.5"/>
+              <pattern id={`grid-${ticket.id}`} x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+                <path d="M30 0L0 0 0 30" fill="none" stroke={primaryColor} strokeWidth="0.3" opacity="0.5"/>
               </pattern>
+              <linearGradient id={`fade-${ticket.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="white" stopOpacity="1"/>
+                <stop offset="100%" stopColor="white" stopOpacity="0"/>
+              </linearGradient>
+              <mask id={`mask-${ticket.id}`}>
+                <rect width="100%" height="100%" fill={`url(#fade-${ticket.id})`}/>
+              </mask>
             </defs>
-            <rect width="100%" height="100%" fill={`url(#circuit-event-${ticket.id})`}/>
+            <rect width="100%" height="100%" fill={`url(#grid-${ticket.id})`} mask={`url(#mask-${ticket.id})`}/>
           </svg>
         </div>
 
-        {/* Scan Lines Effect */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div 
-            className="absolute inset-0 opacity-5"
-            style={{
-              background: `repeating-linear-gradient(0deg, transparent, transparent 2px, ${primaryColor}20 2px, ${primaryColor}20 4px)`,
-            }}
-          />
+        {/* Top Accent Line */}
+        <div 
+          className="absolute top-0 left-0 right-0 h-1"
+          style={{
+            background: `linear-gradient(90deg, transparent 0%, ${primaryColor} 50%, transparent 100%)`,
+          }}
+        />
+
+        {/* Corner Brackets */}
+        <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 rounded-tl" style={{ borderColor: primaryColor }} />
+        <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 rounded-tr" style={{ borderColor: primaryColor }} />
+        <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 rounded-bl" style={{ borderColor: primaryColor }} />
+        <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 rounded-br" style={{ borderColor: primaryColor }} />
+
+        {/* Status LEDs */}
+        <div className="absolute top-5 left-5 flex gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-lg shadow-green-500/50" />
+          <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse shadow-lg shadow-cyan-500/50" style={{ animationDelay: '0.5s' }} />
         </div>
 
-        {/* Corner Decorations */}
-        <div className="absolute top-0 left-0 w-8 h-8">
-          <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2" style={{ borderColor: primaryColor }} />
-          <div className="absolute top-3 left-3 w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: '#22c55e' }} />
-        </div>
-        <div className="absolute top-0 right-0 w-8 h-8">
-          <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2" style={{ borderColor: primaryColor }} />
-          <div className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: '#22c55e' }} />
-        </div>
-        <div className="absolute bottom-0 left-0 w-8 h-8">
-          <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2" style={{ borderColor: primaryColor }} />
-        </div>
-        <div className="absolute bottom-0 right-0 w-8 h-8">
-          <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2" style={{ borderColor: primaryColor }} />
-        </div>
-
-        {/* Header Section */}
-        <div className="relative z-10 pt-4 px-4">
-          {/* Security Protocol Text */}
-          <p 
-            className="text-center text-[8px] tracking-[0.3em] mb-1"
-            style={{ 
-              fontFamily: 'monospace',
-              color: `${primaryColor}80`,
-            }}
-          >
-            SECURITY ACCESS PROTOCOL
-          </p>
+        {/* Content Container */}
+        <div className="relative z-10 flex flex-col h-full px-5 py-6">
           
-          {/* Event Name - Large */}
-          <h1 
-            className="text-center text-xl font-black tracking-wider mb-3"
-            style={{ 
-              fontFamily: 'Orbitron, sans-serif',
-              color: primaryColor,
-              textShadow: `0 0 20px ${primaryColor}60`,
-            }}
-          >
-            {eventName.toUpperCase()}
-          </h1>
-        </div>
-
-        {/* Logo/Icon Section */}
-        <div className="relative z-10 flex justify-center mb-4">
-          <div className="relative">
-            {/* Rotating Ring */}
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-              className="absolute -inset-3"
-            >
-              <svg className="w-full h-full" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  stroke={primaryColor}
-                  strokeWidth="1"
-                  strokeDasharray="10 5"
-                  opacity="0.4"
-                />
-              </svg>
-            </motion.div>
-            
-            {/* Hexagon Container */}
-            <div 
-              className="relative w-20 h-20 flex items-center justify-center"
-              style={{
-                clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-                background: `linear-gradient(180deg, ${primaryColor}30 0%, ${primaryColor}10 100%)`,
-              }}
-            >
-              {/* Quantum Symbol + Samurai Icon */}
-              <svg viewBox="0 0 100 100" className="w-14 h-14" style={{ filter: `drop-shadow(0 0 8px ${primaryColor})` }}>
-                {/* Atom orbits */}
-                <ellipse cx="50" cy="50" rx="35" ry="12" fill="none" stroke={primaryColor} strokeWidth="1.5" transform="rotate(0 50 50)" opacity="0.7"/>
-                <ellipse cx="50" cy="50" rx="35" ry="12" fill="none" stroke={primaryColor} strokeWidth="1.5" transform="rotate(60 50 50)" opacity="0.7"/>
-                <ellipse cx="50" cy="50" rx="35" ry="12" fill="none" stroke={primaryColor} strokeWidth="1.5" transform="rotate(-60 50 50)" opacity="0.7"/>
-                {/* Central nucleus */}
-                <circle cx="50" cy="50" r="6" fill={primaryColor}/>
-                {/* Samurai helmet hint at top */}
-                <path d="M50 25 L35 40 L50 35 L65 40 Z" fill={primaryColor} opacity="0.8"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        {/* ACCESS GRANTED Badge */}
-        <div className="relative z-10 px-4 mb-3">
-          <div 
-            className="text-center py-2 px-4 rounded-lg"
-            style={{
-              background: `${primaryColor}15`,
-              border: `1px solid ${primaryColor}40`,
-            }}
-          >
+          {/* Header */}
+          <div className="text-center mb-4">
             <p 
-              className="text-xs tracking-[0.15em] font-bold flex items-center justify-center gap-2"
-              style={{ 
-                fontFamily: 'Orbitron, monospace',
-                color: primaryColor,
-              }}
+              className="text-[9px] tracking-[0.4em] mb-2 opacity-60"
+              style={{ fontFamily: 'monospace', color: primaryColor }}
             >
-              <span>✓</span> ACCESS GRANTED
+              ◆ QUANTUM ACCESS PASS ◆
             </p>
-          </div>
-          
-          {/* Non-Transferable Warning */}
-          {isNonTransferable && (
-            <div 
-              className="mt-2 text-center py-1.5 px-2 rounded"
-              style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
+            <h1 
+              className="text-2xl font-black tracking-wider leading-tight"
+              style={{ 
+                fontFamily: 'Orbitron, sans-serif',
+                color: '#fff',
+                textShadow: `0 0 30px ${primaryColor}80, 0 0 60px ${primaryColor}40`,
               }}
             >
-              <p 
-                className="text-[9px] tracking-wider font-bold flex items-center justify-center gap-1"
-                style={{ 
-                  fontFamily: 'monospace',
-                  color: '#ef4444',
+              {eventName.toUpperCase()}
+            </h1>
+          </div>
+
+          {/* Quantum Symbol */}
+          <div className="flex justify-center mb-4">
+            <div className="relative">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                className="absolute -inset-4"
+              >
+                <svg className="w-full h-full" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" fill="none" stroke={primaryColor} strokeWidth="0.5" strokeDasharray="4 8" opacity="0.4"/>
+                </svg>
+              </motion.div>
+              
+              <div 
+                className="w-16 h-16 rounded-xl flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(135deg, ${primaryColor}20 0%, ${accentColor}20 100%)`,
+                  border: `1px solid ${primaryColor}40`,
                 }}
               >
-                <AlertTriangle className="w-3 h-3" />
-                NO TRANSFERIBLE
-              </p>
+                <Zap className="w-8 h-8" style={{ color: primaryColor, filter: `drop-shadow(0 0 8px ${primaryColor})` }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Access Status */}
+          <div 
+            className="mx-auto px-6 py-2 rounded-full mb-4"
+            style={{
+              background: `linear-gradient(90deg, ${primaryColor}15 0%, ${primaryColor}25 50%, ${primaryColor}15 100%)`,
+              border: `1px solid ${primaryColor}50`,
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4" style={{ color: '#22c55e' }} />
+              <span 
+                className="text-xs font-bold tracking-widest"
+                style={{ fontFamily: 'Orbitron, sans-serif', color: '#22c55e' }}
+              >
+                ACCESS GRANTED
+              </span>
+            </div>
+          </div>
+
+          {/* Non-Transferable Badge */}
+          {isNonTransferable && (
+            <div 
+              className="mx-auto px-4 py-1.5 rounded-full mb-4"
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+              }}
+            >
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-3 h-3 text-red-400" />
+                <span className="text-[10px] font-bold tracking-wider text-red-400" style={{ fontFamily: 'monospace' }}>
+                  NO TRANSFERIBLE
+                </span>
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Data Section */}
-        <div className="relative z-10 px-5 space-y-2">
-          <DataRow label="CODENAME" value={userName.split(' ')[0].toUpperCase()} color={primaryColor} />
-          <DataRow label="LEVEL" value="BÁSICO" color={primaryColor} />
-          <DataRow label="STATUS" value="PARTICIPANTE" color={primaryColor} />
-          <DataRow label="VISION" value={eventName} color={primaryColor} />
-        </div>
+          {/* Participant Info Card */}
+          <div 
+            className="rounded-xl p-4 mb-4"
+            style={{
+              background: 'rgba(0, 240, 255, 0.03)',
+              border: `1px solid ${primaryColor}20`,
+            }}
+          >
+            <div className="space-y-2.5">
+              <InfoRow label="OPERATIVO" value={userName.split(' ')[0].toUpperCase()} color={primaryColor} />
+              <InfoRow label="CLEARANCE" value="NIVEL BÁSICO" color={primaryColor} />
+              <InfoRow label="STATUS" value="PARTICIPANTE" color="#22c55e" />
+              <InfoRow label="MISIÓN" value={eventName.substring(0, 15)} color={accentColor} />
+            </div>
+          </div>
 
-        {/* QR Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <div className="flex justify-center">
+          {/* QR Section - Flex grow to push to bottom */}
+          <div className="flex-grow" />
+          
+          <div className="text-center">
             <div 
-              className="p-2.5 rounded-lg"
+              className="inline-block p-3 rounded-xl mb-2"
               style={{
-                background: '#000',
-                border: `1px solid ${primaryColor}60`,
+                background: 'rgba(255,255,255,0.95)',
+                boxShadow: `0 0 20px ${primaryColor}30`,
               }}
             >
               <QRCode
-                value={ticket.ticketCode || `EVENT:${ticket.id}`}
-                size={80}
-                bgColor="transparent"
-                fgColor={primaryColor}
-                level="M"
+                value={ticket.ticketCode || `EVENT:${ticketId}`}
+                size={90}
+                bgColor="#ffffff"
+                fgColor="#0a1929"
+                level="H"
               />
             </div>
+            
+            <p 
+              className="text-[11px] tracking-[0.2em] font-mono"
+              style={{ color: `${primaryColor}90` }}
+            >
+              {ticket.ticketCode || `EVT-${ticketId.substring(0, 8).toUpperCase()}`}
+            </p>
+            <p 
+              className="text-[9px] mt-1 opacity-50"
+              style={{ color: primaryColor, fontFamily: 'monospace' }}
+            >
+              PRESENTA ESTE CÓDIGO EN LA ENTRADA
+            </p>
           </div>
-          <p 
-            className="text-center text-[10px] mt-2 tracking-widest"
-            style={{ 
-              fontFamily: 'monospace',
-              color: `${primaryColor}80`,
-            }}
-          >
-            ID: {ticket.id.toUpperCase()}
-          </p>
         </div>
 
-        {/* Glowing Edge Effect */}
+        {/* Bottom Accent Line */}
         <div 
-          className="absolute inset-0 rounded-2xl pointer-events-none"
+          className="absolute bottom-0 left-0 right-0 h-0.5"
           style={{
-            boxShadow: `inset 0 0 30px ${primaryColor}10`,
+            background: `linear-gradient(90deg, transparent 0%, ${accentColor} 50%, transparent 100%)`,
           }}
         />
       </div>
@@ -265,24 +251,18 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
   );
 }
 
-function DataRow({ label, value, color }: { label: string; value: string; color: string }) {
+function InfoRow({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="flex justify-between items-center py-1 border-b border-slate-800/30">
+    <div className="flex justify-between items-center">
       <span 
-        className="text-[10px] tracking-wider"
-        style={{ 
-          fontFamily: 'monospace',
-          color: '#64748b',
-        }}
+        className="text-[10px] tracking-wider opacity-50"
+        style={{ fontFamily: 'monospace', color: '#94a3b8' }}
       >
-        {label}:
+        {label}
       </span>
       <span 
         className="text-[12px] font-bold tracking-wide"
-        style={{ 
-          fontFamily: 'Orbitron, monospace',
-          color: color,
-        }}
+        style={{ fontFamily: 'Orbitron, sans-serif', color: color }}
       >
         {value}
       </span>
