@@ -8,6 +8,7 @@ import {
   CreditCard, Smartphone, Loader2, Wifi, WifiOff, Users
 } from 'lucide-react';
 import Link from 'next/link';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface PaymentCode {
   id: number;
@@ -224,6 +225,9 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
     participantName?: string;
     visionName?: string;
     isCombo?: boolean;
+    ticketId?: string;
+    ticketLevel?: string;
+    organizationName?: string;
   }>({ stage: 'sending', message: 'Enviando a terminal...' });
 
   useEffect(() => {
@@ -502,6 +506,8 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
     pendingDebt?: number;
     ticketsCreated?: number; 
     paymentCode?: { code: string; amount: number; reference: string };
+    ticketId?: string;
+    ticketLevel?: string;
     error?: string 
   }> => {
     // Si es AVANZADO, registrar con la API de avanzado
@@ -538,6 +544,8 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
           isApartado: registerData.isApartado,
           pendingDebt: registerData.pendingDebt,
           ticketsCreated: registerData.ticketsCreated || 1,
+          ticketId: registerData.enrollment?.ticketId,
+          ticketLevel: 'ADVANCED',
           paymentCode: registerData.paymentCode ? {
             code: registerData.paymentCode.code,
             amount: registerData.paymentCode.amount,
@@ -581,6 +589,8 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
           visionName: registerData.enrollment?.visionName || 'Liderato',
           isUpgrade: registerData.isUpgrade,
           ticketsCreated: registerData.ticketsCreated || 1,
+          ticketId: registerData.ticket?.id || registerData.enrollment?.ticketId,
+          ticketLevel: 'PL',
           paymentCode: registerData.paymentCode ? {
             code: registerData.paymentCode.code,
             amount: registerData.paymentCode.amount,
@@ -623,6 +633,8 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
           visionName: registerData.enrollment?.visionName || 'Básico',
           isCombo: registerData.isCombo,
           ticketsCreated: registerData.ticketsCreated || 1,
+          ticketId: registerData.enrollment?.ticketId,
+          ticketLevel: registerData.isCombo ? 'COMBO' : 'BASIC',
           paymentCode: registerData.paymentCode ? {
             code: registerData.paymentCode.code,
             amount: registerData.paymentCode.amount,
@@ -677,7 +689,10 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
                   amount: registerResult.paymentCode?.amount || parseFloat(cobroForm.amount),
                   participantName: newUserForm.nombre,
                   visionName: registerResult.visionName,
-                  isCombo: registerResult.isCombo
+                  isCombo: registerResult.isCombo,
+                  ticketId: registerResult.ticketId,
+                  ticketLevel: registerResult.ticketLevel,
+                  organizationName: orgInfo.name
                 });
                 
                 showNotification('success', successMsg);
@@ -711,7 +726,10 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
                   amount: registerResult.paymentCode?.amount || parseFloat(cobroForm.amount),
                   participantName: selectedParticipante?.nombre || '',
                   visionName: registerResult.visionName,
-                  isCombo: registerResult.isCombo
+                  isCombo: registerResult.isCombo,
+                  ticketId: registerResult.ticketId,
+                  ticketLevel: registerResult.ticketLevel,
+                  organizationName: orgInfo.name
                 });
                 
                 showNotification('success', successMsg);
@@ -743,7 +761,10 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
                   amount: registerResult.paymentCode?.amount || parseFloat(cobroForm.amount),
                   participantName: selectedParticipante?.nombre || '',
                   visionName: registerResult.visionName,
-                  isCombo: false
+                  isCombo: false,
+                  ticketId: registerResult.ticketId,
+                  ticketLevel: registerResult.ticketLevel,
+                  organizationName: orgInfo.name
                 });
                 
                 showNotification('success', successMsg);
@@ -2514,6 +2535,92 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
             {/* Estado completado: mostrar código de confirmación */}
             {posPaymentStatus.stage === 'completed' && posPaymentStatus.confirmationCode && (
               <>
+                {/* Ticket Visual con QR */}
+                {posPaymentStatus.ticketId && (
+                  <div 
+                    id="treasury-ticket-card"
+                    className="mt-4 rounded-xl overflow-hidden"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                      border: `2px solid ${orgInfo.brandColor}40`
+                    }}
+                  >
+                    {/* Header del ticket */}
+                    <div 
+                      className="px-4 py-3 text-center"
+                      style={{ background: `linear-gradient(135deg, ${orgInfo.brandColor}40, ${orgInfo.brandColor}20)` }}
+                    >
+                      <p className="text-xs text-slate-400 uppercase tracking-wider">
+                        {posPaymentStatus.organizationName || 'Quantum Matter'}
+                      </p>
+                      <h3 className="text-lg font-bold text-white">
+                        🎫 Ticket de Ingreso
+                      </h3>
+                    </div>
+
+                    {/* QR Code */}
+                    <div className="p-4 flex justify-center">
+                      <div className="p-3 bg-white rounded-xl">
+                        <QRCodeSVG 
+                          value={posPaymentStatus.ticketId}
+                          size={140}
+                          level="H"
+                          includeMargin={false}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Ticket ID */}
+                    <div className="px-4 pb-2 text-center">
+                      <code className="text-xs font-mono text-slate-400">
+                        {posPaymentStatus.ticketId}
+                      </code>
+                    </div>
+
+                    {/* Info del ticket */}
+                    <div className="px-4 pb-4 space-y-2">
+                      <div className="flex justify-between items-center py-2 border-t border-slate-700/50">
+                        <span className="text-slate-400 text-sm">👤 Participante</span>
+                        <span className="text-white font-medium text-sm">{posPaymentStatus.participantName}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-t border-slate-700/50">
+                        <span className="text-slate-400 text-sm">🎯 Visión</span>
+                        <span className="text-white font-medium text-sm">{posPaymentStatus.visionName}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-t border-slate-700/50">
+                        <span className="text-slate-400 text-sm">🏷️ Nivel</span>
+                        <span 
+                          className="px-2 py-1 rounded-full text-xs font-bold"
+                          style={{ 
+                            backgroundColor: posPaymentStatus.isCombo 
+                              ? '#22c55e20' 
+                              : posPaymentStatus.ticketLevel === 'BASIC' 
+                                ? '#3b82f620' 
+                                : posPaymentStatus.ticketLevel === 'ADVANCED' 
+                                  ? '#f59e0b20' 
+                                  : '#8b5cf620',
+                            color: posPaymentStatus.isCombo 
+                              ? '#22c55e' 
+                              : posPaymentStatus.ticketLevel === 'BASIC' 
+                                ? '#3b82f6' 
+                                : posPaymentStatus.ticketLevel === 'ADVANCED' 
+                                  ? '#f59e0b' 
+                                  : '#8b5cf6'
+                          }}
+                        >
+                          {posPaymentStatus.isCombo 
+                            ? '✨ FULL (B+A+L)' 
+                            : posPaymentStatus.ticketLevel === 'BASIC' 
+                              ? '🌱 BÁSICO' 
+                              : posPaymentStatus.ticketLevel === 'ADVANCED' 
+                                ? '🔥 AVANZADO' 
+                                : '👑 LIDERATO'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Código de Confirmación */}
                 <div 
                   className="mt-4 p-4 rounded-xl border-2 border-dashed"
@@ -2531,27 +2638,29 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                   </code>
                 </div>
 
-                {/* Info del participante */}
-                <div className="mt-4 space-y-2 text-left">
-                  {posPaymentStatus.participantName && (
-                    <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-                      <span className="text-slate-400 text-sm">👤 Participante</span>
-                      <span className="text-white font-medium text-sm">{posPaymentStatus.participantName}</span>
-                    </div>
-                  )}
-                  {posPaymentStatus.visionName && (
-                    <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-                      <span className="text-slate-400 text-sm">🎯 Visión</span>
-                      <span className="text-white font-medium text-sm">{posPaymentStatus.visionName}</span>
-                    </div>
-                  )}
-                  {posPaymentStatus.isCombo && (
-                    <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-                      <span className="text-slate-400 text-sm">📦 Tipo</span>
-                      <span className="text-green-400 font-bold text-sm">FULL (Básico + Avanzado + Liderato)</span>
-                    </div>
-                  )}
-                </div>
+                {/* Info del participante (solo si no hay ticket visual) */}
+                {!posPaymentStatus.ticketId && (
+                  <div className="mt-4 space-y-2 text-left">
+                    {posPaymentStatus.participantName && (
+                      <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
+                        <span className="text-slate-400 text-sm">👤 Participante</span>
+                        <span className="text-white font-medium text-sm">{posPaymentStatus.participantName}</span>
+                      </div>
+                    )}
+                    {posPaymentStatus.visionName && (
+                      <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
+                        <span className="text-slate-400 text-sm">🎯 Visión</span>
+                        <span className="text-white font-medium text-sm">{posPaymentStatus.visionName}</span>
+                      </div>
+                    )}
+                    {posPaymentStatus.isCombo && (
+                      <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
+                        <span className="text-slate-400 text-sm">📦 Tipo</span>
+                        <span className="text-green-400 font-bold text-sm">FULL (Básico + Avanzado + Liderato)</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Contraseña */}
                 <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
@@ -2560,17 +2669,54 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                   </p>
                 </div>
 
-                {/* Botón copiar código */}
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(posPaymentStatus.confirmationCode || '');
-                    showNotification('success', '¡Código copiado!');
-                  }}
-                  className="mt-4 w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
-                >
-                  <Copy size={16} />
-                  Copiar Código
-                </button>
+                {/* Botones de acción */}
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(posPaymentStatus.confirmationCode || '');
+                      showNotification('success', '¡Código copiado!');
+                    }}
+                    className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Copy size={16} />
+                    Copiar
+                  </button>
+                  
+                  {posPaymentStatus.ticketId && (
+                    <button
+                      onClick={async () => {
+                        // Compartir ticket
+                        const ticketText = `🎫 *TICKET DE INGRESO*\n\n` +
+                          `👤 *Participante:* ${posPaymentStatus.participantName}\n` +
+                          `🎯 *Visión:* ${posPaymentStatus.visionName}\n` +
+                          `🏷️ *Nivel:* ${posPaymentStatus.isCombo ? 'FULL (B+A+L)' : posPaymentStatus.ticketLevel}\n` +
+                          `🔑 *Código:* ${posPaymentStatus.ticketId}\n\n` +
+                          `📱 Presenta este código o QR en la entrada.\n` +
+                          `🔐 Contraseña inicial: Quantum123`;
+                        
+                        if (navigator.share) {
+                          try {
+                            await navigator.share({
+                              title: 'Ticket de Ingreso',
+                              text: ticketText
+                            });
+                          } catch {
+                            navigator.clipboard.writeText(ticketText);
+                            showNotification('success', '¡Ticket copiado al portapapeles!');
+                          }
+                        } else {
+                          navigator.clipboard.writeText(ticketText);
+                          showNotification('success', '¡Ticket copiado al portapapeles!');
+                        }
+                      }}
+                      className="flex-1 px-4 py-2 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
+                      style={{ backgroundColor: orgInfo.brandColor }}
+                    >
+                      <Share2 size={16} />
+                      Compartir
+                    </button>
+                  )}
+                </div>
               </>
             )}
 

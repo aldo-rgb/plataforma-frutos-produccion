@@ -706,6 +706,7 @@ export async function POST(request: NextRequest) {
         visionId: result.vision.id,
         visionName: result.vision.nombre,
         level: 'ADVANCED',
+        ticketId: result.advancedTicket?.id,
       },
       paymentCode: {
         id: result.paymentCode.id,
