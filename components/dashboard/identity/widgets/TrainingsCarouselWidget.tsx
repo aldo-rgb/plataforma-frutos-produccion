@@ -119,7 +119,8 @@ Un espacio para abrir posibilidades a tu vida.
         await navigator.share({
           title: shareTitle,
           text: shareText,
-          url: shareUrl
+          // No incluir url aquí porque ya está en el texto
+          // Si se incluye, WhatsApp lo duplica
         });
         return; // Éxito, no hacer nada más
       } catch (error) {
