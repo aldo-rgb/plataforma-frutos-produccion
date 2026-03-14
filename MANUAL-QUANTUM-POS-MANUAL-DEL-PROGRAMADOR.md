@@ -4069,7 +4069,277 @@ grep -A 20 "^model NombreDelModelo" prisma/schema.prisma
 
 ---
 
+## 🎫 Fix: Generación de Tickets para Talleres (Eventos)
+
+**Fecha:** 13/03/2026  
+**Archivo modificado:** `app/api/public/evento/[productId]/verify-payment/route.ts`
+
+### Problema Detectado
+
+Después de que un usuario pagaba un taller (SchoolProduct), el sistema **no generaba el ticket** correctamente:
+
+| Flujo de Pago | Creaba Usuario | Generaba ticketCode | Vinculaba userId |
+|---------------|----------------|---------------------|------------------|
+| Simulado (Test) | ✅ | ✅ | ✅ |
+| Stripe | ❌ | ❌ | ❌ |
+| MercadoPago | ❌ | ❌ | ❌ |
+
+### Solución Implementada
+
+#### 1. Flujo Stripe - Código Corregido
+
+```typescript
+// Verificar el pago con Stripe si hay sessionId
+if (sessionId) {
+  const gateway = await getPaymentGateway(
+    registration.SchoolProduct.organizationId,
+    'stripe'
+  );
+
+  if (gateway) {
+    const stripe = new Stripe(gateway.secretKey, { apiVersion: '2024-12-18.acacia' });
+    
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      if (session.payment_status === 'paid') {
+        const amountPaid = session.amount_total ? session.amount_total / 100 : 0;
+
+        // ====== CREAR USUARIO SI NO EXISTE ======
+        let payerUser = await prisma.usuario.findUnique({
+          where: { email: registration.email.toLowerCase() },
+          select: { id: true, nombre: true, referralCode: true }
+        });
+
+        if (!payerUser) {
+          console.log('👤 [Stripe] Creando nuevo usuario para:', registration.email);
+          const bcrypt = require('bcryptjs');
+          const tempPassword = Math.random().toString(36).slice(-8);
+          const hashedPassword = await bcrypt.hash(tempPassword, 10);
+          
+          // Generar referralCode único
+          const timestamp = Date.now().toString(36).toUpperCase();
+          const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+          const namePrefix = registration.nombre.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
+          const referralCode = `${namePrefix}${timestamp}${random}`;
+
+          payerUser = await prisma.usuario.create({
+            data: {
+              nombre: registration.nombre,
+              email: registration.email.toLowerCase(),
+              telefono: registration.telefono || null,
+              password: hashedPassword,
+              organizationId: registration.organizationId,
+              isActive: true,
+              rol: 'PARTICIPANTE',
+              referralCode,
+            },
+            select: { id: true, nombre: true, referralCode: true }
+          });
+        }
+
+        // ====== GENERAR TICKET CODE ======
+        const ticketCode = `TKT-${registration.id}-${Date.now().toString(36).toUpperCase()}`;
+
+        // Actualizar registro con ticketCode y userId
+        await prisma.eventRegistration.update({
+          where: { id: registration.id },
+          data: {
+            status: EventRegistrationStatus.REGISTERED,
+            paymentStatus: 'PAID',
+            paymentProvider: 'stripe',
+            paymentSessionId: sessionId,
+            amountPaid: new Decimal(amountPaid),
+            paidAt: new Date(),
+            ticketCode,  // ✅ NUEVO
+            userId: payerUser.id,  // ✅ NUEVO
+          }
+        });
+
+        // Verificar comisión antes de crear (evitar duplicados)
+        if (inviterInfo?.isGraduated && amountPaid > 0) {
+          const existingCommission = await prisma.ambassador_wallet_transactions.findFirst({
+            where: {
+              ambassadorId: inviterInfo.id,
+              referredUserId: payerUser.id,
+              productType: AmbassadorProductType.WORKSHOP,
+            }
+          });
+
+          if (!existingCommission) {
+            // Crear comisión...
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            eventName: registration.SchoolProduct.name,
+            ticketCode,  // ✅ Incluir en respuesta
+            userId: payerUser.id,  // ✅ Incluir en respuesta
+          }
+        });
+      }
+    } catch (stripeError) {
+      console.error('Error verifying Stripe payment:', stripeError);
+    }
+  }
+}
+```
+
+#### 2. Flujo MercadoPago - Código Nuevo
+
+```typescript
+// ====== VERIFICAR PAGO CON MERCADOPAGO ======
+if (!sessionId && registration.paymentProvider === 'mercadopago' && registration.paymentSessionId) {
+  console.log('🔵 [MercadoPago] Verificando pago para registro:', registration.id);
+  
+  try {
+    const gateway = await getPaymentGateway(
+      registration.SchoolProduct.organizationId,
+      'mercadopago'
+    );
+
+    if (gateway) {
+      // Buscar pagos aprobados usando la API de MercadoPago
+      const searchResponse = await fetch(
+        `https://api.mercadopago.com/v1/payments/search?external_reference=${encodeURIComponent(JSON.stringify({ registrationId: registration.id }))}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${gateway.secretKey}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      if (searchResponse.ok) {
+        const searchData = await searchResponse.json();
+        const approvedPayment = searchData.results?.find((p: any) => p.status === 'approved');
+
+        if (approvedPayment) {
+          const amountPaid = approvedPayment.transaction_amount || 0;
+
+          // Crear usuario si no existe (mismo código que Stripe)
+          let payerUser = await prisma.usuario.findUnique({
+            where: { email: registration.email.toLowerCase() },
+            select: { id: true, nombre: true, referralCode: true }
+          });
+
+          if (!payerUser) {
+            // Crear usuario con contraseña temporal...
+          }
+
+          // Generar ticket
+          const ticketCode = `TKT-${registration.id}-${Date.now().toString(36).toUpperCase()}`;
+
+          // Actualizar registro
+          await prisma.eventRegistration.update({
+            where: { id: registration.id },
+            data: {
+              status: EventRegistrationStatus.REGISTERED,
+              paymentStatus: 'PAID',
+              amountPaid: new Decimal(amountPaid),
+              paidAt: new Date(),
+              ticketCode,
+              userId: payerUser.id,
+            }
+          });
+
+          // Procesar comisiones...
+
+          return NextResponse.json({
+            success: true,
+            data: {
+              eventName: registration.SchoolProduct.name,
+              ticketCode,
+              userId: payerUser.id,
+            }
+          });
+        }
+      }
+    }
+  } catch (mpError) {
+    console.error('Error verifying MercadoPago payment:', mpError);
+  }
+}
+```
+
+### Formato del Ticket Code
+
+```
+TKT-{registrationId}-{timestamp_base36}
+```
+
+**Ejemplos:**
+- `TKT-123-M5X8Y2AB`
+- `TKT-456-M5X8ZCDE`
+
+### Modelo EventRegistration - Campos Relevantes
+
+```prisma
+model EventRegistration {
+  id               Int      @id @default(autoincrement())
+  ticketCode       String?  @unique  // ✅ Código único del ticket
+  ticketUsed       Boolean  @default(false)
+  ticketUsedAt     DateTime?
+  userId           Int?     // ✅ Vinculación con Usuario
+  // ... otros campos
+}
+```
+
+### Flujo Completo Después del Fix
+
+```
+1. Usuario llena formulario de registro
+2. Sistema crea EventRegistration con status PENDING_PAYMENT
+3. Usuario paga (Stripe/MercadoPago)
+4. Usuario es redirigido a /evento/{id}/success
+5. Frontend llama a /api/public/evento/{id}/verify-payment
+6. API verifica pago con la pasarela
+7. Si es aprobado:
+   a. Crea Usuario si no existe
+   b. Genera ticketCode único
+   c. Actualiza EventRegistration:
+      - status: REGISTERED
+      - paymentStatus: PAID
+      - ticketCode: TKT-XXX-XXX
+      - userId: {id del usuario}
+   d. Incrementa currentEnrollment del SchoolProduct
+   e. Procesa comisiones de embajador si aplica
+8. Devuelve datos del evento + ticketCode
+```
+
+### Lección Aprendida
+
+Cuando se tienen múltiples flujos de pago (simulado, Stripe, MercadoPago), **todos deben realizar las mismas acciones post-pago**:
+- Crear usuario
+- Generar ticket
+- Vincular relaciones
+- Procesar comisiones
+
+Es recomendable extraer esta lógica a una función compartida `processSuccessfulPayment()` para evitar inconsistencias.
+
+---
+
+## 📋 Checklist para Nuevos Desarrolladores
+
+### Antes de crear cualquier `.create()`:
+1. ¿El modelo tiene `id String @id` sin `@default()`? → Agregar `id: randomUUID()`
+2. ¿El modelo tiene `updatedAt DateTime` sin `@updatedAt`? → Agregar `updatedAt: new Date()`
+
+### Antes de usar `include`:
+1. Verificar nombre EXACTO de la relación en `schema.prisma`
+2. Usar formato PascalCase: `Usuario`, `Vision`, `BusinessCategory`
+3. Para relaciones múltiples usar nombre completo: `Usuario_ExpoReview_exhibitorIdToUsuario`
+
+### Comando útil para verificar relaciones:
+```bash
+grep -A 20 "^model NombreDelModelo" prisma/schema.prisma
+```
+
+---
+
 *Manual del Programador - Plataforma Quantum Frutos*  
-*Versión 3.6 - Marzo 2026*  
-*Última actualización: 09/03/2026*
+*Versión 3.7 - Marzo 2026*  
+*Última actualización: 13/03/2026*
 
