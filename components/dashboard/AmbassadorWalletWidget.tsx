@@ -86,7 +86,16 @@ export default function AmbassadorWalletWidget() {
       ? `${baseUrl}/org/${data.user.organizationSlug}?ref=${data.user.referralCode}`
       : `${baseUrl}/registro?ref=${data.user.referralCode}`;
     const message = encodeURIComponent(
-      `¡Hola! Te invito a vivir una experiencia transformadora. Usa mi código de referido y regístrate aquí: ${link}`
+      `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
+
+✨ Entrenamiento Básico de Transformación Cuántica
+
+🏆 3 días intensivos de conciencia y romper creencias limitantes
+📝 Entrenamiento práctico para resultados reales
+🤝 Una comunidad extraordinaria
+
+👉 Conoce más y regístrate aquí:
+${link}`
     );
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };

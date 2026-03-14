@@ -540,7 +540,7 @@ export default function PersonalQRWidget({
                     ? `https://www.impactocuantico.com/auth/signup?ref=${userReferralCode}`
                     : `https://www.impactocuantico.com/auth/signup`;
 
-                  const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
+                  const shareText = `🎓 ¡Te invito a vivir una experiencia que abrirá posibilidades a tu vida!
 
 ✨ Entrenamiento Básico de Transformación Cuántica
 
@@ -575,8 +575,7 @@ ${invitationURL}
                   ? `https://www.impactocuantico.com/auth/signup?ref=${userReferralCode}`
                   : `https://www.impactocuantico.com/auth/signup`;
 
-                const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
-
+                const shareText = `🎓 ¡Te invito a vivir una experiencia que abrirá posibilidades a tu vida
 ✨ Entrenamiento Básico de Transformación Cuántica
 
 🌟 3 días intensivos de conciencia y romper creencias limitantes
@@ -739,8 +738,7 @@ ${invitationURL}
                       ? `https://www.impactocuantico.com/auth/signup?ref=${referralCode}`
                       : `https://www.impactocuantico.com/auth/signup`;
 
-                    const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
-
+                    const shareText = `🎓 ¡Te invito a vivir una experiencia que abrirá posibilidades a tu vida
 ✨ Entrenamiento Básico de Transformación Cuántica
 
 🌟 3 días intensivos de conciencia y romper creencias limitantes
@@ -775,7 +773,7 @@ ${invitationURL}
                     ? `https://www.impactocuantico.com/auth/signup?ref=${referralCode}`
                     : `https://www.impactocuantico.com/auth/signup`;
 
-                  const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
+                  const shareText = `🎓 ¡Te invito a vivir una experiencia que abrirá posibilidades a tu vida!
 
 ✨ Entrenamiento Básico de Transformación Cuántica
 
