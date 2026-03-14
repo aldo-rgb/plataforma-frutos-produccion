@@ -2207,342 +2207,225 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
       </div>
     </div>
 
-    {/* MODAL DE CÓDIGO GENERADO - Estilo Nota de Compra Premium */}
+    {/* MODAL DE CÓDIGO GENERADO - Solo Ticket */}
     {showCodeModal && generatedCode && (
       <div 
-        className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto"
+        className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
         onClick={() => setShowCodeModal(false)}
       >
         <div 
-          className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border-2 max-w-md w-full shadow-2xl my-8"
-          style={{ 
-            borderColor: `${orgInfo.brandColor}50`,
-            boxShadow: `0 25px 50px -12px ${orgInfo.brandColor}30`
-          }}
+          className="max-w-[320px] w-full"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header Premium con color de organización */}
-          <div 
-            className="p-4 border-b flex items-center justify-between"
-            style={{ 
-              borderColor: `${orgInfo.brandColor}30`,
-              background: `linear-gradient(to right, ${orgInfo.brandColor}20, transparent)`
-            }}
-          >
-            <div className="flex items-center gap-3">
-              {orgInfo.logoUrl ? (
-                <img 
-                  src={orgInfo.logoUrl} 
-                  alt={orgInfo.nombre}
-                  className="w-10 h-10 rounded-lg object-cover"
-                />
-              ) : (
-                <div 
-                  className="p-2 rounded-lg"
-                  style={{ backgroundColor: `${orgInfo.brandColor}30` }}
-                >
-                  <Receipt style={{ color: orgInfo.brandColor }} size={24} />
-                </div>
-              )}
-              <div>
-                <h3 className="text-xl font-black" style={{ color: orgInfo.brandColor }}>
-                  {generatedCode.status === 'REDEEMED' ? 'Código de Confirmación' : 'Codigo de Referencia'}
-                </h3>
-                <p className="text-xs text-slate-400">
-                  {generatedCode.status === 'REDEEMED' ? 'Registro completado exitosamente' : 'Comprobante de cobro generado'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowCodeModal(false)}
-              className="text-slate-400 hover:text-white transition-colors p-2"
-            >
-              <X size={24} />
-            </button>
+          {/* Título */}
+          <div className="text-center mb-4">
+            <h2 className="text-2xl font-black text-white">
+              {generatedCode.status === 'REDEEMED' ? '¡Registro Exitoso!' : 'Código Generado'}
+            </h2>
+            <p className="text-slate-400 text-sm">
+              {generatedCode.status === 'REDEEMED' ? 'Bienvenido!!!! 🎉' : 'Pendiente de pago'}
+            </p>
           </div>
 
-          {/* Contenido - Nota de Compra */}
-          <div className="p-6">
-            {/* Recibo Visual */}
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 overflow-hidden">
-              {/* Header del recibo con color de organización */}
-              <div 
-                className="p-4 text-center"
-                style={{ 
-                  background: `linear-gradient(to right, ${orgInfo.brandColor}, ${orgInfo.brandColor}CC)`
-                }}
-              >
-                {orgInfo.logoUrl ? (
-                  <img 
-                    src={orgInfo.logoUrl} 
-                    alt={orgInfo.nombre}
-                    className="w-16 h-16 mx-auto mb-2 rounded-xl object-cover border-2 border-white/30"
-                  />
-                ) : (
-                  <div className="text-3xl mb-1">💰</div>
-                )}
-                <h4 className="text-white font-bold text-lg">
-                  {generatedCode.status === 'REDEEMED' ? 'CÓDIGO DE CONFIRMACIÓN' : 'CODIGO DE REFERENCIA'}
-                </h4>
-                <p className="text-white/80 text-xs">{orgInfo.nombre}</p>
-              </div>
-
-              {/* Línea decorativa perforada */}
-              <div className="flex justify-center -my-2 relative z-10">
-                <div className="flex gap-1">
-                  {[...Array(20)].map((_, i) => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-slate-900" />
-                  ))}
-                </div>
-              </div>
-
-              {/* TICKET VISUAL CON QR - Solo cuando está REDEEMED y tiene ticketId */}
-              {generatedCode.status === 'REDEEMED' && generatedCode.ticketId && (
-                <div 
-                  id="cash-ticket-card"
-                  className="mx-4 mt-4 rounded-xl overflow-hidden relative"
-                  style={{ 
-                    boxShadow: '0 0 30px rgba(0, 240, 255, 0.2)',
-                    border: '2px solid #00F0FF',
-                  }}
-                >
-                  {/* CORO2.png Background */}
-                  <div 
-                    className="absolute inset-0"
-                    style={{
-                      backgroundImage: 'url(/CORO2.png)',
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      opacity: 0.15,
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-900/85 to-black/95" />
-
-                  {/* Header ACCESS GRANTED */}
-                  <div className="relative z-10 p-2">
-                    <div 
-                      className="text-center py-1.5 px-3 rounded-lg bg-[#00F0FF]/10"
-                      style={{ border: '1px solid rgba(0, 240, 255, 0.3)' }}
-                    >
-                      <p 
-                        className="text-[10px] font-bold tracking-[0.3em] text-[#00F0FF]"
-                        style={{ textShadow: '0 0 10px rgba(0, 240, 255, 0.5)' }}
-                      >
-                        ▸ ACCESS GRANTED ◂
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Info del participante */}
-                  <div className="relative z-10 px-3 pb-2 space-y-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[8px] text-slate-500 uppercase tracking-wider">Participante:</span>
-                      <span className="text-[10px] text-[#00F0FF] font-bold">{generatedCode.participantName?.toUpperCase()}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[8px] text-slate-500 uppercase tracking-wider">Nivel:</span>
-                      <span className="text-[10px] text-[#00F0FF] font-bold">{generatedCode.ticketLevel}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[8px] text-slate-500 uppercase tracking-wider">Visión:</span>
-                      <span className="text-[10px] text-[#00F0FF] font-bold">{generatedCode.visionName}</span>
-                    </div>
-                  </div>
-
-                  {/* QR Code */}
-                  <div className="relative z-10 flex flex-col items-center py-3">
-                    <div 
-                      className="p-2 rounded-lg"
-                      style={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        boxShadow: '0 0 20px rgba(0, 240, 255, 0.3)'
-                      }}
-                    >
-                      <QRCodeSVG
-                        value={generatedCode.ticketId}
-                        size={100}
-                        level="H"
-                        fgColor="#0f172a"
-                        bgColor="transparent"
-                      />
-                    </div>
-                    <p 
-                      className="text-center text-[6px] mt-2 tracking-wide text-[#00F0FF]/60"
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      ID: {generatedCode.ticketId.toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Código Principal */}
-              <div className="p-6 text-center">
-                <p className="text-xs text-slate-500 mb-2 uppercase tracking-wider">Referencia</p>
-                <div className="relative">
-                  <code 
-                    className="text-3xl md:text-4xl font-mono font-black tracking-[0.15em] block py-4 px-2 rounded-xl border-2 border-dashed"
-                    style={{ 
-                      color: orgInfo.brandColor,
-                      backgroundColor: `${orgInfo.brandColor}15`,
-                      borderColor: `${orgInfo.brandColor}40`
-                    }}
-                  >
-                    {generatedCode.code}
-                  </code>
-                  {copied && (
-                    <div 
-                      className="absolute -top-2 -right-2 text-white text-xs px-2 py-1 rounded-full animate-bounce"
-                      style={{ backgroundColor: orgInfo.brandColor }}
-                    >
-                      ¡Copiado!
-                    </div>
-                  )}
-                </div>
-
-                {/* Monto Destacado */}
-                <div 
-                  className="mt-6 p-4 rounded-xl border"
-                  style={{ 
-                    background: `linear-gradient(to right, ${orgInfo.brandColor}20, ${orgInfo.brandColor}10)`,
-                    borderColor: `${orgInfo.brandColor}30`
-                  }}
-                >
-                  <p className="text-xs text-slate-400 mb-1">
-                    {generatedCode.status === 'REDEEMED' ? 'MONTO REGISTRADO' : 'MONTO A REDIMIR'}
-                  </p>
-                  <p className="text-4xl font-black text-white">
-                    {formatMoney(generatedCode.amount)}
-                  </p>
-                </div>
-
-                {/* Detalles */}
-                <div className="mt-4 space-y-3 text-left">
-                  <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-                    <span className="text-slate-400 text-sm">📝 Concepto</span>
-                    <span className="text-white font-medium text-sm text-right max-w-[60%] truncate">
-                      {generatedCode.reference}
-                    </span>
-                  </div>
-                  {generatedCode.visionName && (
-                    <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-                      <span className="text-slate-400 text-sm">🎯 Visión</span>
-                      <span className="text-white font-medium text-sm">{generatedCode.visionName}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-                    <span className="text-slate-400 text-sm">📅 Generado</span>
-                    <span className="text-white font-medium text-sm">
-                      {formatDate(generatedCode.createdAt)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-slate-400 text-sm">📊 Estado</span>
-                    {generatedCode.status === 'REDEEMED' ? (
-                      <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-bold rounded-full border border-green-500/30">
-                        ✓ CONFIRMADO
-                      </span>
-                    ) : (
-                      <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-bold rounded-full border border-yellow-500/30">
-                        PENDIENTE
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer del recibo */}
-              <div 
-                className="p-4 text-center border-t border-slate-700/50"
-                style={{ backgroundColor: `${orgInfo.brandColor}10` }}
-              >
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider">
-                  {generatedCode.status === 'REDEEMED' 
-                    ? '✓ Pago registrado correctamente en el sistema' 
-                    : 'Presente esta referencia al momento del pago'}
-                </p>
-              </div>
-            </div>
-
-            {/* Botones de Acción */}
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => copyCode(generatedCode.code)}
-                className="flex-1 px-4 py-4 bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-              >
-                <Copy size={20} />
-                {copied ? '¡Copiado!' : 'Copiar'}
-              </button>
-              <button
-                onClick={shareCode}
-                className="flex-1 px-4 py-4 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-                style={{ 
-                  background: `linear-gradient(to right, ${orgInfo.brandColor}, ${orgInfo.brandColor}CC)`,
-                  boxShadow: `0 10px 25px -5px ${orgInfo.brandColor}40`
-                }}
-              >
-                <Share2 size={20} />
-                Compartir
-              </button>
-            </div>
-
-            {/* Warning Message y Guardar Ticket - Solo cuando hay ticket */}
-            {generatedCode.status === 'REDEEMED' && generatedCode.ticketId && (
-              <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                <p className="text-yellow-400 text-xs font-medium text-center mb-2">
-                  ⚠️ <strong>¡IMPORTANTE!</strong> Guarda este ticket para ingresar al evento.
-                </p>
-                <button
-                  onClick={async () => {
-                    const ticketElement = document.getElementById('cash-ticket-card');
-                    if (ticketElement) {
-                      try {
-                        const html2canvas = (await import('html2canvas')).default;
-                        const canvas = await html2canvas(ticketElement, {
-                          backgroundColor: '#0f172a',
-                          scale: 2
-                        });
-                        const link = document.createElement('a');
-                        link.download = `ticket-${generatedCode.ticketId}.png`;
-                        link.href = canvas.toDataURL('image/png');
-                        link.click();
-                        showNotification('success', '¡Ticket guardado!');
-                      } catch {
-                        const ticketText = `🎫 *TICKET DE INGRESO*\n\n` +
-                          `👤 *Participante:* ${generatedCode.participantName}\n` +
-                          `🎯 *Visión:* ${generatedCode.visionName}\n` +
-                          `🔑 *ID:* ${generatedCode.ticketId}\n\n` +
-                          `📱 Presenta este código en la entrada.`;
-                        navigator.clipboard.writeText(ticketText);
-                        showNotification('success', '¡Información copiada!');
-                      }
-                    }
-                  }}
-                  className="w-full py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-bold rounded-lg transition-all flex items-center justify-center gap-2 text-sm"
-                >
-                  <Download size={16} />
-                  Guardar Ticket
-                </button>
-              </div>
-            )}
-
-            {/* Tip */}
+          {/* TICKET VISUAL - Igual que checkout/success */}
+          {generatedCode.status === 'REDEEMED' && generatedCode.ticketId ? (
             <div 
-              className="mt-4 p-3 rounded-xl border"
+              id="cash-ticket-card"
+              className="rounded-2xl overflow-hidden relative"
               style={{ 
-                background: `linear-gradient(to right, ${orgInfo.brandColor}10, ${orgInfo.brandColor}05)`,
-                borderColor: `${orgInfo.brandColor}20`
+                boxShadow: '0 0 40px rgba(0, 240, 255, 0.3), inset 0 1px 0 rgba(0, 240, 255, 0.2)',
+                border: '2px solid #00F0FF',
               }}
             >
-              <p className="text-slate-300/80 text-xs text-center">
-                {generatedCode.status === 'REDEEMED' 
-                  ? generatedCode.reference?.includes('Full') 
-                    ? '🎉 Participante registrado FULL (Básico + Avanzado + Liderato). Contraseña: Quantum123' 
-                    : '🎉 El nuevo participante ha sido registrado exitosamente. Contraseña inicial: Quantum123'
-                  : '💡 La referencia será válida hasta que sea canjeada o cancelada'}
-              </p>
+              {/* CORO2.png Background */}
+              <div 
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: 'url(/CORO2.png)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  opacity: 0.15,
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-900/85 to-black/95" />
+
+              {/* Scan Lines Effect */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div 
+                  className="absolute inset-0 opacity-5"
+                  style={{
+                    background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 240, 255, 0.1) 2px, rgba(0, 240, 255, 0.1) 4px)',
+                  }}
+                />
+              </div>
+
+              {/* Header - ACCESS GRANTED */}
+              <div className="relative z-10 p-4">
+                <div 
+                  className="text-center py-2 px-4 rounded-lg bg-[#00F0FF]/10"
+                  style={{ border: '1px solid rgba(0, 240, 255, 0.3)' }}
+                >
+                  <p 
+                    className="text-xs font-bold tracking-[0.3em] text-[#00F0FF]"
+                    style={{ textShadow: '0 0 10px rgba(0, 240, 255, 0.5)' }}
+                  >
+                    ▸ ACCESS GRANTED ◂
+                  </p>
+                </div>
+
+                {/* Badge NO TRANSFERIBLE */}
+                <div className="mt-2 py-1.5 px-3 rounded-lg bg-red-500/20 border border-red-500/30 text-center">
+                  <p className="text-[10px] font-bold text-red-400 tracking-wider">
+                    ⚠ NO TRANSFERIBLE
+                  </p>
+                </div>
+              </div>
+
+              {/* Quantum Symbol */}
+              <div className="relative z-10 flex justify-center py-2">
+                <div className="relative">
+                  <div 
+                    className="w-20 h-20 rounded-full flex items-center justify-center"
+                    style={{ 
+                      border: '2px dashed rgba(0, 240, 255, 0.4)',
+                      background: 'radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 70%)'
+                    }}
+                  >
+                    <div className="text-[#00F0FF] text-3xl">⚛</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Grid */}
+              <div className="relative z-10 px-4 pb-3 space-y-2">
+                <div className="flex justify-between items-center border-b border-slate-700/30 pb-2">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider">CODENAME:</span>
+                  <span className="text-sm text-[#00F0FF] font-bold tracking-wide">{generatedCode.participantName?.toUpperCase()}</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-slate-700/30 pb-2">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider">LEVEL:</span>
+                  <span className="text-sm text-[#00F0FF] font-bold tracking-wide">
+                    {generatedCode.ticketLevel === 'BASIC' ? 'BÁSICO' : 
+                     generatedCode.ticketLevel === 'ADVANCED' ? 'AVANZADO' : 
+                     generatedCode.ticketLevel === 'PL' ? 'LIDERATO' : 
+                     generatedCode.ticketLevel === 'FULL' ? 'FULL' : generatedCode.ticketLevel}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-b border-slate-700/30 pb-2">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider">STATUS:</span>
+                  <span className="text-sm text-[#00F0FF] font-bold tracking-wide">PARTICIPANTE</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-slate-700/30 pb-2">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider">VISION:</span>
+                  <span className="text-sm text-[#00F0FF] font-bold tracking-wide">{generatedCode.visionName}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider">FECHA:</span>
+                  <span className="text-sm text-[#00F0FF] font-bold tracking-wide">
+                    {new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }).toUpperCase().replace('.', '')}
+                  </span>
+                </div>
+              </div>
+
+              {/* QR Code Section */}
+              <div className="relative z-10 flex flex-col items-center py-4">
+                <div 
+                  className="p-3 rounded-xl"
+                  style={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    boxShadow: '0 0 30px rgba(0, 240, 255, 0.4), inset 0 0 20px rgba(0, 240, 255, 0.1)'
+                  }}
+                >
+                  <QRCodeSVG
+                    value={generatedCode.ticketId}
+                    size={140}
+                    level="H"
+                    fgColor="#0f172a"
+                    bgColor="transparent"
+                  />
+                </div>
+                <p 
+                  className="text-center text-[7px] mt-3 tracking-wide text-[#00F0FF]/60"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  ID: {generatedCode.ticketId.toUpperCase()}
+                </p>
+              </div>
+
+              {/* Glowing Edge Effect */}
+              <div 
+                className="absolute inset-0 rounded-2xl pointer-events-none"
+                style={{ boxShadow: 'inset 0 0 30px rgba(0, 240, 255, 0.1)' }}
+              />
             </div>
-          </div>
+          ) : (
+            /* Código de referencia para pagos pendientes */
+            <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-6 text-center">
+              <p className="text-xs text-slate-500 mb-2 uppercase tracking-wider">Código de Referencia</p>
+              <code 
+                className="text-2xl font-mono font-black tracking-wider block py-3 px-4 rounded-xl bg-slate-900 border border-slate-600 text-green-400"
+              >
+                {generatedCode.code}
+              </code>
+              <p className="text-slate-400 text-sm mt-3">Monto: <span className="text-white font-bold">{formatMoney(generatedCode.amount)}</span></p>
+            </div>
+          )}
+
+          {/* Warning + Guardar Ticket */}
+          {generatedCode.status === 'REDEEMED' && generatedCode.ticketId && (
+            <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+              <p className="text-yellow-400 text-xs font-medium text-center mb-2">
+                ⚠️ <strong>¡IMPORTANTE!</strong> Guarda este ticket para ingresar al evento.
+              </p>
+              <button
+                onClick={async () => {
+                  const ticketElement = document.getElementById('cash-ticket-card');
+                  if (ticketElement) {
+                    try {
+                      const html2canvas = (await import('html2canvas')).default;
+                      const canvas = await html2canvas(ticketElement, {
+                        backgroundColor: '#0f172a',
+                        scale: 2
+                      });
+                      const link = document.createElement('a');
+                      link.download = `ticket-${generatedCode.ticketId}.png`;
+                      link.href = canvas.toDataURL('image/png');
+                      link.click();
+                      showNotification('success', '¡Ticket guardado!');
+                    } catch {
+                      const ticketText = `🎫 *TICKET DE INGRESO*\n\n` +
+                        `👤 *Participante:* ${generatedCode.participantName}\n` +
+                        `🎯 *Visión:* ${generatedCode.visionName}\n` +
+                        `🔑 *ID:* ${generatedCode.ticketId}\n\n` +
+                        `📱 Presenta este código en la entrada.`;
+                      navigator.clipboard.writeText(ticketText);
+                      showNotification('success', '¡Información copiada!');
+                    }
+                  }
+                }}
+                className="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <Download size={20} />
+                Guardar Ticket
+              </button>
+            </div>
+          )}
+
+          {/* Tip para nuevos usuarios */}
+          {generatedCode.status === 'REDEEMED' && (
+            <p className="text-slate-400 text-xs text-center mt-3">
+              🔐 Contraseña inicial: <span className="text-white font-mono">Quantum123</span>
+            </p>
+          )}
+
+          {/* Botón Cerrar */}
+          <button
+            onClick={() => setShowCodeModal(false)}
+            className="w-full mt-4 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            <X size={20} />
+            Cerrar
+          </button>
         </div>
       </div>
     )}
