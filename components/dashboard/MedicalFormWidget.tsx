@@ -5,11 +5,12 @@ import Link from 'next/link';
 
 interface MedicalFormWidgetProps {
   hasForm: boolean; // Si ya llenó el formulario
+  isGraduated?: boolean; // Si el usuario es graduado, no necesita formulario
 }
 
-export default function MedicalFormWidget({ hasForm }: MedicalFormWidgetProps) {
-  // Si ya tiene formulario completado, no mostrar el widget
-  if (hasForm) {
+export default function MedicalFormWidget({ hasForm, isGraduated }: MedicalFormWidgetProps) {
+  // Si ya tiene formulario completado o es graduado, no mostrar el widget
+  if (hasForm || isGraduated) {
     return null;
   }
 

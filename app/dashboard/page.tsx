@@ -591,10 +591,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         />
       )}
 
-      {/* WIDGET: FORMULARIO MÉDICO - Solo para usuarios de Vision */}
+      {/* WIDGET: FORMULARIO MÉDICO - Solo para usuarios de Vision (no graduados) */}
       {isVisionUser && (
         <MedicalFormWidget 
           hasForm={!!medicalForm}
+          isGraduated={usuario.isGraduated}
         />
       )}
 
