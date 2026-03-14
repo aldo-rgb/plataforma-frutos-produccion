@@ -294,8 +294,25 @@ export async function GET() {
     let tribeMission = null;
     
     if (currentLevel === 'PL' && vision) {
-      const invitedCount = await prisma.usuario.count({
-        where: { invitedBy: usuario.id }
+      // Contar invitados que están en un entrenamiento (no talleres)
+      // Solo cuentan usuarios activos con currentVisionLevel (están en entrenamiento)
+      const enrolledCount = await prisma.usuario.count({
+        where: { 
+          invitedBy: usuario.id,
+          isActive: true,
+          currentVisionLevel: { not: null }, // Tiene nivel de entrenamiento asignado
+        }
+      });
+
+      // Contar graduados entre los invitados
+      const graduatedCount = await prisma.usuario.count({
+        where: {
+          invitedBy: usuario.id,
+          OR: [
+            { graduatedFromBasic: { not: null } },
+            { graduatedFromAdvanced: { not: null } },
+          ]
+        }
       });
 
       // Obtener logo de tribu, misión y nombre de la visión
@@ -309,8 +326,9 @@ export async function GET() {
       });
 
       tribeStats = {
-        invitedCount,
-        enrolledCount: invitedCount, // Simplificado, se puede mejorar
+        invitedCount: enrolledCount, // Mantener compatibilidad
+        enrolledCount,
+        graduatedCount,
       };
       
       tribeLogoUrl = visionWithLogo?.tribeLogoUrl || null;
