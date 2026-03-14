@@ -273,7 +273,7 @@ export function WalletStack({ tickets, user, onTransfer }: WalletStackProps) {
       {/* Contenedor del carrusel */}
       <div 
         ref={containerRef}
-        className="relative w-full max-w-sm h-[560px] overflow-hidden"
+        className="relative w-full max-w-sm h-[580px] overflow-hidden"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}

@@ -40,10 +40,11 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
   const accentColor = '#9D4EDD';
   const eventName = ticket.product?.name || ticket.vision.nombre;
   const ticketId = ticket.id.replace('event-', '');
+  const productImage = ticket.product?.imageUrl;
   
   return (
     <motion.div
-      className="relative w-[300px] h-[520px]"
+      className="relative w-[300px] h-[540px]"
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       style={{ transformStyle: 'preserve-3d' }}
@@ -64,8 +65,26 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
           boxShadow: `0 0 0 1px ${primaryColor}50, 0 0 30px ${primaryColor}20`,
         }}
       >
+        {/* Product Image Background */}
+        {productImage && (
+          <div className="absolute inset-0">
+            <img 
+              src={productImage} 
+              alt={eventName}
+              className="w-full h-full object-cover"
+              style={{ opacity: 0.15 }}
+            />
+            <div 
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(180deg, rgba(10,25,41,0.9) 0%, rgba(5,17,24,0.95) 50%, rgba(2,10,16,0.98) 100%)',
+              }}
+            />
+          </div>
+        )}
+
         {/* Animated Grid Background */}
-        <div className="absolute inset-0 opacity-30">
+        <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id={`grid-${ticket.id}`} x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
@@ -104,18 +123,18 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
         </div>
 
         {/* Content Container */}
-        <div className="relative z-10 flex flex-col h-full px-5 py-6">
+        <div className="relative z-10 flex flex-col h-full px-5 py-5">
           
           {/* Header */}
-          <div className="text-center mb-4">
+          <div className="text-center mb-3">
             <p 
-              className="text-[9px] tracking-[0.4em] mb-2 opacity-60"
+              className="text-[8px] tracking-[0.35em] mb-1.5 opacity-60"
               style={{ fontFamily: 'monospace', color: primaryColor }}
             >
               ◆ QUANTUM ACCESS PASS ◆
             </p>
             <h1 
-              className="text-2xl font-black tracking-wider leading-tight"
+              className="text-xl font-black tracking-wider leading-tight"
               style={{ 
                 fontFamily: 'Orbitron, sans-serif',
                 color: '#fff',
@@ -126,13 +145,13 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
             </h1>
           </div>
 
-          {/* Quantum Symbol */}
-          <div className="flex justify-center mb-4">
+          {/* Quantum Symbol - Smaller */}
+          <div className="flex justify-center mb-3">
             <div className="relative">
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                className="absolute -inset-4"
+                className="absolute -inset-3"
               >
                 <svg className="w-full h-full" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="45" fill="none" stroke={primaryColor} strokeWidth="0.5" strokeDasharray="4 8" opacity="0.4"/>
@@ -140,29 +159,29 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
               </motion.div>
               
               <div 
-                className="w-16 h-16 rounded-xl flex items-center justify-center"
+                className="w-14 h-14 rounded-xl flex items-center justify-center"
                 style={{
                   background: `linear-gradient(135deg, ${primaryColor}20 0%, ${accentColor}20 100%)`,
                   border: `1px solid ${primaryColor}40`,
                 }}
               >
-                <Zap className="w-8 h-8" style={{ color: primaryColor, filter: `drop-shadow(0 0 8px ${primaryColor})` }} />
+                <Zap className="w-7 h-7" style={{ color: primaryColor, filter: `drop-shadow(0 0 8px ${primaryColor})` }} />
               </div>
             </div>
           </div>
 
           {/* Access Status */}
           <div 
-            className="mx-auto px-6 py-2 rounded-full mb-4"
+            className="mx-auto px-5 py-1.5 rounded-full mb-2"
             style={{
               background: `linear-gradient(90deg, ${primaryColor}15 0%, ${primaryColor}25 50%, ${primaryColor}15 100%)`,
               border: `1px solid ${primaryColor}50`,
             }}
           >
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4" style={{ color: '#22c55e' }} />
+              <Shield className="w-3.5 h-3.5" style={{ color: '#22c55e' }} />
               <span 
-                className="text-xs font-bold tracking-widest"
+                className="text-[11px] font-bold tracking-widest"
                 style={{ fontFamily: 'Orbitron, sans-serif', color: '#22c55e' }}
               >
                 ACCESS GRANTED
@@ -173,7 +192,7 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
           {/* Non-Transferable Badge */}
           {isNonTransferable && (
             <div 
-              className="mx-auto px-4 py-1.5 rounded-full mb-4"
+              className="mx-auto px-4 py-1 rounded-full mb-2"
               style={{
                 background: 'rgba(239, 68, 68, 0.1)',
                 border: '1px solid rgba(239, 68, 68, 0.4)',
@@ -181,7 +200,7 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
             >
               <div className="flex items-center gap-1.5">
                 <AlertTriangle className="w-3 h-3 text-red-400" />
-                <span className="text-[10px] font-bold tracking-wider text-red-400" style={{ fontFamily: 'monospace' }}>
+                <span className="text-[9px] font-bold tracking-wider text-red-400" style={{ fontFamily: 'monospace' }}>
                   NO TRANSFERIBLE
                 </span>
               </div>
@@ -190,34 +209,32 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
 
           {/* Participant Info Card */}
           <div 
-            className="rounded-xl p-4 mb-4"
+            className="rounded-xl p-3 mb-3"
             style={{
               background: 'rgba(0, 240, 255, 0.03)',
               border: `1px solid ${primaryColor}20`,
             }}
           >
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               <InfoRow label="OPERATIVO" value={userName.split(' ')[0].toUpperCase()} color={primaryColor} />
               <InfoRow label="CLEARANCE" value="NIVEL BÁSICO" color={primaryColor} />
               <InfoRow label="STATUS" value="PARTICIPANTE" color="#22c55e" />
-              <InfoRow label="MISIÓN" value={eventName.substring(0, 15)} color={accentColor} />
+              <InfoRow label="MISIÓN" value={eventName.substring(0, 14)} color={accentColor} />
             </div>
           </div>
 
-          {/* QR Section - Flex grow to push to bottom */}
-          <div className="flex-grow" />
-          
-          <div className="text-center">
+          {/* QR Section */}
+          <div className="text-center mt-auto pb-1">
             <div 
-              className="inline-block p-3 rounded-xl mb-2"
+              className="inline-block p-2.5 rounded-xl"
               style={{
-                background: 'rgba(255,255,255,0.95)',
+                background: 'rgba(255,255,255,0.97)',
                 boxShadow: `0 0 20px ${primaryColor}30`,
               }}
             >
               <QRCode
                 value={ticket.ticketCode || `EVENT:${ticketId}`}
-                size={90}
+                size={80}
                 bgColor="#ffffff"
                 fgColor="#0a1929"
                 level="H"
@@ -225,16 +242,16 @@ export function EventTicket({ ticket, userName, userInitials, userPhoto }: Event
             </div>
             
             <p 
-              className="text-[11px] tracking-[0.2em] font-mono"
-              style={{ color: `${primaryColor}90` }}
+              className="text-[10px] tracking-[0.15em] font-mono mt-2"
+              style={{ color: `${primaryColor}` }}
             >
               {ticket.ticketCode || `EVT-${ticketId.substring(0, 8).toUpperCase()}`}
             </p>
             <p 
-              className="text-[9px] mt-1 opacity-50"
+              className="text-[8px] mt-0.5 opacity-60"
               style={{ color: primaryColor, fontFamily: 'monospace' }}
             >
-              PRESENTA ESTE CÓDIGO EN LA ENTRADA
+              PRESENTA EN LA ENTRADA
             </p>
           </div>
         </div>
