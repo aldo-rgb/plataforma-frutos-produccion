@@ -49,12 +49,11 @@ export function BasicTicket({ ticket, userName, userInitials, userPhoto }: Basic
             backgroundImage: 'url(/CORO2.png)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            opacity: isActive ? 0.15 : 0.05,
           }}
         />
-        {/* Dark Overlay for readability */}
+        {/* Dark Overlay - más transparente para ver CORO2 */}
         <div className={`absolute inset-0 ${
-          isActive ? 'bg-gradient-to-b from-slate-950/90 via-slate-900/85 to-black/95' : 'bg-slate-800/80'
+          isActive ? 'bg-gradient-to-b from-slate-950/70 via-slate-900/75 to-black/80' : 'bg-slate-800/90'
         }`} />
 
         {/* Scan Lines Effect */}

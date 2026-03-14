@@ -258,11 +258,10 @@ function SuccessContent() {
                       backgroundImage: 'url(/CORO2.png)',
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
-                      opacity: 0.15,
                     }}
                   />
-                  {/* Dark Overlay for readability */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-900/85 to-black/95" />
+                  {/* Dark Overlay - más transparente para ver CORO2 */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-900/75 to-black/80" />
 
                   {/* Scan Lines Effect */}
                   <div className="absolute inset-0 overflow-hidden pointer-events-none">
