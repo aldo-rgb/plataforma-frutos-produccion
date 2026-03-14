@@ -374,30 +374,28 @@ export default function InvoicesPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            {invoice.invoiceStatus === 'COMPLETED' && (
+                            {invoice.invoiceStatus === 'COMPLETED' && invoice.invoiceId && (
                               <>
-                                {invoice.invoicePdfUrl && (
-                                  <a
-                                    href={invoice.invoicePdfUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                                    title="Descargar PDF"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </a>
-                                )}
-                                {invoice.invoiceXmlUrl && (
-                                  <a
-                                    href={invoice.invoiceXmlUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                    title="Descargar XML"
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                  </a>
-                                )}
+                                <a
+                                  href={`/api/invoices/download?registrationId=${invoice.id}&type=pdf`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition"
+                                  title="Descargar PDF"
+                                >
+                                  <Download className="h-4 w-4" />
+                                  PDF
+                                </a>
+                                <a
+                                  href={`/api/invoices/download?registrationId=${invoice.id}&type=xml`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition"
+                                  title="Descargar XML"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                  XML
+                                </a>
                               </>
                             )}
                             {(invoice.invoiceStatus === 'PENDING' ||
