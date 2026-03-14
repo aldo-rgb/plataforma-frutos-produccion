@@ -214,6 +214,30 @@ export async function POST(
       // @ts-ignore - Stripe API version mismatch
       const stripe = new Stripe(gateway.secretKey, { apiVersion: '2024-12-18.acacia' });
 
+      // Obtener URL base de múltiples fuentes
+      const requestUrl = new URL(request.url);
+      const hostHeader = request.headers.get('host') || request.headers.get('x-forwarded-host');
+      const protocol = request.headers.get('x-forwarded-proto') || 'https';
+      
+      let baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '';
+      
+      // Si no hay URL configurada, usar la del request
+      if (!baseUrl && hostHeader) {
+        baseUrl = `${protocol}://${hostHeader}`;
+      }
+      
+      // Asegurar que tenga esquema
+      if (baseUrl && !baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+        baseUrl = `https://${baseUrl}`;
+      }
+      
+      // En producción, forzar https
+      if (process.env.NODE_ENV === 'production' && baseUrl.startsWith('http://')) {
+        baseUrl = baseUrl.replace('http://', 'https://');
+      }
+
+      console.log('[Stripe Checkout] Using baseUrl:', baseUrl);
+
       const stripeSession = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
@@ -231,8 +255,8 @@ export async function POST(
         ],
         mode: 'payment',
         customer_email: email.trim().toLowerCase(),
-        success_url: `${process.env.NEXTAUTH_URL}/evento/${id}/success?session_id={CHECKOUT_SESSION_ID}&registration_id=${registration.id}`,
-        cancel_url: `${process.env.NEXTAUTH_URL}/evento/${id}?cancelled=true`,
+        success_url: `${baseUrl}/evento/${id}/success?session_id={CHECKOUT_SESSION_ID}&registration_id=${registration.id}`,
+        cancel_url: `${baseUrl}/evento/${id}?cancelled=true`,
         metadata: {
           type: 'event_registration',
           registrationId: registration.id.toString(),
@@ -265,6 +289,26 @@ export async function POST(
       const client = new MercadoPagoConfig({ accessToken: gateway.secretKey });
       const preference = new Preference(client);
 
+      // Obtener URL base de múltiples fuentes (igual que Stripe)
+      const hostHeader = request.headers.get('host') || request.headers.get('x-forwarded-host');
+      const protocol = request.headers.get('x-forwarded-proto') || 'https';
+      
+      let mpBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '';
+      
+      if (!mpBaseUrl && hostHeader) {
+        mpBaseUrl = `${protocol}://${hostHeader}`;
+      }
+      
+      if (mpBaseUrl && !mpBaseUrl.startsWith('http://') && !mpBaseUrl.startsWith('https://')) {
+        mpBaseUrl = `https://${mpBaseUrl}`;
+      }
+      
+      if (process.env.NODE_ENV === 'production' && mpBaseUrl.startsWith('http://')) {
+        mpBaseUrl = mpBaseUrl.replace('http://', 'https://');
+      }
+
+      console.log('[MercadoPago Checkout] Using baseUrl:', mpBaseUrl);
+
       const preferenceData = await preference.create({
         body: {
           items: [
@@ -282,9 +326,9 @@ export async function POST(
             name: nombre.trim(),
           },
           back_urls: {
-            success: `${process.env.NEXTAUTH_URL}/evento/${id}/success?registration_id=${registration.id}`,
-            failure: `${process.env.NEXTAUTH_URL}/evento/${id}?failed=true`,
-            pending: `${process.env.NEXTAUTH_URL}/evento/${id}?pending=true`,
+            success: `${mpBaseUrl}/evento/${id}/success?registration_id=${registration.id}`,
+            failure: `${mpBaseUrl}/evento/${id}?failed=true`,
+            pending: `${mpBaseUrl}/evento/${id}?pending=true`,
           },
           auto_return: 'approved',
           external_reference: JSON.stringify({
