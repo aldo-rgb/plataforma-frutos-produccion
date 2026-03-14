@@ -13,6 +13,8 @@ interface TribeStats {
 interface TribeManagementWidgetProps {
   stats?: TribeStats | null;
   onInviteClick?: () => void;
+  onEnrolledClick?: () => void;
+  onGraduatedClick?: () => void;
   tribeLogoUrl?: string | null;
   tribeName?: string;
   tribeMission?: string | null;
@@ -20,7 +22,9 @@ interface TribeManagementWidgetProps {
 
 export default function TribeManagementWidget({ 
   stats, 
-  onInviteClick, 
+  onInviteClick,
+  onEnrolledClick,
+  onGraduatedClick,
   tribeLogoUrl,
   tribeName,
   tribeMission 
@@ -74,27 +78,31 @@ export default function TribeManagementWidget({
 
       {/* Stats Grid - Solo Enrollados y Graduados */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <motion.div
-          className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 text-center"
+        <motion.button
+          onClick={onEnrolledClick}
+          className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 text-center cursor-pointer hover:bg-slate-700/50 hover:border-green-500/30 transition-all"
           whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
           <div className="flex items-center justify-center gap-1 mb-2">
             <TrendingUp className="w-5 h-5 text-green-400" />
           </div>
           <span className="text-3xl font-bold text-white">{enrolledCount}</span>
           <p className="text-sm text-slate-400">Enrollados</p>
-        </motion.div>
+        </motion.button>
 
-        <motion.div
-          className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 text-center"
+        <motion.button
+          onClick={onGraduatedClick}
+          className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 text-center cursor-pointer hover:bg-slate-700/50 hover:border-purple-500/30 transition-all"
           whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
           <div className="flex items-center justify-center gap-1 mb-2">
             <Award className="w-5 h-5 text-purple-400" />
           </div>
           <span className="text-3xl font-bold text-white">{graduatedCount}</span>
           <p className="text-sm text-slate-400">Graduados</p>
-        </motion.div>
+        </motion.button>
       </div>
 
       {/* CTA */}
