@@ -86,7 +86,7 @@ const transformationLevels = [
       'Acceso al Directorio de Talentos para networking',
       'Reprogramación de creencias limitantes',
       'Definición de visión personal asistida por IA',
-      'Crea tu página web de negocio'
+      'Comunidad de apoyo y crecimiento'
     ]
   },
   {
@@ -103,12 +103,13 @@ const transformationLevels = [
       'Sistema de metas en 8 áreas de vida',
       'Mentor personal con llamadas semanales',
       'Inteligencia emocional y liderazgo',
-      'Perfil destacado en Directorio de Talentos'
+      'Perfil destacado en Directorio de Talentos',
+      'Crea tu página web de negocio'
     ]
   },
   {
     level: 'PROGRAMA DE LIDERATO',
-    duration: '10 semanas - 3 fines de semana',
+    duration: '10 semanas - 2 fines de semana',
     iconType: 'crown', // Icono corporativo
     gradient: 'from-indigo-500 to-blue-700',
     bgGradient: 'from-indigo-500/20 to-blue-700/20',
@@ -143,7 +144,7 @@ const mainBenefits = [
   },
   {
     icon: Target,
-    title: 'Sistema de Metas',
+    title: 'Sistema de Objetivos',
     description: 'Metodología probada para definir y alcanzar objetivos en 8 áreas de tu vida',
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/20'
@@ -1065,7 +1066,7 @@ export default function EventoPage() {
             </h2>
             
             <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
-              Este es el primer paso hacia la posibilia. 
+              Con este registro inicia la posibilidad. 
               {spotsLeft !== null && spotsLeft < 20 && (
                 <span className="block text-amber-400 font-bold mt-2">
                   ¡Solo quedan {spotsLeft} lugares!

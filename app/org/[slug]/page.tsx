@@ -393,14 +393,14 @@ function HeroPathSection() {
       includes: [
         'IA que profundiza en tus metas y te guía',
         'Perfil destacado en Directorio de Talentos',
-        'Sistema de metas en 8 áreas de vida',
+        'Sistema de objetivos en 8 áreas de vida',
         'Staff asignado con llamadas semanales',
         'Inteligencia emocional y liderazgo'
       ]
     },
     {
       level: 'PROGRAMA DE LIDERAZGO',
-      duration: '10 semanas - 3 fines de semana',
+      duration: '10 semanas - 2 fines de semana',
       icon: '👑',
       gradient: 'from-violet-500 to-purple-600',
       bgGradient: 'from-violet-500/20 to-purple-600/20',
@@ -602,7 +602,7 @@ function PlatformFeaturesSection() {
           
           <p className="text-xl text-slate-300 max-w-3xl mx-auto">
             Una plataforma revolucionaria que combina <span className="text-cyan-400 font-semibold">Inteligencia Artificial</span>, 
-            <span className="text-violet-400 font-semibold"> mentoría personalizada</span> y un sistema de metas diseñado para 
+            <span className="text-violet-400 font-semibold"> mentoría personalizada</span> y un sistema de objetivos diseñado para 
             garantizar tu éxito.
           </p>
         </div>
@@ -702,7 +702,7 @@ function PlatformFeaturesSection() {
               <div className="order-2 lg:order-1">
                 <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 border border-violet-500/20">
                   <div className="flex items-center justify-between mb-6">
-                    <h4 className="text-white font-bold">Sistema de Metas</h4>
+                    <h4 className="text-white font-bold">Sistema de Objetivos</h4>
                     <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full font-bold">EN PROGRESO</span>
                   </div>
                   
@@ -763,7 +763,7 @@ function PlatformFeaturesSection() {
               <div className="order-1 lg:order-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 border border-violet-500/30 mb-4">
                   <Users className="w-4 h-4 text-violet-400" />
-                  <span className="text-xs font-bold text-violet-400">SISTEMA DE METAS + MENTOR</span>
+                  <span className="text-xs font-bold text-violet-400">SISTEMA DE OBJETIVOS + MENTOR</span>
                 </div>
                 
                 <h3 className="text-3xl md:text-4xl font-black text-white mb-6">
