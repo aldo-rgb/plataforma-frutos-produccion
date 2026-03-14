@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
       pendingDebt,
       prices,
       appliedCodes = [],
+      requiresInvoice = false,
+      invoiceData = null,
     } = body;
     
     // DEBUG: Log received data
@@ -148,6 +150,8 @@ export async function POST(request: NextRequest) {
       appliedCodes,
       productTitle,
       productDescription,
+      requiresInvoice,
+      invoiceData,
     };
 
     let paymentUrl = '';

@@ -139,6 +139,8 @@ export async function GET(request: NextRequest) {
       pendingDebt,
       prices,
       appliedCodes,
+      requiresInvoice = false,
+      invoiceData = null,
     } = orderData;
     
     // organizationId puede no venir si es una transacción antigua, buscar de la visión
@@ -509,6 +511,44 @@ export async function GET(request: NextRequest) {
     } catch (ambassadorError) {
       logger.error('Error procesando comisión ambassador:', ambassadorError);
       // No falla el pago si falla la comisión
+    }
+
+    // 🧾 CREAR SOLICITUD DE FACTURA SI SE REQUIERE
+    if (requiresInvoice && invoiceData) {
+      try {
+        // Buscar el ticket recién creado para asociar
+        const newTicket = await prisma.ticket.findFirst({
+          where: {
+            ownerId: userId,
+            visionId: visionId,
+            level: isPLOnly ? 'PL' : 'ADVANCED',
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        await prisma.registrationInvoiceRequest.create({
+          data: {
+            userId: userId,
+            organizationId: organizationId,
+            visionId: visionId,
+            ticketId: newTicket?.id || null,
+            amount: new (prisma as any).$Prisma?.Decimal ? new (prisma as any).$Prisma.Decimal(amount) : amount,
+            paymentMethod: 'CARD',
+            paymentReference: paymentId || stripeSessionId || null,
+            paymentStatus: 'PAID',
+            rfc: invoiceData.rfc,
+            razonSocial: invoiceData.name,
+            codigoPostal: invoiceData.zipCode,
+            regimenFiscal: invoiceData.regime,
+            usoCfdi: invoiceData.cfdiUse,
+            invoiceStatus: 'PENDING',
+          },
+        });
+        logger.debug(`✅ Solicitud de factura creada para usuario ${userId}`);
+      } catch (invoiceError) {
+        logger.error('Error creando solicitud de factura:', invoiceError);
+        // No falla el pago si falla la creación de la solicitud de factura
+      }
     }
 
     // Store success data in a cookie for the success page to read
