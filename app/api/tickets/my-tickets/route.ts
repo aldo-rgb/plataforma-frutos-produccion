@@ -215,6 +215,88 @@ export async function GET() {
       ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
       : userName.substring(0, 2).toUpperCase();
 
+    // También obtener tickets de EventRegistration (eventos como Samurai Game, etc.)
+    const eventRegistrations = await prisma.eventRegistration.findMany({
+      where: {
+        userId: user.id,
+        paymentStatus: 'PAID',
+        ticketUsed: false,
+      },
+      include: {
+        SchoolProduct: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+            description: true,
+            location: true,
+            type: true,
+            startDate: true,
+            endDate: true,
+            visionId: true,
+          }
+        },
+        Organization: {
+          select: {
+            name: true,
+            logoUrl: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Filtrar registros de eventos que no hayan expirado
+    const validEventRegistrations = eventRegistrations.filter(reg => {
+      // Si el producto tiene fecha de fin y ya pasó, no mostrar
+      if (reg.SchoolProduct.endDate && new Date(reg.SchoolProduct.endDate) < now) {
+        return false;
+      }
+      return true;
+    });
+
+    // Convertir EventRegistrations a formato de ticket
+    const eventTickets = validEventRegistrations.map(reg => ({
+      id: `event-${reg.id}`,
+      type: 'EVENT',
+      level: 'EVENT',
+      status: 'ACTIVE',
+      paymentStatus: reg.paymentStatus,
+      costAtPurchase: reg.amountPaid ? parseFloat(reg.amountPaid.toString()) : 0,
+      amountPaid: reg.amountPaid ? parseFloat(reg.amountPaid.toString()) : 0,
+      isTransferable: false,
+      validUntil: reg.SchoolProduct.endDate?.toISOString() || null,
+      purchasePrice: reg.amountPaid ? parseFloat(reg.amountPaid.toString()) : null,
+      createdAt: reg.createdAt.toISOString(),
+      ticketCode: reg.ticketCode,
+      vision: {
+        id: reg.SchoolProduct.visionId || 0,
+        nombre: reg.SchoolProduct.name,
+        startDate: reg.SchoolProduct.startDate?.toISOString() || '',
+        endDate: reg.SchoolProduct.endDate?.toISOString() || null,
+        advancedStartDate: null,
+        advancedEndDate: null,
+        plStartDate: null,
+        plEndDate: null,
+      },
+      organization: {
+        name: reg.Organization?.name || 'Impacto Cuántico',
+        logoUrl: reg.Organization?.logoUrl || null,
+        transfersEnabled: false,
+      },
+      product: {
+        id: reg.SchoolProduct.id,
+        name: reg.SchoolProduct.name,
+        imageUrl: reg.SchoolProduct.imageUrl,
+        description: reg.SchoolProduct.description,
+        location: reg.SchoolProduct.location,
+        type: reg.SchoolProduct.type,
+      },
+    }));
+
+    // Combinar tickets de Vision + tickets de Eventos
+    const allTickets = [...ticketsWithProducts, ...eventTickets];
+
     return NextResponse.json({
       success: true,
       user: {
@@ -224,7 +306,7 @@ export async function GET() {
         photo: user.profileImage,
         memberSince: user.createdAt.toISOString(),
       },
-      tickets: ticketsWithProducts,
+      tickets: allTickets,
     });
   } catch (error) {
     logger.error('Error fetching tickets:', error);
