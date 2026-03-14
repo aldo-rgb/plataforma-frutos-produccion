@@ -321,7 +321,7 @@ Regístrate aquí: ${shareUrl}`;
           {/* Background Image */}
           <div className="absolute inset-0">
             <Image
-              src="/assets/CORO1.png"
+              src="/CORO2.png"
               alt="Vision Background"
               fill
               className="object-cover opacity-30"

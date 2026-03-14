@@ -853,7 +853,7 @@ export default function EventoPage() {
             {/* Banner Image */}
             <div className="relative rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl shadow-violet-500/10 mb-16">
               <Image
-                src="/assets/CORO1.png"
+                src="/CORO2.png"
                 alt="Los 3 Niveles de Transformación - Básico, Avanzado, Programa de Liderazgo"
                 width={1200}
                 height={400}
