@@ -22,6 +22,7 @@ import {
   Plus,
   Trash2,
   Wallet,
+  Receipt,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -113,6 +114,21 @@ function CheckoutContent() {
   const [validatedCode, setValidatedCode] = useState<GiftCodeData | null>(null);
   const [codeError, setCodeError] = useState('');
   
+  // Invoice (Factura) states
+  const [requiresInvoice, setRequiresInvoice] = useState(false);
+  const [invoiceData, setInvoiceData] = useState({
+    rfc: '',
+    name: '',
+    zipCode: '',
+    regime: '',
+    cfdiUse: '',
+  });
+  const [satCatalogs, setSatCatalogs] = useState<{
+    regimenFiscal: Array<{ code: string; name: string }>;
+    usoCfdi: Array<{ code: string; name: string }>;
+  } | null>(null);
+  const [loadingCatalogs, setLoadingCatalogs] = useState(false);
+  
   // Processing states
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
@@ -198,6 +214,27 @@ function CheckoutContent() {
       router.push('/auth/signup');
     }
   }, [router]);
+
+  // Cargar catálogos del SAT cuando se activa el switch de factura
+  useEffect(() => {
+    const loadSatCatalogs = async () => {
+      if (requiresInvoice && !satCatalogs) {
+        setLoadingCatalogs(true);
+        try {
+          const res = await fetch('/api/invoices');
+          const data = await res.json();
+          if (data.success) {
+            setSatCatalogs(data.catalogs);
+          }
+        } catch (err) {
+          console.error('Error loading SAT catalogs:', err);
+        } finally {
+          setLoadingCatalogs(false);
+        }
+      }
+    };
+    loadSatCatalogs();
+  }, [requiresInvoice, satCatalogs]);
 
   const fetchPrices = async (organizationId: number) => {
     try {
@@ -366,6 +403,18 @@ function CheckoutContent() {
   const handlePayment = async () => {
     if (!registrationData) return;
     
+    // Validar datos de factura si requiere
+    if (requiresInvoice) {
+      if (!invoiceData.rfc || !invoiceData.name || !invoiceData.zipCode || !invoiceData.regime || !invoiceData.cfdiUse) {
+        setError('Por favor completa todos los datos fiscales para la factura');
+        return;
+      }
+      if (invoiceData.rfc.length < 12 || invoiceData.rfc.length > 13) {
+        setError('El RFC debe tener 12 o 13 caracteres');
+        return;
+      }
+    }
+    
     console.log('[CHECKOUT] registrationData:', registrationData);
     
     setProcessing(true);
@@ -411,6 +460,15 @@ function CheckoutContent() {
               referralCode: registrationData.referralCode,
             },
             appliedCodes: codesToRedeem.map(p => p.code),
+            // Datos de facturación
+            requiresInvoice,
+            invoiceData: requiresInvoice ? {
+              rfc: invoiceData.rfc.toUpperCase(),
+              name: invoiceData.name.toUpperCase(),
+              zipCode: invoiceData.zipCode,
+              regime: invoiceData.regime,
+              cfdiUse: invoiceData.cfdiUse,
+            } : null,
           }),
         });
 
@@ -467,6 +525,15 @@ function CheckoutContent() {
               referralCode: registrationData.referralCode,
             },
             appliedCodes: codesToRedeem.map(p => p.code),
+            // Datos de facturación
+            requiresInvoice,
+            invoiceData: requiresInvoice ? {
+              rfc: invoiceData.rfc.toUpperCase(),
+              name: invoiceData.name.toUpperCase(),
+              zipCode: invoiceData.zipCode,
+              regime: invoiceData.regime,
+              cfdiUse: invoiceData.cfdiUse,
+            } : null,
           }),
         });
 
@@ -860,6 +927,126 @@ function CheckoutContent() {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Invoice (Factura) Section */}
+              <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 mb-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 bg-amber-500/20 rounded-lg flex-shrink-0">
+                      <Receipt className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <div>
+                      <span className="text-white font-medium">¿Necesitas factura?</span>
+                      <p className="text-xs text-slate-400">Proporciona tus datos fiscales</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRequiresInvoice(!requiresInvoice)}
+                    className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
+                      requiresInvoice ? 'bg-cyan-500' : 'bg-slate-600'
+                    }`}
+                  >
+                    <span 
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-md ${
+                        requiresInvoice ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Formulario fiscal (si requiere) */}
+                {requiresInvoice && (
+                  <div className="mt-4 space-y-4 p-4 bg-slate-800/50 rounded-xl border border-amber-500/30">
+                    <p className="text-amber-400 text-xs font-medium flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      Datos exactamente como aparecen en tu Constancia de Situación Fiscal
+                    </p>
+
+                    {loadingCatalogs ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
+                      </div>
+                    ) : (
+                      <>
+                        {/* RFC */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1">RFC *</label>
+                          <input
+                            type="text"
+                            value={invoiceData.rfc}
+                            onChange={(e) => setInvoiceData({ ...invoiceData, rfc: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 13) })}
+                            placeholder="XAXX010101000"
+                            maxLength={13}
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors font-mono uppercase"
+                          />
+                          <p className="text-xs text-slate-500 mt-1">{invoiceData.rfc.length}/13 caracteres</p>
+                        </div>
+
+                        {/* Razón Social */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1">Razón Social *</label>
+                          <input
+                            type="text"
+                            value={invoiceData.name}
+                            onChange={(e) => setInvoiceData({ ...invoiceData, name: e.target.value.toUpperCase() })}
+                            placeholder="NOMBRE COMPLETO O EMPRESA"
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors uppercase"
+                          />
+                          <p className="text-xs text-slate-500 mt-1">Sin S.A. de C.V., exactamente como aparece en tu constancia</p>
+                        </div>
+
+                        {/* Código Postal */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1">Código Postal Fiscal *</label>
+                          <input
+                            type="text"
+                            value={invoiceData.zipCode}
+                            onChange={(e) => setInvoiceData({ ...invoiceData, zipCode: e.target.value.replace(/\D/g, '').slice(0, 5) })}
+                            placeholder="00000"
+                            maxLength={5}
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors font-mono"
+                          />
+                        </div>
+
+                        {/* Régimen Fiscal */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1">Régimen Fiscal *</label>
+                          <select
+                            value={invoiceData.regime}
+                            onChange={(e) => setInvoiceData({ ...invoiceData, regime: e.target.value })}
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                          >
+                            <option value="">Selecciona tu régimen fiscal</option>
+                            {satCatalogs?.regimenFiscal.map((r) => (
+                              <option key={r.code} value={r.code}>
+                                {r.code} - {r.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Uso de CFDI */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1">Uso de CFDI *</label>
+                          <select
+                            value={invoiceData.cfdiUse}
+                            onChange={(e) => setInvoiceData({ ...invoiceData, cfdiUse: e.target.value })}
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                          >
+                            <option value="">Selecciona el uso</option>
+                            {satCatalogs?.usoCfdi.map((u) => (
+                              <option key={u.code} value={u.code}>
+                                {u.code} - {u.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Applied Payments */}
