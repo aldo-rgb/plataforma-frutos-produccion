@@ -214,40 +214,41 @@ export async function POST(
       // @ts-ignore - Stripe API version mismatch
       const stripe = new Stripe(gateway.secretKey, { apiVersion: '2024-12-18.acacia' });
 
-      // Obtener URL base - priorizar headers del request para Vercel/producción
+      // Obtener URL base - múltiples fuentes con fallback a producción
       const hostHeader = request.headers.get('x-forwarded-host') || request.headers.get('host');
       const protocol = request.headers.get('x-forwarded-proto') || 'https';
       
-      // Construir baseUrl: primero desde request headers, luego env vars
+      // Construir baseUrl con múltiples fallbacks
       let baseUrl = '';
       
+      // 1. Primero intentar con headers del request (Vercel)
       if (hostHeader) {
-        // En producción (Vercel), usar los headers del request
         baseUrl = `${protocol}://${hostHeader}`;
-      } else if (process.env.NEXTAUTH_URL) {
+      }
+      // 2. Variables de entorno
+      if (!baseUrl && process.env.NEXTAUTH_URL) {
         baseUrl = process.env.NEXTAUTH_URL;
-      } else if (process.env.NEXT_PUBLIC_APP_URL) {
+      }
+      if (!baseUrl && process.env.NEXT_PUBLIC_APP_URL) {
         baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-      } else if (process.env.VERCEL_URL) {
+      }
+      if (!baseUrl && process.env.VERCEL_URL) {
         baseUrl = `https://${process.env.VERCEL_URL}`;
+      }
+      // 3. Fallback hardcodeado para producción
+      if (!baseUrl) {
+        baseUrl = 'https://impactocuantico.com';
       }
       
       // Asegurar que tenga esquema https en producción
-      if (baseUrl && !baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
         baseUrl = `https://${baseUrl}`;
       }
       if (process.env.NODE_ENV === 'production' && baseUrl.startsWith('http://')) {
         baseUrl = baseUrl.replace('http://', 'https://');
       }
 
-      // Validación final
-      if (!baseUrl) {
-        console.error('[Stripe Checkout] ERROR: No se pudo determinar baseUrl');
-        return NextResponse.json(
-          { success: false, error: 'Error de configuración del servidor' },
-          { status: 500 }
-        );
-      }
+      console.log('[Stripe Checkout] baseUrl:', baseUrl, '| host:', hostHeader, '| proto:', protocol);
 
       console.log('[Stripe Checkout] Using baseUrl:', baseUrl, '| Host:', hostHeader, '| Proto:', protocol);
 
@@ -302,38 +303,40 @@ export async function POST(
       const client = new MercadoPagoConfig({ accessToken: gateway.secretKey });
       const preference = new Preference(client);
 
-      // Obtener URL base - priorizar headers del request para Vercel/producción
+      // Obtener URL base - múltiples fuentes con fallback a producción
       const mpHostHeader = request.headers.get('x-forwarded-host') || request.headers.get('host');
       const mpProtocol = request.headers.get('x-forwarded-proto') || 'https';
       
       let mpBaseUrl = '';
       
+      // 1. Primero intentar con headers del request (Vercel)
       if (mpHostHeader) {
         mpBaseUrl = `${mpProtocol}://${mpHostHeader}`;
-      } else if (process.env.NEXTAUTH_URL) {
+      }
+      // 2. Variables de entorno
+      if (!mpBaseUrl && process.env.NEXTAUTH_URL) {
         mpBaseUrl = process.env.NEXTAUTH_URL;
-      } else if (process.env.NEXT_PUBLIC_APP_URL) {
+      }
+      if (!mpBaseUrl && process.env.NEXT_PUBLIC_APP_URL) {
         mpBaseUrl = process.env.NEXT_PUBLIC_APP_URL;
-      } else if (process.env.VERCEL_URL) {
+      }
+      if (!mpBaseUrl && process.env.VERCEL_URL) {
         mpBaseUrl = `https://${process.env.VERCEL_URL}`;
       }
+      // 3. Fallback hardcodeado para producción
+      if (!mpBaseUrl) {
+        mpBaseUrl = 'https://impactocuantico.com';
+      }
       
-      if (mpBaseUrl && !mpBaseUrl.startsWith('http://') && !mpBaseUrl.startsWith('https://')) {
+      // Asegurar https
+      if (!mpBaseUrl.startsWith('http://') && !mpBaseUrl.startsWith('https://')) {
         mpBaseUrl = `https://${mpBaseUrl}`;
       }
       if (process.env.NODE_ENV === 'production' && mpBaseUrl.startsWith('http://')) {
         mpBaseUrl = mpBaseUrl.replace('http://', 'https://');
       }
 
-      if (!mpBaseUrl) {
-        console.error('[MercadoPago Checkout] ERROR: No se pudo determinar baseUrl');
-        return NextResponse.json(
-          { success: false, error: 'Error de configuración del servidor' },
-          { status: 500 }
-        );
-      }
-
-      console.log('[MercadoPago Checkout] Using baseUrl:', mpBaseUrl, '| Host:', mpHostHeader, '| Proto:', mpProtocol);
+      console.log('[MercadoPago Checkout] baseUrl:', mpBaseUrl, '| host:', mpHostHeader, '| proto:', mpProtocol);
 
       const preferenceData = await preference.create({
         body: {
