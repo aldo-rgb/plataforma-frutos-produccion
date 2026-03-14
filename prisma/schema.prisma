@@ -1205,9 +1205,14 @@ model EventRegistration {
   invoiceXmlUrl    String?
   invoiceZipCode   String?
   requiresInvoice  Boolean                 @default(false)
+  ticketCode       String?                 @unique
+  ticketUsed       Boolean                 @default(false)
+  ticketUsedAt     DateTime?
+  userId           Int?
   InvitedByUser    Usuario?                @relation("EventInvitations", fields: [invitedByUserId], references: [id])
   Organization     Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   SchoolProduct    SchoolProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  Usuario          Usuario?                @relation("EventRegistrationUser", fields: [userId], references: [id])
 
   @@unique([productId, email])
   @@index([email])
@@ -1216,6 +1221,8 @@ model EventRegistration {
   @@index([invitedByUserId])
   @@index([paymentStatus])
   @@index([invoiceStatus])
+  @@index([ticketCode])
+  @@index([userId])
 }
 
 model Evidencia {
@@ -4957,6 +4964,7 @@ model Usuario {
   DisciplineSubscription_DisciplineSubscription_mentorIdToUsuario           DisciplineSubscription[]         @relation("DisciplineSubscription_mentorIdToUsuario")
   DisciplineSubscription_DisciplineSubscription_studentIdToUsuario          DisciplineSubscription?          @relation("DisciplineSubscription_studentIdToUsuario")
   EventInvitations                                                          EventRegistration[]              @relation("EventInvitations")
+  EventRegistrations                                                        EventRegistration[]              @relation("EventRegistrationUser")
   Evidencia                                                                 Evidencia[]
   EvidenciaAccion                                                           EvidenciaAccion[]
   Expense_Expense_approvedByIdToUsuario                                     Expense[]                        @relation("Expense_approvedByIdToUsuario")
