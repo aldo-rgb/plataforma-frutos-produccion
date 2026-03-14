@@ -44,7 +44,12 @@ export async function GET(request: NextRequest) {
     // Construir filtros
     // ACTIVE = Directorio de Servicios (público, TODAS las organizaciones)
     // HIDDEN o ACTIVE = Expo de Futuros (todos los negocios de la visión)
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = {
+      // Solo mostrar perfiles de usuarios activos
+      Usuario: {
+        isActive: true,
+      },
+    };
 
     // Expo de Futuros: mostrar TODOS los negocios de la VISIÓN seleccionada (HIDDEN y ACTIVE)
     // Directorio de Servicios: solo ACTIVE de todas las organizaciones
