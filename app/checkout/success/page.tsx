@@ -244,29 +244,25 @@ function SuccessContent() {
               >
                 {/* Main Card - Cyberpunk Style */}
                 <div 
-                  className="relative w-full rounded-2xl overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-black"
+                  id="success-ticket-card"
+                  className="relative w-full rounded-2xl overflow-hidden"
                   style={{
                     boxShadow: '0 0 40px rgba(0, 240, 255, 0.3), inset 0 1px 0 rgba(0, 240, 255, 0.2)',
                     border: '2px solid #00F0FF',
                   }}
                 >
-                  {/* Circuit Board Pattern Background */}
-                  <div className="absolute inset-0 opacity-10">
-                    <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                      <defs>
-                        <pattern id="circuit-success" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
-                          <path d="M10 10h30M10 10v30M40 10v15M25 25h15M25 25v15" stroke="#00F0FF" strokeWidth="0.5" fill="none"/>
-                          <circle cx="10" cy="10" r="2" fill="#00F0FF"/>
-                          <circle cx="40" cy="10" r="2" fill="#00F0FF"/>
-                          <circle cx="40" cy="25" r="2" fill="#00F0FF"/>
-                          <circle cx="25" cy="25" r="2" fill="#00F0FF"/>
-                          <circle cx="25" cy="40" r="2" fill="#00F0FF"/>
-                          <circle cx="10" cy="40" r="2" fill="#00F0FF"/>
-                        </pattern>
-                      </defs>
-                      <rect width="100%" height="100%" fill="url(#circuit-success)"/>
-                    </svg>
-                  </div>
+                  {/* CORO2.png Background Image */}
+                  <div 
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage: 'url(/CORO2.png)',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      opacity: 0.15,
+                    }}
+                  />
+                  {/* Dark Overlay for readability */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-900/85 to-black/95" />
 
                   {/* Scan Lines Effect */}
                   <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -412,6 +408,52 @@ function SuccessContent() {
                     style={{ boxShadow: 'inset 0 0 30px rgba(0, 240, 255, 0.1)' }}
                   />
                 </div>
+
+                {/* Warning Message */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl"
+                >
+                  <p className="text-yellow-400 text-sm font-medium text-center mb-3">
+                    ⚠️ <strong>¡IMPORTANTE!</strong> Guarda este ticket, lo necesitarás para ingresar al evento.
+                  </p>
+                  <button
+                    onClick={() => {
+                      // Crear elemento para descargar como imagen
+                      const ticketElement = document.querySelector('.relative.mx-auto.w-\\[300px\\]');
+                      if (ticketElement) {
+                        import('html2canvas').then(({ default: html2canvas }) => {
+                          html2canvas(ticketElement as HTMLElement, {
+                            backgroundColor: '#0f172a',
+                            scale: 2
+                          }).then(canvas => {
+                            const link = document.createElement('a');
+                            link.download = `ticket-${ticketData.ticketCode}.png`;
+                            link.href = canvas.toDataURL('image/png');
+                            link.click();
+                          });
+                        }).catch(() => {
+                          // Fallback: copiar al portapapeles
+                          navigator.clipboard.writeText(
+                            `🎫 TICKET DE INGRESO\n\n` +
+                            `👤 ${ticketData.userName}\n` +
+                            `🎯 ${ticketData.visionName}\n` +
+                            `📍 ${ticketData.organizationName}\n` +
+                            `🔑 ID: ${ticketData.ticketCode}\n\n` +
+                            `Presenta este código en la entrada del evento.`
+                          );
+                          alert('Información del ticket copiada al portapapeles');
+                        });
+                      }
+                    }}
+                    className="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <Download size={20} />
+                    Guardar Ticket
+                  </button>
+                </motion.div>
               </motion.div>
             ) : (
               /* Fallback: Info Card sin ticket */

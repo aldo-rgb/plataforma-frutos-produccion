@@ -33,9 +33,7 @@ export function BasicTicket({ ticket, userName, userInitials, userPhoto }: Basic
     >
       {/* Main Card */}
       <div 
-        className={`relative w-full h-full rounded-2xl overflow-hidden ${
-          isActive ? 'bg-gradient-to-b from-slate-950 via-slate-900 to-black' : 'bg-slate-800/50'
-        }`}
+        className={`relative w-full h-full rounded-2xl overflow-hidden`}
         style={{
           boxShadow: isActive 
             ? '0 0 40px rgba(0, 240, 255, 0.3), inset 0 1px 0 rgba(0, 240, 255, 0.2)' 
@@ -44,23 +42,20 @@ export function BasicTicket({ ticket, userName, userInitials, userPhoto }: Basic
           borderColor: isActive ? '#00F0FF' : '#475569',
         }}
       >
-        {/* Circuit Board Pattern Background */}
-        <div className="absolute inset-0 opacity-10">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="circuit" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
-                <path d="M10 10h30M10 10v30M40 10v15M25 25h15M25 25v15" stroke="#00F0FF" strokeWidth="0.5" fill="none"/>
-                <circle cx="10" cy="10" r="2" fill="#00F0FF"/>
-                <circle cx="40" cy="10" r="2" fill="#00F0FF"/>
-                <circle cx="40" cy="25" r="2" fill="#00F0FF"/>
-                <circle cx="25" cy="25" r="2" fill="#00F0FF"/>
-                <circle cx="25" cy="40" r="2" fill="#00F0FF"/>
-                <circle cx="10" cy="40" r="2" fill="#00F0FF"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#circuit)"/>
-          </svg>
-        </div>
+        {/* CORO2.png Background Image */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: 'url(/CORO2.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: isActive ? 0.15 : 0.05,
+          }}
+        />
+        {/* Dark Overlay for readability */}
+        <div className={`absolute inset-0 ${
+          isActive ? 'bg-gradient-to-b from-slate-950/90 via-slate-900/85 to-black/95' : 'bg-slate-800/80'
+        }`} />
 
         {/* Scan Lines Effect */}
         {isActive && (
