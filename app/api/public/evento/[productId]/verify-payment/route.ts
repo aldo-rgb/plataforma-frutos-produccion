@@ -25,7 +25,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { sessionId, registrationId } = body;
+    const { sessionId, registrationId, simulatePayment } = body;
 
     if (!registrationId) {
       return NextResponse.json(
@@ -85,6 +85,92 @@ export async function POST(
           nombre: true,
           referralCode: true,
           isGraduated: true,
+        }
+      });
+    }
+
+    // ======= SIMULACIÓN DE PAGO (SOLO PARA TESTING) =======
+    if (simulatePayment) {
+      console.log('🧪 SIMULATING PAYMENT for registration:', registrationId);
+      
+      // Calcular el monto (usar promoPrice si existe, sino basePrice)
+      const amountPaid = registration.SchoolProduct.promoPrice 
+        ? Number(registration.SchoolProduct.promoPrice) 
+        : Number(registration.SchoolProduct.basePrice);
+
+      // Actualizar registro como pagado
+      await prisma.eventRegistration.update({
+        where: { id: registration.id },
+        data: {
+          status: EventRegistrationStatus.REGISTERED,
+          paymentStatus: 'PAID',
+          paymentProvider: 'test_simulation',
+          paymentSessionId: `simulated_${Date.now()}`,
+          amountPaid: new Decimal(amountPaid),
+          paidAt: new Date(),
+        }
+      });
+
+      // Incrementar contador de inscritos
+      await prisma.schoolProduct.update({
+        where: { id: registration.productId },
+        data: {
+          currentEnrollment: { increment: 1 },
+          updatedAt: new Date(),
+        }
+      });
+
+      // Procesar comisión si fue invitado por alguien graduado
+      if (inviterInfo?.isGraduated && amountPaid > 0) {
+        const commissionAmount = amountPaid * WORKSHOP_COMMISSION_RATE;
+        
+        // Buscar al usuario que pagó
+        const payerUser = await prisma.usuario.findUnique({
+          where: { email: registration.email },
+          select: { id: true }
+        });
+
+        if (payerUser) {
+          // Crear transacción de comisión
+          await prisma.ambassador_wallet_transactions.create({
+            data: {
+              ambassadorId: inviterInfo.id,
+              referredUserId: payerUser.id,
+              productType: AmbassadorProductType.WORKSHOP,
+              saleAmount: new Decimal(amountPaid),
+              commissionPercent: new Decimal(WORKSHOP_COMMISSION_RATE),
+              commissionAmount: new Decimal(commissionAmount),
+              status: 'PENDING',
+              notes: `Comisión por invitación a ${registration.SchoolProduct.name} (SIMULADO)`,
+            }
+          });
+          console.log(`✅ Comisión de $${commissionAmount.toFixed(2)} creada para ${inviterInfo.nombre}`);
+        }
+      }
+
+      // TODO: Procesar factura si requiresInvoice es true
+      if (registration.requiresInvoice) {
+        console.log('📄 Usuario requiere factura - Datos:', {
+          rfc: registration.invoiceRfc,
+          name: registration.invoiceName,
+          zipCode: registration.invoiceZipCode,
+          regime: registration.invoiceRegime,
+          cfdiUse: registration.invoiceCfdiUse,
+        });
+        // Aquí iría la llamada a createInvoice() cuando esté listo
+      }
+
+      return NextResponse.json({
+        success: true,
+        simulated: true,
+        data: {
+          eventName: registration.SchoolProduct.name,
+          userName: registration.nombre,
+          userEmail: registration.email,
+          startDate: registration.SchoolProduct.startDate,
+          location: registration.SchoolProduct.location,
+          amountPaid,
+          requiresInvoice: registration.requiresInvoice,
         }
       });
     }
