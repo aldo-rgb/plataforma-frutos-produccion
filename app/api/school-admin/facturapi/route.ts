@@ -99,13 +99,17 @@ export async function POST(request: Request) {
 
     // Validar la API Key con Facturapi
     try {
-      const testResponse = await fetch('https://www.facturapi.io/v2/organizations', {
+      // Facturapi usa el endpoint /v2/customers para validar (un endpoint simple que funciona)
+      const testResponse = await fetch('https://www.facturapi.io/v2/customers?limit=1', {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
         },
       });
 
       if (!testResponse.ok) {
+        const errorData = await testResponse.json().catch(() => ({}));
+        console.error('Facturapi validation error:', testResponse.status, errorData);
         return NextResponse.json(
           { success: false, error: 'API Key inválida. Verifica tus credenciales de Facturapi.' },
           { status: 400 }

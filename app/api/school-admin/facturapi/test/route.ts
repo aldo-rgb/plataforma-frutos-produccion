@@ -31,8 +31,8 @@ export async function POST() {
       );
     }
 
-    // Probar la conexión con Facturapi obteniendo la info de la organización
-    const response = await fetch('https://www.facturapi.io/v2/organizations', {
+    // Probar la conexión con Facturapi obteniendo clientes (endpoint simple)
+    const response = await fetch('https://www.facturapi.io/v2/customers?limit=1', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${config.apiKey}`,
@@ -50,14 +50,12 @@ export async function POST() {
 
     const data = await response.json();
     
-    // Facturapi devuelve un array de organizaciones
-    const organization = data.data?.[0];
-    
     return NextResponse.json({
       success: true,
       message: 'Conexión exitosa',
-      organizationName: organization?.legal_name || organization?.name || 'Conectado',
+      organizationName: 'Facturapi conectado correctamente',
       isLive: config.isLiveMode,
+      totalCustomers: data.total_results || 0,
     });
   } catch (error) {
     console.error('Error testing Facturapi connection:', error);

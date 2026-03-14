@@ -431,7 +431,7 @@ function HeroPathSection() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 mb-6">
             <Zap className="w-4 h-4 text-cyan-400" />
-            <span className="text-sm font-medium text-cyan-300">EL CAMINO DEL HÉROE</span>
+            <span className="text-sm font-medium text-cyan-300">EL CAMINO DEL LIDER</span>
           </div>
           
           <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
