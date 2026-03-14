@@ -270,8 +270,8 @@ function CommissionInfoModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <p className="text-xs text-slate-400">El primer paso de transformación</p>
                 <div className="mt-2 pt-2 border-t border-cyan-500/20">
-                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $5,000</p>
-                  <p className="text-sm text-green-400 font-semibold">Ganas $1,000</p>
+                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $6,500</p>
+                  <p className="text-sm text-green-400 font-semibold">Ganas $1,300</p>
                 </div>
               </div>
 
@@ -283,8 +283,8 @@ function CommissionInfoModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <p className="text-xs text-slate-400">Básico + Avanzado + PL juntos</p>
                 <div className="mt-2 pt-2 border-t border-purple-500/20">
-                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $25,000</p>
-                  <p className="text-sm text-green-400 font-semibold">Ganas $5,000</p>
+                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $23,000</p>
+                  <p className="text-sm text-green-400 font-semibold">Ganas $4,600</p>
                 </div>
               </div>
 
@@ -296,8 +296,8 @@ function CommissionInfoModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <p className="text-xs text-slate-400">Breakthrough - El siguiente nivel</p>
                 <div className="mt-2 pt-2 border-t border-amber-500/20">
-                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $8,000</p>
-                  <p className="text-sm text-green-400 font-semibold">Ganas $800</p>
+                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $7,500</p>
+                  <p className="text-sm text-green-400 font-semibold">Ganas $750</p>
                 </div>
               </div>
 
@@ -309,8 +309,8 @@ function CommissionInfoModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <p className="text-xs text-slate-400">El camino del líder</p>
                 <div className="mt-2 pt-2 border-t border-yellow-500/20">
-                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $15,000</p>
-                  <p className="text-sm text-green-400 font-semibold">Ganas $1,500</p>
+                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $7,000</p>
+                  <p className="text-sm text-green-400 font-semibold">Ganas $700</p>
                 </div>
               </div>
             </div>
