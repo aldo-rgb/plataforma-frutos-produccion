@@ -32,6 +32,8 @@ import {
   CreditCard,
   ArrowLeft,
   Shield,
+  Sprout,
+  Flame,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -68,15 +70,16 @@ interface OtherTraining {
   location: string | null;
 }
 
-// Nivel de transformación data
+// Nivel de transformación data - Estilo corporativo Impacto Cuántico
 const transformationLevels = [
   {
     level: 'BÁSICO',
     duration: '1 fin de semana + 4 semanas',
-    icon: '🌱',
-    gradient: 'from-emerald-500 to-cyan-500',
-    bgGradient: 'from-emerald-500/20 to-cyan-500/20',
-    borderColor: 'border-emerald-500/30',
+    iconType: 'seedling', // Icono corporativo
+    gradient: 'from-cyan-500 to-blue-600',
+    bgGradient: 'from-cyan-500/20 to-blue-600/20',
+    borderColor: 'border-cyan-500/30',
+    iconBg: 'bg-slate-800',
     description: 'Despierta tu potencial dormido. Rompe las cadenas mentales que te mantienen en tu zona de confort.',
     includes: [
       'Descubre metas y sueños ocultos con Quantum AI',
@@ -89,10 +92,11 @@ const transformationLevels = [
   {
     level: 'AVANZADO',
     duration: '4 días',
-    icon: '🔥',
-    gradient: 'from-orange-500 to-red-500',
-    bgGradient: 'from-orange-500/20 to-red-500/20',
-    borderColor: 'border-orange-500/30',
+    iconType: 'flame', // Icono corporativo
+    gradient: 'from-blue-500 to-indigo-600',
+    bgGradient: 'from-blue-500/20 to-indigo-600/20',
+    borderColor: 'border-blue-500/30',
+    iconBg: 'bg-slate-800',
     description: 'Domina tus emociones y relaciones. Conviértete en un líder que inspira con el ejemplo.',
     includes: [
       'IA que profundiza en tus metas y te guía',
@@ -105,10 +109,11 @@ const transformationLevels = [
   {
     level: 'PROGRAMA DE LIDERATO',
     duration: '10 semanas - 3 fines de semana',
-    icon: '👑',
-    gradient: 'from-violet-500 to-purple-600',
-    bgGradient: 'from-violet-500/20 to-purple-600/20',
-    borderColor: 'border-violet-500/30',
+    iconType: 'crown', // Icono corporativo
+    gradient: 'from-indigo-500 to-blue-700',
+    bgGradient: 'from-indigo-500/20 to-blue-700/20',
+    borderColor: 'border-indigo-500/30',
+    iconBg: 'bg-slate-800',
     description: 'La cumbre del entrenamiento. Certifícate como líder y construye tu legado que trasciende.',
     includes: [
       'Certificado de participación oficial',
@@ -877,9 +882,11 @@ export default function EventoPage() {
                   {index + 1}
                 </div>
 
-                {/* Icon */}
-                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-r ${level.bgGradient} flex items-center justify-center text-2xl sm:text-3xl mb-4 sm:mb-6 group-hover:scale-110 transition-transform`}>
-                  {level.icon}
+                {/* Icon - Corporativo */}
+                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${level.iconBg} border border-slate-700/50 flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform shadow-lg`}>
+                  {level.iconType === 'seedling' && <Sprout className="w-8 h-8 text-cyan-400" />}
+                  {level.iconType === 'flame' && <Flame className="w-8 h-8 text-blue-400" />}
+                  {level.iconType === 'crown' && <Crown className="w-8 h-8 text-indigo-400" />}
                 </div>
 
                 {/* Content */}
@@ -1054,11 +1061,11 @@ export default function EventoPage() {
             </div>
             
             <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
-              ¿Listo para Transformar tu Vida?
+              ¿Listo para abrir posibilidades desde la nada?
             </h2>
             
             <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
-              Este es el primer paso hacia la mejor versión de ti mismo. 
+              Este es el primer paso hacia la posibilia. 
               {spotsLeft !== null && spotsLeft < 20 && (
                 <span className="block text-amber-400 font-bold mt-2">
                   ¡Solo quedan {spotsLeft} lugares!
