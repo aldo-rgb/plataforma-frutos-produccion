@@ -15,6 +15,14 @@ async function processInvoice(registration: any, amountPaid: number, paymentProv
   if (!registration.requiresInvoice) return null;
   
   console.log('📄 Procesando factura para registro:', registration.id);
+  console.log('📄 Datos de facturación:', {
+    requiresInvoice: registration.requiresInvoice,
+    invoiceRfc: registration.invoiceRfc,
+    invoiceName: registration.invoiceName,
+    invoiceRegime: registration.invoiceRegime,
+    invoiceZipCode: registration.invoiceZipCode,
+    invoiceCfdiUse: registration.invoiceCfdiUse,
+  });
   
   // Verificar si Facturapi está configurado para esta organización
   const facturapiConfig = await getFacturapiConfig(registration.organizationId);
@@ -28,13 +36,27 @@ async function processInvoice(registration: any, amountPaid: number, paymentProv
     return { status: 'PENDING', message: 'Sistema de facturación no configurado' };
   }
 
-  if (!registration.invoiceRfc || !registration.invoiceName) {
-    console.log('⚠️ Datos de facturación incompletos');
+  // Validar RFC (debe tener 12 o 13 caracteres)
+  const rfc = registration.invoiceRfc?.trim();
+  if (!rfc || rfc.length < 12 || rfc.length > 13) {
+    console.log('⚠️ RFC inválido o faltante:', rfc);
     await prisma.eventRegistration.update({
       where: { id: registration.id },
       data: { 
         invoiceStatus: 'ERROR',
-        invoiceError: 'Datos de facturación incompletos (RFC o nombre faltante)',
+        invoiceError: `RFC inválido o faltante. RFC recibido: "${rfc || 'vacío'}" (debe tener 12-13 caracteres)`,
+      },
+    });
+    return { status: 'ERROR', message: 'RFC inválido o faltante' };
+  }
+
+  if (!registration.invoiceName) {
+    console.log('⚠️ Nombre/Razón social faltante');
+    await prisma.eventRegistration.update({
+      where: { id: registration.id },
+      data: { 
+        invoiceStatus: 'ERROR',
+        invoiceError: 'Nombre o razón social faltante',
       },
     });
     return { status: 'ERROR', message: 'Datos de facturación incompletos' };
@@ -44,8 +66,8 @@ async function processInvoice(registration: any, amountPaid: number, paymentProv
     const result = await createEventInvoice({
       registrationId: registration.id,
       organizationId: registration.organizationId,
-      rfc: registration.invoiceRfc,
-      legalName: registration.invoiceName,
+      rfc: rfc.toUpperCase().replace(/[^A-Z0-9]/g, ''), // RFC limpio y en mayúsculas
+      legalName: registration.invoiceName.trim(),
       taxSystem: registration.invoiceRegime || '616',
       zipCode: registration.invoiceZipCode || '00000',
       cfdiUse: registration.invoiceCfdiUse || 'G03',
@@ -191,7 +213,7 @@ export async function POST(
       if (!payerUser) {
         console.log('👤 Creando nuevo usuario para:', registration.email);
         const bcrypt = require('bcryptjs');
-        const defaultPassword = 'Quantum123';
+        const defaultPassword = 'Quantum123.';
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
         
         // Generar referralCode único
@@ -332,7 +354,7 @@ export async function POST(
             if (!payerUser) {
               console.log('👤 [Stripe] Creando nuevo usuario para:', registration.email);
               const bcrypt = require('bcryptjs');
-              const defaultPassword = 'Quantum123';
+              const defaultPassword = 'Quantum123.';
               const hashedPassword = await bcrypt.hash(defaultPassword, 10);
               
               // Generar referralCode único
@@ -495,7 +517,7 @@ export async function POST(
               if (!payerUser) {
                 console.log('👤 [MercadoPago] Creando nuevo usuario para:', registration.email);
                 const bcrypt = require('bcryptjs');
-                const defaultPassword = 'Quantum123';
+                const defaultPassword = 'Quantum123.';
                 const hashedPassword = await bcrypt.hash(defaultPassword, 10);
                 
                 // Generar referralCode único

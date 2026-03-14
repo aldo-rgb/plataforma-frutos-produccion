@@ -331,23 +331,6 @@ export default function CompletarPerfilPage() {
                 <li><span className="text-green-400 font-semibold">GARANTÍA DE SATISFACCIÓN:</span> Si no estás satisfecho con el valor del entrenamiento, puedes solicitar un reembolso (debes quedarte hasta el cierre del domingo)</li>
               </ul>
 
-              <h4 className="font-semibold text-cyan-400 mt-6 mb-2">📅 DETALLES DEL ENTRENAMIENTO BÁSICO</h4>
-              <p className="mb-2 font-medium text-white">Horario:</p>
-              <ul className="list-none space-y-2 mb-4">
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-400 font-bold">Viernes:</span>
-                  <span>Registro 9AM - Inicio a las 10 AM hasta aproximadamente 10 PM (puede variar según el avance del grupo)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-400 font-bold">Sábado:</span>
-                  <span>Inicio a las 10 AM hasta aproximadamente 10 PM (puede variar según el avance del grupo)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-400 font-bold">Domingo:</span>
-                  <span>Inicio a las 10 AM hasta aproximadamente 7 PM (puede variar según el avance del grupo)</span>
-                </li>
-              </ul>
-
               <div className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
                 <p className="text-red-400 font-semibold">
                   ⚠️ IMPORTANTE: El entrenamiento Básico es integral y si el participante abandona el entrenamiento en cualquier momento, NO se le permitirá reingresar ya que puede perderse algunas dinámicas.
