@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, Calendar, MapPin, Users, ChevronLeft, ChevronRight,
-  Sparkles, Clock, Ticket, ExternalLink, Share2, MessageCircle, UserPlus
+  Sparkles, Clock, Ticket, ExternalLink, Share2, MessageCircle, UserPlus, Check, Copy
 } from 'lucide-react';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
@@ -52,6 +52,7 @@ export default function TrainingsCarouselWidget() {
   const [isPaused, setIsPaused] = useState(false);
   const [userReferralCode, setUserReferralCode] = useState<string | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showCopiedToast, setShowCopiedToast] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -106,7 +107,8 @@ Regístrate aquí: ${shareUrl}`;
     // Fallback: Copiar al portapapeles y mostrar mensaje
     try {
       await navigator.clipboard.writeText(shareText);
-      alert('¡Mensaje copiado! Pégalo en WhatsApp o cualquier app para compartir.');
+      setShowCopiedToast(true);
+      setTimeout(() => setShowCopiedToast(false), 3000);
     } catch (error) {
       // Último recurso: abrir WhatsApp web
       window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
@@ -559,6 +561,28 @@ Regístrate aquí: ${shareUrl}`;
           onClose={() => setShowQRModal(false)}
         />
       )}
+
+      {/* Toast de mensaje copiado */}
+      <AnimatePresence>
+        {showCopiedToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
+          >
+            <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-400/30">
+              <div className="bg-white/20 rounded-full p-2">
+                <Check className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-semibold">¡Mensaje copiado!</p>
+                <p className="text-sm text-emerald-100">Pégalo en WhatsApp o cualquier app</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
