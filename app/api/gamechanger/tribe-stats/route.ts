@@ -108,50 +108,54 @@ export async function GET() {
     }
 
     // =====================================================
-    // CONTAR REFERIDOS GLOBALMENTE (sin filtrar por visión)
+    // CONTAR REFERIDOS QUE HAN PAGADO (ENROLLADOS REALES)
     // =====================================================
 
-    // Contar TODOS los usuarios invitados por este GC (global)
-    const enrolledByInvitedBy = await prisma.usuario.count({
-      where: {
-        invitedBy: userId
-      }
+    // Obtener IDs de usuarios invitados por este usuario
+    const invitedByUserId = await prisma.usuario.findMany({
+      where: { invitedBy: userId },
+      select: { id: true }
     });
 
-    // Contar también por referralCode
-    let enrolledByReferral = 0;
+    // Obtener IDs de usuarios invitados por referralCode (evitando duplicados)
+    let invitedByReferral: { id: number }[] = [];
     if (user?.referralCode) {
-      enrolledByReferral = await prisma.usuario.count({
+      invitedByReferral = await prisma.usuario.findMany({
         where: {
           invitedByText: user.referralCode,
-          invitedBy: { not: userId } // Evitar duplicados
+          invitedBy: { not: userId }
+        },
+        select: { id: true }
+      });
+    }
+
+    // Combinar todos los IDs de invitados
+    const allInvitedIds = [
+      ...invitedByUserId.map(u => u.id),
+      ...invitedByReferral.map(u => u.id)
+    ];
+
+    // Contar cuántos de estos invitados tienen un ticket PAGADO (Básico o superior)
+    let enrolledCount = 0;
+    if (allInvitedIds.length > 0) {
+      enrolledCount = await prisma.ticket.count({
+        where: {
+          ownerId: { in: allInvitedIds },
+          paymentStatus: { in: ['PAID', 'PARTIAL', 'GIFT'] }
         }
       });
     }
 
-    // Total de enrollados (global)
-    const enrolledCount = enrolledByInvitedBy + enrolledByReferral;
-
-    // Contar graduados globalmente
-    const graduatedByInvitedBy = await prisma.usuario.count({
-      where: {
-        invitedBy: userId,
-        isGraduated: true
-      }
-    });
-
-    let graduatedByReferral = 0;
-    if (user?.referralCode) {
-      graduatedByReferral = await prisma.usuario.count({
+    // Contar graduados de entre los invitados
+    let graduatedCount = 0;
+    if (allInvitedIds.length > 0) {
+      graduatedCount = await prisma.usuario.count({
         where: {
-          invitedByText: user.referralCode,
-          invitedBy: { not: userId },
+          id: { in: allInvitedIds },
           isGraduated: true
         }
       });
     }
-
-    const graduatedCount = graduatedByInvitedBy + graduatedByReferral;
 
     return NextResponse.json({
       visionId,
