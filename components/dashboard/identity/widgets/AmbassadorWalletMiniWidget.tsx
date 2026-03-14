@@ -64,7 +64,7 @@ export default function AmbassadorWalletMiniWidget() {
       ? `${baseUrl}/org/${data.user.organizationSlug}?ref=${data.user.referralCode}`
       : `${baseUrl}/registro?ref=${data.user.referralCode}`;
     const message = encodeURIComponent(
-      `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
+      `🎓 ¡Te invito a vivir una experiencia que abrirá posibilidades a tu vida!
 
 ✨ Entrenamiento Básico de Transformación Cuántica
 
