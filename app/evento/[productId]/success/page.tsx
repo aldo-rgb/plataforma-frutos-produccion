@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { CheckCircle, Loader2, Calendar, MapPin, Mail, ArrowRight, PartyPopper } from 'lucide-react';
+import { CheckCircle, Loader2, Calendar, MapPin, Mail, ArrowRight, PartyPopper, Ticket, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 
@@ -16,12 +16,14 @@ export default function EventSuccessPage() {
   
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [eventData, setEventData] = useState<{
     eventName: string;
     userName: string;
     userEmail: string;
     startDate: string | null;
     location: string | null;
+    ticketCode?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +61,14 @@ export default function EventSuccessPage() {
       setError('Error al verificar el pago');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyTicketCode = async () => {
+    if (eventData?.ticketCode) {
+      await navigator.clipboard.writeText(eventData.ticketCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -126,6 +136,40 @@ export default function EventSuccessPage() {
           </h1>
           <p className="text-slate-400 mb-6">Tu lugar está confirmado</p>
         </motion.div>
+
+        {/* Ticket Code - Prominente */}
+        {eventData?.ticketCode && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.35 }}
+            className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 border-2 border-amber-500/50 rounded-2xl p-5 mb-6"
+          >
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Ticket className="w-6 h-6 text-amber-400" />
+              <span className="text-amber-400 font-semibold text-sm uppercase tracking-wider">Tu Ticket de Entrada</span>
+            </div>
+            <div className="bg-slate-900/80 rounded-xl p-4 flex items-center justify-between gap-3">
+              <code className="text-xl md:text-2xl font-mono font-bold text-white tracking-wider">
+                {eventData.ticketCode}
+              </code>
+              <button
+                onClick={copyTicketCode}
+                className="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors flex-shrink-0"
+                title="Copiar código"
+              >
+                {copied ? (
+                  <Check className="w-5 h-5 text-green-400" />
+                ) : (
+                  <Copy className="w-5 h-5 text-amber-400" />
+                )}
+              </button>
+            </div>
+            <p className="text-amber-300/70 text-xs mt-3 text-center">
+              Guarda este código. Lo necesitarás para entrar al evento.
+            </p>
+          </motion.div>
+        )}
 
         {/* Event Details */}
         {eventData && (

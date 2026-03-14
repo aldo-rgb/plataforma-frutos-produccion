@@ -71,6 +71,7 @@ export async function POST(
           userEmail: registration.email,
           startDate: registration.SchoolProduct.startDate,
           location: registration.SchoolProduct.location,
+          ticketCode: registration.ticketCode,
         }
       });
     }
