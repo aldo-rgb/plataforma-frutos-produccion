@@ -250,8 +250,6 @@ export async function POST(
 
       console.log('[Stripe Checkout] baseUrl:', baseUrl, '| host:', hostHeader, '| proto:', protocol);
 
-      console.log('[Stripe Checkout] Using baseUrl:', baseUrl, '| Host:', hostHeader, '| Proto:', protocol);
-
       const stripeSession = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
