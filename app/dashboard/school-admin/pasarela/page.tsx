@@ -21,6 +21,7 @@ import {
   X,
   Building2,
   Phone,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -121,6 +122,19 @@ export default function PaymentGatewayPage() {
   const [testingPayment, setTestingPayment] = useState<string | null>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
 
+  // Facturapi config
+  const [facturapiConfig, setFacturapiConfig] = useState({
+    apiKey: '',
+    isActive: false,
+    isLiveMode: false,
+    defaultSatKey: '86132000',
+    defaultUnitKey: 'E48',
+  });
+  const [savingFacturapi, setSavingFacturapi] = useState(false);
+  const [showFacturapiKey, setShowFacturapiKey] = useState(false);
+  const [testingFacturapi, setTestingFacturapi] = useState(false);
+  const [expandedFacturapi, setExpandedFacturapi] = useState(false);
+
   // Helper para verificar si un proveedor tiene configuración existente
   const hasExistingConfig = (provider: string) => {
     const cfg = providerConfigs[provider as keyof ProviderConfigs];
@@ -180,6 +194,22 @@ export default function PaymentGatewayPage() {
           });
         }
       }
+
+      // Cargar configuración de Facturapi
+      const facturapiRes = await fetch('/api/school-admin/facturapi', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      const facturapiData = await facturapiRes.json();
+      if (facturapiData.success && facturapiData.config) {
+        setFacturapiConfig({
+          apiKey: facturapiData.config.apiKey || '',
+          isActive: facturapiData.config.isActive || false,
+          isLiveMode: facturapiData.config.isLiveMode || false,
+          defaultSatKey: facturapiData.config.defaultSatKey || '86132000',
+          defaultUnitKey: facturapiData.config.defaultUnitKey || 'E48',
+        });
+      }
     } catch (error) {
       console.error('Error fetching config:', error);
       showNotification('error', 'Error al cargar la configuración');
@@ -217,6 +247,73 @@ export default function PaymentGatewayPage() {
       showNotification('error', 'Error al guardar la configuración bancaria');
     } finally {
       setSavingBank(false);
+    }
+  };
+
+  // Guardar configuración de Facturapi
+  const handleSaveFacturapiConfig = async () => {
+    if (!facturapiConfig.apiKey || (facturapiConfig.apiKey.includes('*') && !facturapiConfig.isActive)) {
+      showNotification('error', 'La API Key de Facturapi es requerida');
+      return;
+    }
+
+    setSavingFacturapi(true);
+    try {
+      const res = await fetch('/api/school-admin/facturapi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(facturapiConfig),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showNotification('success', 'Configuración de Facturapi guardada correctamente');
+        if (data.config) {
+          setFacturapiConfig({
+            apiKey: data.config.apiKey || '',
+            isActive: data.config.isActive || false,
+            isLiveMode: data.config.isLiveMode || false,
+            defaultSatKey: data.config.defaultSatKey || '86132000',
+            defaultUnitKey: data.config.defaultUnitKey || 'E48',
+          });
+        }
+      } else {
+        showNotification('error', data.error || 'Error al guardar');
+      }
+    } catch (error) {
+      console.error('Error saving Facturapi config:', error);
+      showNotification('error', 'Error al guardar la configuración de Facturapi');
+    } finally {
+      setSavingFacturapi(false);
+    }
+  };
+
+  // Probar conexión con Facturapi
+  const handleTestFacturapi = async () => {
+    if (!facturapiConfig.apiKey || facturapiConfig.apiKey.includes('*')) {
+      showNotification('error', 'Primero guarda una API Key válida');
+      return;
+    }
+
+    setTestingFacturapi(true);
+    try {
+      const res = await fetch('/api/school-admin/facturapi/test', {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showNotification('success', `Conexión exitosa con Facturapi. Organización: ${data.organizationName || 'OK'}`);
+      } else {
+        showNotification('error', data.error || 'Error al conectar con Facturapi');
+      }
+    } catch (error) {
+      console.error('Error testing Facturapi:', error);
+      showNotification('error', 'Error al probar la conexión');
+    } finally {
+      setTestingFacturapi(false);
     }
   };
 
@@ -812,6 +909,222 @@ export default function PaymentGatewayPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Sección de Facturapi - Facturación Electrónica */}
+        <div className="mt-10 pt-8 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Facturación Electrónica (Facturapi)
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Emite facturas CFDI 4.0 automáticamente después de cada pago
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Header expandible */}
+            <button
+              onClick={() => setExpandedFacturapi(!expandedFacturapi)}
+              className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <FileText className="w-6 h-6 text-purple-500" />
+                </div>
+                <div className="text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      Facturapi
+                    </span>
+                    {facturapiConfig.apiKey && !facturapiConfig.apiKey.includes('*') ? null : facturapiConfig.apiKey ? (
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${
+                        facturapiConfig.isActive 
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                      }`}>
+                        {facturapiConfig.isActive ? '✓ Activa' : 'Desactivada'}
+                      </span>
+                    ) : null}
+                    {facturapiConfig.isLiveMode && (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        PRODUCCIÓN
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Facturación electrónica automática CFDI 4.0
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {facturapiConfig.apiKey && (
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                )}
+                <svg 
+                  className={`w-5 h-5 text-gray-400 transition-transform ${expandedFacturapi ? 'rotate-180' : ''}`}
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+
+            {/* Formulario expandible */}
+            {expandedFacturapi && (
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-gray-500">
+                    Credenciales de Facturapi
+                  </span>
+                  <a
+                    href="https://www.facturapi.io/dashboard/settings/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1"
+                  >
+                    Obtener API Key
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+
+                <div className="space-y-4">
+                  {/* API Key */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      API Key
+                      <span className="ml-2 text-xs text-gray-500">
+                        <Shield className="w-3 h-3 inline" /> Encriptado
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showFacturapiKey ? 'text' : 'password'}
+                        value={facturapiConfig.apiKey}
+                        onChange={(e) => setFacturapiConfig(prev => ({ ...prev, apiKey: e.target.value }))}
+                        onFocus={() => {
+                          if (facturapiConfig.apiKey.includes('*')) {
+                            setFacturapiConfig(prev => ({ ...prev, apiKey: '' }));
+                          }
+                        }}
+                        placeholder={facturapiConfig.apiKey.includes('*') 
+                          ? 'Ingresa nueva API Key para actualizar' 
+                          : 'sk_live_... o sk_test_...'}
+                        className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowFacturapiKey(!showFacturapiKey)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showFacturapiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Switches */}
+                  <div className="flex items-center gap-6">
+                    {/* Activo */}
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setFacturapiConfig(prev => ({ ...prev, isActive: !prev.isActive }))}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${
+                          facturapiConfig.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span 
+                          className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                            facturapiConfig.isActive ? 'translate-x-7' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {facturapiConfig.isActive ? 'Activo' : 'Desactivado'}
+                      </span>
+                    </div>
+
+                    {/* Modo Live */}
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setFacturapiConfig(prev => ({ ...prev, isLiveMode: !prev.isLiveMode }))}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${
+                          facturapiConfig.isLiveMode ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span 
+                          className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                            facturapiConfig.isLiveMode ? 'translate-x-7' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {facturapiConfig.isLiveMode ? 'Producción (facturas reales)' : 'Sandbox (pruebas)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Info SAT */}
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                    <p className="text-sm text-purple-800 dark:text-purple-200">
+                      <strong>Clave SAT:</strong> {facturapiConfig.defaultSatKey} (Servicios de formación en gestión y desarrollo personal)
+                    </p>
+                    <p className="text-sm text-purple-800 dark:text-purple-200 mt-1">
+                      <strong>Unidad:</strong> {facturapiConfig.defaultUnitKey} (Unidad de servicio)
+                    </p>
+                  </div>
+
+                  {/* Botones */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={handleTestFacturapi}
+                      disabled={testingFacturapi || !facturapiConfig.apiKey}
+                      className="px-4 py-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {testingFacturapi ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Zap className="w-4 h-4" />
+                      )}
+                      Probar conexión
+                    </button>
+                    <button
+                      onClick={handleSaveFacturapiConfig}
+                      disabled={savingFacturapi || !facturapiConfig.apiKey}
+                      className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {savingFacturapi ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      Guardar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Info sobre facturación */}
+          <div className="mt-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              <strong>¿Cómo funciona?</strong> Cuando un usuario pague y seleccione "Requiero Factura", 
+              el sistema emitirá automáticamente la factura CFDI 4.0 y se la enviará por correo electrónico.
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              <strong>Nota:</strong> Para usar facturación en producción necesitas tener tu certificado CSD 
+              configurado en tu cuenta de Facturapi.
+            </p>
           </div>
         </div>
 

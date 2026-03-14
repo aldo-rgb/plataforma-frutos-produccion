@@ -218,6 +218,22 @@ export default function EventoPage() {
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'mercadopago' | null>(null);
   
+  // Invoice (Factura) state
+  const [showInvoiceStep, setShowInvoiceStep] = useState(false);
+  const [requiresInvoice, setRequiresInvoice] = useState(false);
+  const [invoiceData, setInvoiceData] = useState({
+    rfc: '',
+    name: '',
+    zipCode: '',
+    regime: '',
+    cfdiUse: '',
+  });
+  const [satCatalogs, setSatCatalogs] = useState<{
+    regimenFiscal: Array<{ code: string; name: string }>;
+    usoCfdi: Array<{ code: string; name: string }>;
+  } | null>(null);
+  const [loadingCatalogs, setLoadingCatalogs] = useState(false);
+  
   // Share
   const [copied, setCopied] = useState(false);
   const [showShareOptions, setShowShareOptions] = useState(false);
@@ -228,6 +244,27 @@ export default function EventoPage() {
   useEffect(() => {
     fetchEvent();
   }, [productId]);
+
+  // Cargar catálogos del SAT cuando se muestre el paso de factura
+  useEffect(() => {
+    const loadSatCatalogs = async () => {
+      if (showInvoiceStep && requiresInvoice && !satCatalogs) {
+        setLoadingCatalogs(true);
+        try {
+          const res = await fetch('/api/invoices');
+          const data = await res.json();
+          if (data.success) {
+            setSatCatalogs(data.catalogs);
+          }
+        } catch (err) {
+          console.error('Error loading SAT catalogs:', err);
+        } finally {
+          setLoadingCatalogs(false);
+        }
+      }
+    };
+    loadSatCatalogs();
+  }, [showInvoiceStep, requiresInvoice, satCatalogs]);
 
   // Buscar usuario por código de referido cuando viene en la URL
   useEffect(() => {
@@ -300,8 +337,60 @@ export default function EventoPage() {
       return;
     }
     
-    // Mostrar opciones de pago
+    // Mostrar paso de factura primero (solo si no es gratis)
+    const isFreeEvent = event?.basePrice === 0;
+    if (!isFreeEvent) {
+      setShowInvoiceStep(true);
+    } else {
+      // Si es gratis, ir directo al registro sin pago
+      handleFreeRegistration();
+    }
+  };
+
+  const handleInvoiceContinue = () => {
+    // Validar datos fiscales si requiere factura
+    if (requiresInvoice) {
+      if (!invoiceData.rfc || !invoiceData.name || !invoiceData.zipCode || !invoiceData.regime || !invoiceData.cfdiUse) {
+        alert('Por favor completa todos los datos fiscales');
+        return;
+      }
+      // Validar RFC (12-13 caracteres)
+      if (invoiceData.rfc.length < 12 || invoiceData.rfc.length > 13) {
+        alert('El RFC debe tener 12 o 13 caracteres');
+        return;
+      }
+    }
+    setShowInvoiceStep(false);
     setShowPaymentOptions(true);
+  };
+
+  const handleFreeRegistration = async () => {
+    // Lógica para registro gratuito
+    setRegistering(true);
+    try {
+      const res = await fetch(`/api/public/evento/${productId}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: registerForm.nombre,
+          email: registerForm.email,
+          telefono: registerForm.telefono,
+          invitedByUserId: selectedInviter?.id || null,
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setRegistered(true);
+      } else {
+        alert(data.error || 'Error al registrarse');
+      }
+    } catch (err) {
+      alert('Error al registrarse');
+    } finally {
+      setRegistering(false);
+    }
   };
 
   const handlePaymentSelection = async (provider: 'stripe' | 'mercadopago') => {
@@ -321,7 +410,14 @@ export default function EventoPage() {
           email: registerForm.email,
           telefono: registerForm.telefono,
           invitedByUserId: selectedInviter?.id || null,
-          provider: provider
+          provider: provider,
+          // Datos de facturación
+          requiresInvoice,
+          invoiceRfc: requiresInvoice ? invoiceData.rfc.toUpperCase() : null,
+          invoiceName: requiresInvoice ? invoiceData.name.toUpperCase() : null,
+          invoiceZipCode: requiresInvoice ? invoiceData.zipCode : null,
+          invoiceRegime: requiresInvoice ? invoiceData.regime : null,
+          invoiceCfdiUse: requiresInvoice ? invoiceData.cfdiUse : null,
         })
       });
       
@@ -1160,8 +1256,8 @@ export default function EventoPage() {
                     </div>
                   </div>
 
-                  {/* Botones de acción o selección de pago */}
-                  {!showPaymentOptions ? (
+                  {/* Paso 1: Botones de acción (datos personales) */}
+                  {!showInvoiceStep && !showPaymentOptions ? (
                     <div className="mt-6 space-y-3">
                       <button
                         onClick={handleRegister}
@@ -1180,7 +1276,155 @@ export default function EventoPage() {
                         Cancelar
                       </button>
                     </div>
+                  ) : showInvoiceStep ? (
+                    /* Paso 2: ¿Requiere Factura? */
+                    <div className="mt-6 space-y-4">
+                      <div className="text-center mb-4">
+                        <h4 className="text-lg font-bold text-white mb-1">¿Necesitas factura?</h4>
+                        <p className="text-slate-400 text-sm">Si requieres factura, proporciona tus datos fiscales</p>
+                      </div>
+
+                      {/* Toggle factura */}
+                      <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl border border-slate-700">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-amber-500/20 rounded-lg">
+                            <CreditCard className="w-5 h-5 text-amber-400" />
+                          </div>
+                          <span className="text-white font-medium">Requiero factura</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setRequiresInvoice(!requiresInvoice)}
+                          className={`relative w-14 h-7 rounded-full transition-colors ${
+                            requiresInvoice ? 'bg-cyan-500' : 'bg-slate-600'
+                          }`}
+                        >
+                          <span 
+                            className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                              requiresInvoice ? 'translate-x-8' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Formulario fiscal (si requiere) */}
+                      {requiresInvoice && (
+                        <div className="space-y-4 p-4 bg-slate-800/50 rounded-xl border border-amber-500/30">
+                          <p className="text-amber-400 text-xs font-medium flex items-center gap-2">
+                            <Shield className="w-4 h-4" />
+                            Datos exactamente como aparecen en tu Constancia de Situación Fiscal
+                          </p>
+
+                          {loadingCatalogs ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
+                            </div>
+                          ) : (
+                            <>
+                              {/* RFC */}
+                              <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">RFC *</label>
+                                <input
+                                  type="text"
+                                  value={invoiceData.rfc}
+                                  onChange={(e) => setInvoiceData({ ...invoiceData, rfc: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 13) })}
+                                  placeholder="XAXX010101000"
+                                  maxLength={13}
+                                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors font-mono uppercase"
+                                />
+                                <p className="text-xs text-slate-500 mt-1">{invoiceData.rfc.length}/13 caracteres</p>
+                              </div>
+
+                              {/* Razón Social */}
+                              <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Razón Social *</label>
+                                <input
+                                  type="text"
+                                  value={invoiceData.name}
+                                  onChange={(e) => setInvoiceData({ ...invoiceData, name: e.target.value.toUpperCase() })}
+                                  placeholder="NOMBRE COMPLETO O EMPRESA"
+                                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors uppercase"
+                                />
+                                <p className="text-xs text-slate-500 mt-1">Sin S.A. de C.V., exactamente como aparece en tu constancia</p>
+                              </div>
+
+                              {/* Código Postal */}
+                              <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Código Postal Fiscal *</label>
+                                <input
+                                  type="text"
+                                  value={invoiceData.zipCode}
+                                  onChange={(e) => setInvoiceData({ ...invoiceData, zipCode: e.target.value.replace(/\D/g, '').slice(0, 5) })}
+                                  placeholder="00000"
+                                  maxLength={5}
+                                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors font-mono"
+                                />
+                              </div>
+
+                              {/* Régimen Fiscal */}
+                              <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Régimen Fiscal *</label>
+                                <select
+                                  value={invoiceData.regime}
+                                  onChange={(e) => setInvoiceData({ ...invoiceData, regime: e.target.value })}
+                                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                                >
+                                  <option value="">Selecciona tu régimen fiscal</option>
+                                  {satCatalogs?.regimenFiscal.map((r) => (
+                                    <option key={r.code} value={r.code}>
+                                      {r.code} - {r.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              {/* Uso de CFDI */}
+                              <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Uso de CFDI *</label>
+                                <select
+                                  value={invoiceData.cfdiUse}
+                                  onChange={(e) => setInvoiceData({ ...invoiceData, cfdiUse: e.target.value })}
+                                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                                >
+                                  <option value="">Selecciona el uso</option>
+                                  {satCatalogs?.usoCfdi.map((u) => (
+                                    <option key={u.code} value={u.code}>
+                                      {u.code} - {u.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Botones */}
+                      <div className="space-y-3 pt-2">
+                        <button
+                          onClick={handleInvoiceContinue}
+                          disabled={requiresInvoice && (!invoiceData.rfc || !invoiceData.name || !invoiceData.zipCode || !invoiceData.regime || !invoiceData.cfdiUse)}
+                          className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          <ArrowRight className="w-5 h-5" />
+                          Continuar al pago
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setShowInvoiceStep(false);
+                            setRequiresInvoice(false);
+                            setInvoiceData({ rfc: '', name: '', zipCode: '', regime: '', cfdiUse: '' });
+                          }}
+                          className="w-full px-6 py-3 bg-slate-800 text-slate-300 rounded-xl font-medium hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <ArrowLeft className="w-4 h-4" />
+                          Volver
+                        </button>
+                      </div>
+                    </div>
                   ) : (
+                    /* Paso 3: Opciones de Pago */
                     <div className="mt-6 space-y-4">
                       {/* Resumen del precio */}
                       <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
@@ -1189,6 +1433,12 @@ export default function EventoPage() {
                           <span className="text-2xl font-bold text-white">{formatPrice(getCurrentPrice())}</span>
                         </div>
                         <p className="text-xs text-slate-500">Impuestos incluidos</p>
+                        {requiresInvoice && (
+                          <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Recibirás tu factura por correo después del pago
+                          </p>
+                        )}
                       </div>
 
                       {/* Opciones de pago */}
@@ -1246,7 +1496,10 @@ export default function EventoPage() {
 
                       {/* Botón volver */}
                       <button
-                        onClick={() => setShowPaymentOptions(false)}
+                        onClick={() => {
+                          setShowPaymentOptions(false);
+                          setShowInvoiceStep(true);
+                        }}
                         disabled={registering}
                         className="w-full px-6 py-3 bg-slate-800 text-slate-300 rounded-xl font-medium hover:bg-slate-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                       >

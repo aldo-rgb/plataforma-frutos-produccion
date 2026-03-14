@@ -1042,11 +1042,11 @@ model DefaultPrice {
   basePrice      Float
   promoPrice     Float?
   promoDeadline  DateTime?
-  pago1          Float?           // Primer pago (apartado) para COMBO_ADV_PL
-  pago2          Float?           // Segundo pago (liquidación) para COMBO_ADV_PL
   currency       Currency         @default(MXN)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime
+  pago1          Float?
+  pago2          Float?
   Organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, levelType])
@@ -1183,20 +1183,31 @@ model EventRegistration {
   email            String
   telefono         String?
   comoTeEnteraste  String?
-  invitedByUserId  Int?
-  amountPaid       Decimal?                @db.Decimal(10, 2)
   status           EventRegistrationStatus @default(PENDING_PAYMENT)
-  paymentStatus    String?                 @default("PENDING") // PENDING, PAID, FAILED
-  paymentProvider  String?                 // stripe, mercadopago
-  paymentSessionId String?                 // ID de sesión de pago
-  paidAt           DateTime?
   confirmedAt      DateTime?
   attendedAt       DateTime?
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
+  amountPaid       Decimal?                @db.Decimal(10, 2)
+  invitedByUserId  Int?
+  paidAt           DateTime?
+  paymentProvider  String?
+  paymentSessionId String?
+  paymentStatus    String?                 @default("PENDING")
+  invoiceCfdiUse   String?
+  invoiceError     String?
+  invoiceId        String?
+  invoiceName      String?
+  invoicePdfUrl    String?
+  invoiceRegime    String?
+  invoiceRfc       String?
+  invoiceStatus    String?                 @default("PENDING")
+  invoiceXmlUrl    String?
+  invoiceZipCode   String?
+  requiresInvoice  Boolean                 @default(false)
+  InvitedByUser    Usuario?                @relation("EventInvitations", fields: [invitedByUserId], references: [id])
   Organization     Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   SchoolProduct    SchoolProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
-  InvitedByUser    Usuario?                @relation("EventInvitations", fields: [invitedByUserId], references: [id])
 
   @@unique([productId, email])
   @@index([email])
@@ -1204,6 +1215,7 @@ model EventRegistration {
   @@index([productId])
   @@index([invitedByUserId])
   @@index([paymentStatus])
+  @@index([invoiceStatus])
 }
 
 model Evidencia {
@@ -2404,52 +2416,40 @@ model Notification {
 }
 
 model Organization {
-  id                                                    Int                             @id @default(autoincrement())
+  id                                                    Int                              @id @default(autoincrement())
   name                                                  String
-  slug                                                  String                          @unique
+  slug                                                  String                           @unique
   logoUrl                                               String?
-  brandColor                                            String                          @default("#6366F1")
+  brandColor                                            String                           @default("#6366F1")
   contactEmail                                          String
-  status                                                OrganizationStatus              @default(ACTIVE)
-  isGeofenced                                           Boolean                         @default(false)
+  status                                                OrganizationStatus               @default(ACTIVE)
+  isGeofenced                                           Boolean                          @default(false)
   campusLatitude                                        Float?
   campusLongitude                                       Float?
-  geofenceRadius                                        Int                             @default(100)
-  schoolAdminId                                         Int                             @unique
-  totalLicenses                                         Int                             @default(0)
-  activeLicenses                                        Int                             @default(0)
-  totalStudents                                         Int                             @default(0)
-  createdAt                                             DateTime                        @default(now())
+  geofenceRadius                                        Int                              @default(100)
+  schoolAdminId                                         Int                              @unique
+  totalLicenses                                         Int                              @default(0)
+  activeLicenses                                        Int                              @default(0)
+  totalStudents                                         Int                              @default(0)
+  createdAt                                             DateTime                         @default(now())
   updatedAt                                             DateTime
-  premiumLicensePrice                                   Float                           @default(1250.00)
-  standardLicensePrice                                  Float                           @default(600.00)
-  renewalOfferDiscount                                  Float                           @default(50.00)
-  renewalOfferEnabled                                   Boolean                         @default(true)
-  visionCycleDuration                                   Int                             @default(6)
+  premiumLicensePrice                                   Float                            @default(1250.00)
+  standardLicensePrice                                  Float                            @default(600.00)
+  renewalOfferDiscount                                  Float                            @default(50.00)
+  renewalOfferEnabled                                   Boolean                          @default(true)
+  visionCycleDuration                                   Int                              @default(6)
   masterOrganizationId                                  Int?
   address                                               String?
-  licensesAvailable                                     Int                             @default(0)
-  customLoginEnabled                                    Boolean                         @default(false)
+  licensesAvailable                                     Int                              @default(0)
+  customLoginEnabled                                    Boolean                          @default(false)
   loginBackgroundUrl                                    String?
-  loginWelcomeMessage                                   String?                         @default("Bienvenido al Portal de Entrenamiento")
-  showPoweredBy                                         Boolean                         @default(true)
-  anticipoAmount                                        Decimal?                        @db.Decimal(10, 2)
-  anticipoDeadlineHours                                 Int                             @default(13)
-  anticiposEnabled                                      Boolean                         @default(false)
-  transferDeadlineDays                                  Int                             @default(0)
-  transfersEnabled                                      Boolean                         @default(false)
-  // Comisiones para coordinadores (equipo)
-  teamCommissionsEnabled                                Boolean                         @default(false)
-  teamCommissionBasicSeated                             Decimal                         @default(300.00) @db.Decimal(10, 2)
-  teamCommissionAdvancedSeated                          Decimal                         @default(500.00) @db.Decimal(10, 2)
-  teamCommissionAdvancedCombo                           Decimal                         @default(700.00) @db.Decimal(10, 2)
-  teamCommissionPLStart                                 Decimal                         @default(400.00) @db.Decimal(10, 2)
-  // Comisiones por referencia (embajadores/GCs)
-  referralCommissionsEnabled                            Boolean                         @default(false)
-  referralCommissionBasicPercent                        Decimal                         @default(20.00) @db.Decimal(5, 2)
-  referralCommissionAdvancedPercent                     Decimal                         @default(10.00) @db.Decimal(5, 2)
-  referralCommissionPLPercent                           Decimal                         @default(10.00) @db.Decimal(5, 2)
-  referralCommissionComboPercent                        Decimal                         @default(15.00) @db.Decimal(5, 2)
+  loginWelcomeMessage                                   String?                          @default("Bienvenido al Portal de Entrenamiento")
+  showPoweredBy                                         Boolean                          @default(true)
+  anticipoAmount                                        Decimal?                         @db.Decimal(10, 2)
+  anticipoDeadlineHours                                 Int                              @default(13)
+  anticiposEnabled                                      Boolean                          @default(false)
+  transferDeadlineDays                                  Int                              @default(0)
+  transfersEnabled                                      Boolean                          @default(false)
   bankAccountClabe                                      String?
   bankAccountHolder                                     String?
   bankAccountNumber                                     String?
@@ -2457,14 +2457,14 @@ model Organization {
   bankReference                                         String?
   whatsappInviteImageUrl                                String?
   flyerBackgroundUrl                                    String?
-  flyerCtaText                                          String?                         @default("Escanea para registrarte")
+  flyerCtaText                                          String?                          @default("Escanea para registrarte")
   flyerHeadline                                         String?
   flyerLocationDetail                                   String?
-  flyerShowUrgencyBadge                                 Boolean                         @default(true)
+  flyerShowUrgencyBadge                                 Boolean                          @default(true)
   flyerSubheadline                                      String?
-  flyerUrgencyText                                      String?                         @default("CUPO LIMITADO")
+  flyerUrgencyText                                      String?                          @default("CUPO LIMITADO")
   flyerWhatsappNumber                                   String?
-  customDomain                                          String?                         @unique
+  customDomain                                          String?                          @unique
   video2daLlamadaPerdidaUrl                             String?
   video3raLlamadaUrl                                    String?
   videoBienvenidaLideres1Url                            String?
@@ -2475,6 +2475,16 @@ model Organization {
   website                                               String?
   customLoginUrl                                        String?
   transferWhatsappNumber                                String?
+  referralCommissionAdvancedPercent                     Decimal                          @default(10.00) @db.Decimal(5, 2)
+  referralCommissionBasicPercent                        Decimal                          @default(20.00) @db.Decimal(5, 2)
+  referralCommissionComboPercent                        Decimal                          @default(15.00) @db.Decimal(5, 2)
+  referralCommissionPLPercent                           Decimal                          @default(10.00) @db.Decimal(5, 2)
+  referralCommissionsEnabled                            Boolean                          @default(false)
+  teamCommissionAdvancedCombo                           Decimal                          @default(700.00) @db.Decimal(10, 2)
+  teamCommissionAdvancedSeated                          Decimal                          @default(500.00) @db.Decimal(10, 2)
+  teamCommissionBasicSeated                             Decimal                          @default(300.00) @db.Decimal(10, 2)
+  teamCommissionPLStart                                 Decimal                          @default(400.00) @db.Decimal(10, 2)
+  teamCommissionsEnabled                                Boolean                          @default(false)
   AbandonedCheckout                                     AbandonedCheckout[]
   Archetype                                             Archetype[]
   AutomationMessageLog                                  AutomationMessageLog[]
@@ -2485,6 +2495,7 @@ model Organization {
   EventRegistration                                     EventRegistration[]
   Expense                                               Expense[]
   ExpoVisitor                                           ExpoVisitor[]
+  FacturapiConfig                                       FacturapiConfig?
   GiftCode                                              GiftCode[]
   InstitutionalOrder                                    InstitutionalOrder[]
   LegacyProject                                         LegacyProject[]
@@ -2493,8 +2504,8 @@ model Organization {
   LicenseCode                                           LicenseCode[]
   LicenseOrder                                          LicenseOrder[]
   MentorPackageOrder                                    MentorPackageOrder[]
-  MasterOrganization                                    MasterOrganization?             @relation(fields: [masterOrganizationId], references: [id])
-  Usuario_Organization_schoolAdminIdToUsuario           Usuario                         @relation("Organization_schoolAdminIdToUsuario", fields: [schoolAdminId], references: [id])
+  MasterOrganization                                    MasterOrganization?              @relation(fields: [masterOrganizationId], references: [id])
+  Usuario_Organization_schoolAdminIdToUsuario           Usuario                          @relation("Organization_schoolAdminIdToUsuario", fields: [schoolAdminId], references: [id])
   OrganizationWallet                                    OrganizationWallet?
   PaymentCode                                           PaymentCode[]
   PaymentGatewayConfigs                                 PaymentGatewayConfig[]
@@ -2510,13 +2521,13 @@ model Organization {
   TicketPriceConfig                                     TicketPriceConfig[]
   TimeCapsuleCampaign                                   TimeCapsuleCampaign[]
   UserLicense                                           UserLicense[]
-  Usuario_Usuario_communityOrganizationIdToOrganization Usuario[]                       @relation("Usuario_communityOrganizationIdToOrganization")
-  Usuario_Usuario_organizationIdToOrganization          Usuario[]                       @relation("Usuario_organizationIdToOrganization")
+  Usuario_Usuario_communityOrganizationIdToOrganization Usuario[]                        @relation("Usuario_communityOrganizationIdToOrganization")
+  Usuario_Usuario_organizationIdToOrganization          Usuario[]                        @relation("Usuario_organizationIdToOrganization")
   Vision                                                Vision[]
+  ambassador_wallet_transactions                        ambassador_wallet_transactions[]
   coordinator_commission_config                         coordinator_commission_config[]
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
-  ambassador_wallet_transactions                        ambassador_wallet_transactions[]
 
   @@index([masterOrganizationId])
   @@index([slug])
@@ -2775,6 +2786,21 @@ model PaymentGatewayConfig {
   @@unique([organizationId, provider])
   @@index([organizationId])
   @@index([provider])
+}
+
+model FacturapiConfig {
+  id             Int          @id @default(autoincrement())
+  organizationId Int          @unique
+  apiKey         String
+  isActive       Boolean      @default(true)
+  isLiveMode     Boolean      @default(false)
+  defaultSatKey  String?      @default("86132000")
+  defaultUnitKey String?      @default("E48")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model PaymentSettings {
@@ -3829,31 +3855,31 @@ model TaskSubmission {
 }
 
 model Ticket {
-  id                                    String              @id
+  id                                    String                           @id
   ownerId                               Int
   organizationId                        Int
   visionId                              Int
   level                                 VisionLevel
-  type                                  TicketType          @default(STANDARD)
-  status                                TicketStatus        @default(PENDING_PAYMENT)
-  isTransferable                        Boolean             @default(true)
+  type                                  TicketType                       @default(STANDARD)
+  status                                TicketStatus                     @default(PENDING_PAYMENT)
+  isTransferable                        Boolean                          @default(true)
   validUntil                            DateTime?
-  paymentStatus                         TicketPaymentStatus @default(UNPAID)
-  purchasePrice                         Decimal?            @db.Decimal(10, 2)
+  paymentStatus                         TicketPaymentStatus              @default(UNPAID)
+  purchasePrice                         Decimal?                         @db.Decimal(10, 2)
   transferredAt                         DateTime?
   transferredTo                         Int?
-  createdAt                             DateTime            @default(now())
+  createdAt                             DateTime                         @default(now())
   updatedAt                             DateTime
-  amountPaid                            Decimal             @default(0) @db.Decimal(10, 2)
-  costAtPurchase                        Decimal?            @db.Decimal(10, 2)
+  amountPaid                            Decimal                          @default(0) @db.Decimal(10, 2)
+  costAtPurchase                        Decimal?                         @db.Decimal(10, 2)
   giftCodeId                            Int?
-  isAnticipo                            Boolean             @default(false)
+  isAnticipo                            Boolean                          @default(false)
   AbandonedCheckout                     AbandonedCheckout[]
-  GiftCode                              GiftCode?           @relation(fields: [giftCodeId], references: [id])
-  Organization                          Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Usuario_Ticket_ownerIdToUsuario       Usuario             @relation("Ticket_ownerIdToUsuario", fields: [ownerId], references: [id], onDelete: Cascade)
-  Usuario_Ticket_transferredToToUsuario Usuario?            @relation("Ticket_transferredToToUsuario", fields: [transferredTo], references: [id])
-  Vision                                Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  GiftCode                              GiftCode?                        @relation(fields: [giftCodeId], references: [id])
+  Organization                          Organization                     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Usuario_Ticket_ownerIdToUsuario       Usuario                          @relation("Ticket_ownerIdToUsuario", fields: [ownerId], references: [id], onDelete: Cascade)
+  Usuario_Ticket_transferredToToUsuario Usuario?                         @relation("Ticket_transferredToToUsuario", fields: [transferredTo], references: [id])
+  Vision                                Vision                           @relation(fields: [visionId], references: [id], onDelete: Cascade)
   TicketTransaction                     TicketTransaction[]
   ambassador_wallet_transactions        ambassador_wallet_transactions[]
 
@@ -3870,16 +3896,16 @@ model TicketPriceConfig {
   id              Int          @id @default(autoincrement())
   organizationId  Int
   level           VisionLevel
-  regularPrice      Decimal      @db.Decimal(10, 2)
-  promoPrice        Decimal?     @db.Decimal(10, 2)
-  promoValidUntil   DateTime?
-  comboAdvPL        Decimal?     @db.Decimal(10, 2)
-  comboAdvPLPago1   Decimal?     @db.Decimal(10, 2) // Primer pago (apartado)
-  comboAdvPLPago2   Decimal?     @db.Decimal(10, 2) // Segundo pago (liquidación)
-  partialPayment    Decimal?     @db.Decimal(10, 2)
+  regularPrice    Decimal      @db.Decimal(10, 2)
+  promoPrice      Decimal?     @db.Decimal(10, 2)
+  promoValidUntil DateTime?
+  comboAdvPL      Decimal?     @db.Decimal(10, 2)
+  partialPayment  Decimal?     @db.Decimal(10, 2)
   isActive        Boolean      @default(true)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime
+  comboAdvPLPago1 Decimal?     @db.Decimal(10, 2)
+  comboAdvPLPago2 Decimal?     @db.Decimal(10, 2)
   Organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, level])
@@ -4770,75 +4796,75 @@ model UserSong {
 }
 
 model Usuario {
-  id                                                                        Int                             @id @default(autoincrement())
+  id                                                                        Int                              @id @default(autoincrement())
   nombre                                                                    String
-  email                                                                     String                          @unique
+  email                                                                     String                           @unique
   password                                                                  String?
   imagen                                                                    String?
-  rol                                                                       Rol                             @default(PARTICIPANTE)
-  puntosCuanticos                                                           Int                             @default(0)
-  isActive                                                                  Boolean                         @default(false)
-  suscripcion                                                               EstadoSuscripcion               @default(INACTIVO)
+  rol                                                                       Rol                              @default(PARTICIPANTE)
+  puntosCuanticos                                                           Int                              @default(0)
+  isActive                                                                  Boolean                          @default(false)
+  suscripcion                                                               EstadoSuscripcion                @default(INACTIVO)
   planActual                                                                String?
   fechaFinSuscripcion                                                       DateTime?
-  tier                                                                      UserTier                        @default(FREE)
-  subscriptionStatus                                                        String                          @default("INACTIVE")
+  tier                                                                      UserTier                         @default(FREE)
+  subscriptionStatus                                                        String                           @default("INACTIVE")
   licenseCode                                                               String?
   schoolId                                                                  Int?
   mentorId                                                                  Int?
   coordinadorId                                                             Int?
   vision                                                                    String?
   sede                                                                      String?
-  llamadasPerdidas                                                          Int                             @default(0)
-  createdAt                                                                 DateTime                        @default(now())
-  updatedAt                                                                 DateTime                        @default(now())
+  llamadasPerdidas                                                          Int                              @default(0)
+  createdAt                                                                 DateTime                         @default(now())
+  updatedAt                                                                 DateTime                         @default(now())
   gameChangerId                                                             Int?
-  puntosGamificacion                                                        Int                             @default(0)
-  experienciaXP                                                             Int                             @default(0)
-  nivelActual                                                               Int                             @default(1)
-  rangoActual                                                               String                          @default("NOVATO_RASTREADOR")
-  completionStreak                                                          Int                             @default(0)
+  puntosGamificacion                                                        Int                              @default(0)
+  experienciaXP                                                             Int                              @default(0)
+  nivelActual                                                               Int                              @default(1)
+  rangoActual                                                               String                           @default("NOVATO_RASTREADOR")
+  completionStreak                                                          Int                              @default(0)
   lastCompletionDate                                                        DateTime?
-  collectionsCompleted                                                      String[]                        @default([])
-  missedCallsCount                                                          Int                             @default(0)
+  collectionsCompleted                                                      String[]                         @default([])
+  missedCallsCount                                                          Int                              @default(0)
   assignedMentorId                                                          Int?
   bioFull                                                                   String?
   bioShort                                                                  String?
-  experienceYears                                                           Int                             @default(0)
+  experienceYears                                                           Int                              @default(0)
   jobTitle                                                                  String?
   profileImage                                                              String?
-  skills                                                                    String[]                        @default([])
-  badges                                                                    String[]                        @default([])
-  timezone                                                                  String                          @default("America/Mexico_City")
-  socialVisibility                                                          SocialVisibility                @default(COMMUNITY)
+  skills                                                                    String[]                         @default([])
+  badges                                                                    String[]                         @default([])
+  timezone                                                                  String                           @default("America/Mexico_City")
+  socialVisibility                                                          SocialVisibility                 @default(COMMUNITY)
   organizationId                                                            Int?
-  isPostVisionUser                                                          Boolean                         @default(false)
+  isPostVisionUser                                                          Boolean                          @default(false)
   lastRenewalOfferDate                                                      DateTime?
   originalOrganizationId                                                    Int?
-  renewalOfferShown                                                         Boolean                         @default(false)
+  renewalOfferShown                                                         Boolean                          @default(false)
   subscriptionEndDate                                                       DateTime?
-  subscriptionPlan                                                          SubscriptionPlan?               @default(NONE)
+  subscriptionPlan                                                          SubscriptionPlan?                @default(NONE)
   subscriptionStartDate                                                     DateTime?
   telefono                                                                  String?
-  requirePasswordChange                                                     Boolean                         @default(false)
+  requirePasswordChange                                                     Boolean                          @default(false)
   changeRequestedAt                                                         DateTime?
   changeRequestedBy                                                         Int?
   newOrganizationId                                                         Int?
   newVisionId                                                               Int?
-  pendingOrganizationChange                                                 Boolean                         @default(false)
+  pendingOrganizationChange                                                 Boolean                          @default(false)
   previousOrganizationId                                                    Int?
-  mentorMarketplaceApproved                                                 Boolean                         @default(false)
-  visibleInMentorshipMarketplace                                            Boolean                         @default(true)
+  mentorMarketplaceApproved                                                 Boolean                          @default(false)
+  visibleInMentorshipMarketplace                                            Boolean                          @default(true)
   communityOrganizationId                                                   Int?
   magicLinkExpiry                                                           DateTime?
-  magicLinkToken                                                            String?                         @unique
-  onboardingOrigin                                                          String?                         @default("ORGANIC_SIGNUP")
+  magicLinkToken                                                            String?                          @unique
+  onboardingOrigin                                                          String?                          @default("ORGANIC_SIGNUP")
   temporaryPassword                                                         String?
-  wizardCompleted                                                           Boolean                         @default(false)
-  accumulatedMissedCalls                                                    Int                             @default(0)
-  isAcceptingNewStudents                                                    Boolean                         @default(true)
+  wizardCompleted                                                           Boolean                          @default(false)
+  accumulatedMissedCalls                                                    Int                              @default(0)
+  isAcceptingNewStudents                                                    Boolean                          @default(true)
   lastStrikeDate                                                            DateTime?
-  mentorStatus                                                              MentorStatus                    @default(ACTIVE)
+  mentorStatus                                                              MentorStatus                     @default(ACTIVE)
   lastAvatarChangeDate                                                      DateTime?
   currentVisionLevel                                                        VisionLevel?
   graduatedFromAdvanced                                                     DateTime?
@@ -4850,202 +4876,202 @@ model Usuario {
   responsableSeguimiento                                                    String?
   visionAngel                                                               String?
   invitedBy                                                                 Int?
-  invitedCount                                                              Int                             @default(0)
-  referralCode                                                              String?                         @unique
+  invitedCount                                                              Int                              @default(0)
+  referralCode                                                              String?                          @unique
   birthdate                                                                 DateTime?
   children                                                                  Int?
   goals                                                                     String?
   profession                                                                String?
   expectations                                                              String?
   invitedByText                                                             String?
-  esMentor                                                                  Boolean                         @default(false)
-  esEntrenador                                                              Boolean                         @default(false)
-  esCoordinador                                                             Boolean                         @default(false)
-  esLider                                                                   Boolean                         @default(false)
-  esCoordinadorBasico                                                       Boolean                         @default(false)
-  esCoordinadorAvanzado                                                     Boolean                         @default(false)
-  esGameChanger                                                             Boolean                         @default(false)
+  esMentor                                                                  Boolean                          @default(false)
+  esEntrenador                                                              Boolean                          @default(false)
+  esCoordinador                                                             Boolean                          @default(false)
+  esLider                                                                   Boolean                          @default(false)
+  esCoordinadorBasico                                                       Boolean                          @default(false)
+  esCoordinadorAvanzado                                                     Boolean                          @default(false)
+  esGameChanger                                                             Boolean                          @default(false)
   goal1                                                                     String?
   goal2                                                                     String?
   goal3                                                                     String?
-  profileCompleted                                                          Boolean                         @default(false)
-  // Quantum Ambassadors - Sistema de comisiones por referidos
-  isGraduated                                                               Boolean                         @default(false)
-  ambassadorBalance                                                         Decimal                         @default(0) @db.Decimal(10, 2)
+  profileCompleted                                                          Boolean                          @default(false)
+  ambassadorBalance                                                         Decimal                          @default(0) @db.Decimal(10, 2)
+  bankAccountHolder                                                         String?
   bankClabe                                                                 String?
   bankName                                                                  String?
-  bankAccountHolder                                                         String?
+  isGraduated                                                               Boolean                          @default(false)
   AbandonedCheckout                                                         AbandonedCheckout[]
-  AccessCode_AccessCode_generatedByToUsuario                                AccessCode[]                    @relation("AccessCode_generatedByToUsuario")
-  AccessCode_AccessCode_usedByToUsuario                                     AccessCode[]                    @relation("AccessCode_usedByToUsuario")
+  AccessCode_AccessCode_generatedByToUsuario                                AccessCode[]                     @relation("AccessCode_generatedByToUsuario")
+  AccessCode_AccessCode_usedByToUsuario                                     AccessCode[]                     @relation("AccessCode_usedByToUsuario")
   AdminTask                                                                 AdminTask[]
-  AdvancedPreRegistration_AdvancedPreRegistration_scannedByStaffIdToUsuario AdvancedPreRegistration[]       @relation("AdvancedPreRegistration_scannedByStaffIdToUsuario")
-  AdvancedPreRegistration_AdvancedPreRegistration_userIdToUsuario           AdvancedPreRegistration[]       @relation("AdvancedPreRegistration_userIdToUsuario")
-  AdvancedQuestionnaire_AdvancedQuestionnaire_flagReviewedByToUsuario       AdvancedQuestionnaire[]         @relation("AdvancedQuestionnaire_flagReviewedByToUsuario")
-  AdvancedQuestionnaire_AdvancedQuestionnaire_userIdToUsuario               AdvancedQuestionnaire?          @relation("AdvancedQuestionnaire_userIdToUsuario")
+  AdvancedPreRegistration_AdvancedPreRegistration_scannedByStaffIdToUsuario AdvancedPreRegistration[]        @relation("AdvancedPreRegistration_scannedByStaffIdToUsuario")
+  AdvancedPreRegistration_AdvancedPreRegistration_userIdToUsuario           AdvancedPreRegistration[]        @relation("AdvancedPreRegistration_userIdToUsuario")
+  AdvancedQuestionnaire_AdvancedQuestionnaire_flagReviewedByToUsuario       AdvancedQuestionnaire[]          @relation("AdvancedQuestionnaire_flagReviewedByToUsuario")
+  AdvancedQuestionnaire_AdvancedQuestionnaire_userIdToUsuario               AdvancedQuestionnaire?           @relation("AdvancedQuestionnaire_userIdToUsuario")
   Archetype                                                                 Archetype[]
-  ArchetypeAssignment_ArchetypeAssignment_assignedByIdToUsuario             ArchetypeAssignment[]           @relation("ArchetypeAssignment_assignedByIdToUsuario")
-  ArchetypeAssignment_ArchetypeAssignment_participantIdToUsuario            ArchetypeAssignment[]           @relation("ArchetypeAssignment_participantIdToUsuario")
+  ArchetypeAssignment_ArchetypeAssignment_assignedByIdToUsuario             ArchetypeAssignment[]            @relation("ArchetypeAssignment_assignedByIdToUsuario")
+  ArchetypeAssignment_ArchetypeAssignment_participantIdToUsuario            ArchetypeAssignment[]            @relation("ArchetypeAssignment_participantIdToUsuario")
   AreaConfig                                                                AreaConfig[]
-  ArenaDuel_ArenaDuel_player1IdToUsuario                                    ArenaDuel[]                     @relation("ArenaDuel_player1IdToUsuario")
-  ArenaDuel_ArenaDuel_player2IdToUsuario                                    ArenaDuel[]                     @relation("ArenaDuel_player2IdToUsuario")
-  ArenaDuel_ArenaDuel_winnerIdToUsuario                                     ArenaDuel[]                     @relation("ArenaDuel_winnerIdToUsuario")
+  ArenaDuel_ArenaDuel_player1IdToUsuario                                    ArenaDuel[]                      @relation("ArenaDuel_player1IdToUsuario")
+  ArenaDuel_ArenaDuel_player2IdToUsuario                                    ArenaDuel[]                      @relation("ArenaDuel_player2IdToUsuario")
+  ArenaDuel_ArenaDuel_winnerIdToUsuario                                     ArenaDuel[]                      @relation("ArenaDuel_winnerIdToUsuario")
   ArenaQueue                                                                ArenaQueue?
   ArenaStats                                                                ArenaStats?
-  ArenaTaunt_ArenaTaunt_receiverIdToUsuario                                 ArenaTaunt[]                    @relation("ArenaTaunt_receiverIdToUsuario")
-  ArenaTaunt_ArenaTaunt_senderIdToUsuario                                   ArenaTaunt[]                    @relation("ArenaTaunt_senderIdToUsuario")
+  ArenaTaunt_ArenaTaunt_receiverIdToUsuario                                 ArenaTaunt[]                     @relation("ArenaTaunt_receiverIdToUsuario")
+  ArenaTaunt_ArenaTaunt_senderIdToUsuario                                   ArenaTaunt[]                     @relation("ArenaTaunt_senderIdToUsuario")
   AutoLoginToken                                                            AutoLoginToken[]
   AutomationMessageLog                                                      AutomationMessageLog[]
   AvatarGenerationAttempt                                                   AvatarGenerationAttempt[]
   BasicCallTracking                                                         BasicCallTracking[]
-  BuddyPair_BuddyPair_brokenByToUsuario                                     BuddyPair[]                     @relation("BuddyPair_brokenByToUsuario")
-  BuddyPair_BuddyPair_initiatorIdToUsuario                                  BuddyPair[]                     @relation("BuddyPair_initiatorIdToUsuario")
-  BuddyPair_BuddyPair_receiverIdToUsuario                                   BuddyPair[]                     @relation("BuddyPair_receiverIdToUsuario")
+  BuddyPair_BuddyPair_brokenByToUsuario                                     BuddyPair[]                      @relation("BuddyPair_brokenByToUsuario")
+  BuddyPair_BuddyPair_initiatorIdToUsuario                                  BuddyPair[]                      @relation("BuddyPair_initiatorIdToUsuario")
+  BuddyPair_BuddyPair_receiverIdToUsuario                                   BuddyPair[]                      @relation("BuddyPair_receiverIdToUsuario")
   BusinessNudge                                                             BusinessNudge[]
   BusinessProfile                                                           BusinessProfile?
   CallAvailability                                                          CallAvailability[]
-  CallBooking_CallBooking_mentorIdToUsuario                                 CallBooking[]                   @relation("CallBooking_mentorIdToUsuario")
-  CallBooking_CallBooking_studentIdToUsuario                                CallBooking[]                   @relation("CallBooking_studentIdToUsuario")
+  CallBooking_CallBooking_mentorIdToUsuario                                 CallBooking[]                    @relation("CallBooking_mentorIdToUsuario")
+  CallBooking_CallBooking_studentIdToUsuario                                CallBooking[]                    @relation("CallBooking_studentIdToUsuario")
   CallInteractionLog                                                        CallInteractionLog[]
-  CallLog_CallLog_mentorIdToUsuario                                         CallLog[]                       @relation("CallLog_mentorIdToUsuario")
-  CallLog_CallLog_studentIdToUsuario                                        CallLog[]                       @relation("CallLog_studentIdToUsuario")
-  CapsuleMessage_CapsuleMessage_recipientIdToUsuario                        CapsuleMessage[]                @relation("CapsuleMessage_recipientIdToUsuario")
-  CapsuleMessage_CapsuleMessage_senderUserIdToUsuario                       CapsuleMessage[]                @relation("CapsuleMessage_senderUserIdToUsuario")
+  CallLog_CallLog_mentorIdToUsuario                                         CallLog[]                        @relation("CallLog_mentorIdToUsuario")
+  CallLog_CallLog_studentIdToUsuario                                        CallLog[]                        @relation("CallLog_studentIdToUsuario")
+  CapsuleMessage_CapsuleMessage_recipientIdToUsuario                        CapsuleMessage[]                 @relation("CapsuleMessage_recipientIdToUsuario")
+  CapsuleMessage_CapsuleMessage_senderUserIdToUsuario                       CapsuleMessage[]                 @relation("CapsuleMessage_senderUserIdToUsuario")
   CaptaincyNotification                                                     CaptaincyNotification[]
   CartaFrutos                                                               CartaFrutos[]
-  CashBatch_CashBatch_codeGeneratedByIdToUsuario                            CashBatch[]                     @relation("CashBatch_codeGeneratedByIdToUsuario")
-  CashBatch_CashBatch_coordinatorIdToUsuario                                CashBatch[]                     @relation("CashBatch_coordinatorIdToUsuario")
-  CashBatch_CashBatch_receivedByIdToUsuario                                 CashBatch[]                     @relation("CashBatch_receivedByIdToUsuario")
+  CashBatch_CashBatch_codeGeneratedByIdToUsuario                            CashBatch[]                      @relation("CashBatch_codeGeneratedByIdToUsuario")
+  CashBatch_CashBatch_coordinatorIdToUsuario                                CashBatch[]                      @relation("CashBatch_coordinatorIdToUsuario")
+  CashBatch_CashBatch_receivedByIdToUsuario                                 CashBatch[]                      @relation("CashBatch_receivedByIdToUsuario")
   CheckIn                                                                   CheckIn[]
-  CheckInRecord_CheckInRecord_checkedInByToUsuario                          CheckInRecord[]                 @relation("CheckInRecord_checkedInByToUsuario")
-  CheckInRecord_CheckInRecord_userIdToUsuario                               CheckInRecord[]                 @relation("CheckInRecord_userIdToUsuario")
+  CheckInRecord_CheckInRecord_checkedInByToUsuario                          CheckInRecord[]                  @relation("CheckInRecord_checkedInByToUsuario")
+  CheckInRecord_CheckInRecord_userIdToUsuario                               CheckInRecord[]                  @relation("CheckInRecord_userIdToUsuario")
   CodigoAcceso                                                              CodigoAcceso[]
-  CollectiblePhoto_CollectiblePhoto_userIdToUsuario                         CollectiblePhoto[]              @relation("CollectiblePhoto_userIdToUsuario")
-  CollectiblePhoto_CollectiblePhoto_validatedByToUsuario                    CollectiblePhoto[]              @relation("CollectiblePhoto_validatedByToUsuario")
-  CommissionLedger_CommissionLedger_mentorIdToUsuario                       CommissionLedger[]              @relation("CommissionLedger_mentorIdToUsuario")
-  CommissionLedger_CommissionLedger_studentIdToUsuario                      CommissionLedger[]              @relation("CommissionLedger_studentIdToUsuario")
+  CollectiblePhoto_CollectiblePhoto_userIdToUsuario                         CollectiblePhoto[]               @relation("CollectiblePhoto_userIdToUsuario")
+  CollectiblePhoto_CollectiblePhoto_validatedByToUsuario                    CollectiblePhoto[]               @relation("CollectiblePhoto_validatedByToUsuario")
+  CommissionLedger_CommissionLedger_mentorIdToUsuario                       CommissionLedger[]               @relation("CommissionLedger_mentorIdToUsuario")
+  CommissionLedger_CommissionLedger_studentIdToUsuario                      CommissionLedger[]               @relation("CommissionLedger_studentIdToUsuario")
   CrossingSession                                                           CrossingSession[]
   DirectorAudit                                                             DirectorAudit[]
   DisciplineBlockedSlot                                                     DisciplineBlockedSlot[]
   DisciplineConfig                                                          DisciplineConfig?
   DisciplineSchedule                                                        DisciplineSchedule?
-  DisciplineSubscription_DisciplineSubscription_mentorIdToUsuario           DisciplineSubscription[]        @relation("DisciplineSubscription_mentorIdToUsuario")
-  DisciplineSubscription_DisciplineSubscription_studentIdToUsuario          DisciplineSubscription?         @relation("DisciplineSubscription_studentIdToUsuario")
+  DisciplineSubscription_DisciplineSubscription_mentorIdToUsuario           DisciplineSubscription[]         @relation("DisciplineSubscription_mentorIdToUsuario")
+  DisciplineSubscription_DisciplineSubscription_studentIdToUsuario          DisciplineSubscription?          @relation("DisciplineSubscription_studentIdToUsuario")
+  EventInvitations                                                          EventRegistration[]              @relation("EventInvitations")
   Evidencia                                                                 Evidencia[]
   EvidenciaAccion                                                           EvidenciaAccion[]
-  Expense_Expense_approvedByIdToUsuario                                     Expense[]                       @relation("Expense_approvedByIdToUsuario")
-  Expense_Expense_userIdToUsuario                                           Expense[]                       @relation("Expense_userIdToUsuario")
-  ExpoReview_ExpoReview_exhibitorIdToUsuario                                ExpoReview[]                    @relation("ExpoReview_exhibitorIdToUsuario")
-  ExpoReview_ExpoReview_visitorIdToUsuario                                  ExpoReview[]                    @relation("ExpoReview_visitorIdToUsuario")
+  Expense_Expense_approvedByIdToUsuario                                     Expense[]                        @relation("Expense_approvedByIdToUsuario")
+  Expense_Expense_userIdToUsuario                                           Expense[]                        @relation("Expense_userIdToUsuario")
+  ExpoReview_ExpoReview_exhibitorIdToUsuario                                ExpoReview[]                     @relation("ExpoReview_exhibitorIdToUsuario")
+  ExpoReview_ExpoReview_visitorIdToUsuario                                  ExpoReview[]                     @relation("ExpoReview_visitorIdToUsuario")
   ExpoVisitor                                                               ExpoVisitor[]
   FlightDeckEvent                                                           FlightDeckEvent[]
   FlightLiveSession                                                         FlightLiveSession[]
   FlightPassenger                                                           FlightPassenger[]
   GCAvailability                                                            GCAvailability[]
-  GCCallAttempt_GCCallAttempt_gameChangerIdToUsuario                        GCCallAttempt[]                 @relation("GCCallAttempt_gameChangerIdToUsuario")
-  GCCallAttempt_GCCallAttempt_participantIdToUsuario                        GCCallAttempt[]                 @relation("GCCallAttempt_participantIdToUsuario")
-  GCCallLog_GCCallLog_gameChangerIdToUsuario                                GCCallLog[]                     @relation("GCCallLog_gameChangerIdToUsuario")
-  GCCallLog_GCCallLog_participantIdToUsuario                                GCCallLog[]                     @relation("GCCallLog_participantIdToUsuario")
-  GCCallSlot_GCCallSlot_cancelledByToUsuario                                GCCallSlot[]                    @relation("GCCallSlot_cancelledByToUsuario")
-  GCCallSlot_GCCallSlot_participantIdToUsuario                              GCCallSlot[]                    @relation("GCCallSlot_participantIdToUsuario")
+  GCCallAttempt_GCCallAttempt_gameChangerIdToUsuario                        GCCallAttempt[]                  @relation("GCCallAttempt_gameChangerIdToUsuario")
+  GCCallAttempt_GCCallAttempt_participantIdToUsuario                        GCCallAttempt[]                  @relation("GCCallAttempt_participantIdToUsuario")
+  GCCallLog_GCCallLog_gameChangerIdToUsuario                                GCCallLog[]                      @relation("GCCallLog_gameChangerIdToUsuario")
+  GCCallLog_GCCallLog_participantIdToUsuario                                GCCallLog[]                      @relation("GCCallLog_participantIdToUsuario")
+  GCCallSlot_GCCallSlot_cancelledByToUsuario                                GCCallSlot[]                     @relation("GCCallSlot_cancelledByToUsuario")
+  GCCallSlot_GCCallSlot_participantIdToUsuario                              GCCallSlot[]                     @relation("GCCallSlot_participantIdToUsuario")
   GameChangerLockStatus                                                     GameChangerLockStatus[]
   GameChangerSurvey                                                         GameChangerSurvey[]
-  GiftCode_GiftCode_createdByToUsuario                                      GiftCode[]                      @relation("GiftCode_createdByToUsuario")
-  GiftCode_GiftCode_usedByToUsuario                                         GiftCode[]                      @relation("GiftCode_usedByToUsuario")
+  GiftCode_GiftCode_createdByToUsuario                                      GiftCode[]                       @relation("GiftCode_createdByToUsuario")
+  GiftCode_GiftCode_usedByToUsuario                                         GiftCode[]                       @relation("GiftCode_usedByToUsuario")
   GraduationGuest                                                           GraduationGuest[]
   InstitutionalOrder                                                        InstitutionalOrder[]
   LegacyCampaign                                                            LegacyCampaign[]
   LegacyCampaignMember                                                      LegacyCampaignMember[]
-  LegacyCaptureSession_LegacyCaptureSession_gcIdToUsuario                   LegacyCaptureSession[]          @relation("LegacyCaptureSession_gcIdToUsuario")
-  LegacyCaptureSession_LegacyCaptureSession_participantIdToUsuario          LegacyCaptureSession[]          @relation("LegacyCaptureSession_participantIdToUsuario")
+  LegacyCaptureSession_LegacyCaptureSession_gcIdToUsuario                   LegacyCaptureSession[]           @relation("LegacyCaptureSession_gcIdToUsuario")
+  LegacyCaptureSession_LegacyCaptureSession_participantIdToUsuario          LegacyCaptureSession[]           @relation("LegacyCaptureSession_participantIdToUsuario")
   LegacyDonation                                                            LegacyDonation[]
-  LegacyExpense_LegacyExpense_auditedByIdToUsuario                          LegacyExpense[]                 @relation("LegacyExpense_auditedByIdToUsuario")
-  LegacyExpense_LegacyExpense_dispersedByIdToUsuario                        LegacyExpense[]                 @relation("LegacyExpense_dispersedByIdToUsuario")
-  LegacyExpense_LegacyExpense_requestedByIdToUsuario                        LegacyExpense[]                 @relation("LegacyExpense_requestedByIdToUsuario")
-  LicenseAssignment_LicenseAssignment_assignedByToUsuario                   LicenseAssignment[]             @relation("LicenseAssignment_assignedByToUsuario")
-  LicenseAssignment_LicenseAssignment_userIdToUsuario                       LicenseAssignment[]             @relation("LicenseAssignment_userIdToUsuario")
-  LicenseCode_LicenseCode_createdByToUsuario                                LicenseCode[]                   @relation("LicenseCode_createdByToUsuario")
-  LicenseCode_LicenseCode_usedByToUsuario                                   LicenseCode[]                   @relation("LicenseCode_usedByToUsuario")
+  LegacyExpense_LegacyExpense_auditedByIdToUsuario                          LegacyExpense[]                  @relation("LegacyExpense_auditedByIdToUsuario")
+  LegacyExpense_LegacyExpense_dispersedByIdToUsuario                        LegacyExpense[]                  @relation("LegacyExpense_dispersedByIdToUsuario")
+  LegacyExpense_LegacyExpense_requestedByIdToUsuario                        LegacyExpense[]                  @relation("LegacyExpense_requestedByIdToUsuario")
+  LicenseAssignment_LicenseAssignment_assignedByToUsuario                   LicenseAssignment[]              @relation("LicenseAssignment_assignedByToUsuario")
+  LicenseAssignment_LicenseAssignment_userIdToUsuario                       LicenseAssignment[]              @relation("LicenseAssignment_userIdToUsuario")
+  LicenseCode_LicenseCode_createdByToUsuario                                LicenseCode[]                    @relation("LicenseCode_createdByToUsuario")
+  LicenseCode_LicenseCode_usedByToUsuario                                   LicenseCode[]                    @relation("LicenseCode_usedByToUsuario")
   LicenseOrder                                                              LicenseOrder[]
   MasterOrganization                                                        MasterOrganization[]
-  MedicalForm_MedicalForm_alertsReviewedByToUsuario                         MedicalForm[]                   @relation("MedicalForm_alertsReviewedByToUsuario")
-  MedicalForm_MedicalForm_userIdToUsuario                                   MedicalForm?                    @relation("MedicalForm_userIdToUsuario")
+  MedicalForm_MedicalForm_alertsReviewedByToUsuario                         MedicalForm[]                    @relation("MedicalForm_alertsReviewedByToUsuario")
+  MedicalForm_MedicalForm_userIdToUsuario                                   MedicalForm?                     @relation("MedicalForm_userIdToUsuario")
   MedicalFormAcknowledgment                                                 MedicalFormAcknowledgment[]
   MensajeChat                                                               MensajeChat[]
-  MentorAbsenceReport_MentorAbsenceReport_mentorIdToUsuario                 MentorAbsenceReport[]           @relation("MentorAbsenceReport_mentorIdToUsuario")
-  MentorAbsenceReport_MentorAbsenceReport_reviewedByToUsuario               MentorAbsenceReport[]           @relation("MentorAbsenceReport_reviewedByToUsuario")
-  MentorAbsenceReport_MentorAbsenceReport_studentIdToUsuario                MentorAbsenceReport[]           @relation("MentorAbsenceReport_studentIdToUsuario")
-  MentorAlert_MentorAlert_mentorIdToUsuario                                 MentorAlert[]                   @relation("MentorAlert_mentorIdToUsuario")
-  MentorAlert_MentorAlert_usuarioIdToUsuario                                MentorAlert[]                   @relation("MentorAlert_usuarioIdToUsuario")
-  MentorApplication_MentorApplication_reviewedByToUsuario                   MentorApplication[]             @relation("MentorApplication_reviewedByToUsuario")
-  MentorApplication_MentorApplication_usuarioIdToUsuario                    MentorApplication?              @relation("MentorApplication_usuarioIdToUsuario")
-  MentorPackageOrder_MentorPackageOrder_mentorIdToUsuario                   MentorPackageOrder[]            @relation("MentorPackageOrder_mentorIdToUsuario")
-  MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario                  MentorPackageOrder[]            @relation("MentorPackageOrder_usuarioIdToUsuario")
+  MentorAbsenceReport_MentorAbsenceReport_mentorIdToUsuario                 MentorAbsenceReport[]            @relation("MentorAbsenceReport_mentorIdToUsuario")
+  MentorAbsenceReport_MentorAbsenceReport_reviewedByToUsuario               MentorAbsenceReport[]            @relation("MentorAbsenceReport_reviewedByToUsuario")
+  MentorAbsenceReport_MentorAbsenceReport_studentIdToUsuario                MentorAbsenceReport[]            @relation("MentorAbsenceReport_studentIdToUsuario")
+  MentorAlert_MentorAlert_mentorIdToUsuario                                 MentorAlert[]                    @relation("MentorAlert_mentorIdToUsuario")
+  MentorAlert_MentorAlert_usuarioIdToUsuario                                MentorAlert[]                    @relation("MentorAlert_usuarioIdToUsuario")
+  MentorApplication_MentorApplication_reviewedByToUsuario                   MentorApplication[]              @relation("MentorApplication_reviewedByToUsuario")
+  MentorApplication_MentorApplication_usuarioIdToUsuario                    MentorApplication?               @relation("MentorApplication_usuarioIdToUsuario")
+  MentorPackageOrder_MentorPackageOrder_mentorIdToUsuario                   MentorPackageOrder[]             @relation("MentorPackageOrder_mentorIdToUsuario")
+  MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario                  MentorPackageOrder[]             @relation("MentorPackageOrder_usuarioIdToUsuario")
   MentorPayout                                                              MentorPayout[]
   MentorPayrollItem                                                         MentorPayrollItem[]
-  MetamorfosisAssignment_MetamorfosisAssignment_assignedByIdToUsuario       MetamorfosisAssignment[]        @relation("MetamorfosisAssignment_assignedByIdToUsuario")
-  MetamorfosisAssignment_MetamorfosisAssignment_participantIdToUsuario      MetamorfosisAssignment[]        @relation("MetamorfosisAssignment_participantIdToUsuario")
+  MetamorfosisAssignment_MetamorfosisAssignment_assignedByIdToUsuario       MetamorfosisAssignment[]         @relation("MetamorfosisAssignment_assignedByIdToUsuario")
+  MetamorfosisAssignment_MetamorfosisAssignment_participantIdToUsuario      MetamorfosisAssignment[]         @relation("MetamorfosisAssignment_participantIdToUsuario")
   MetamorfosisBase                                                          MetamorfosisBase[]
   MetamorfosisCunaSong                                                      MetamorfosisCunaSong[]
   MetamorfosisSong                                                          MetamorfosisSong[]
   MetamorfosisTransform                                                     MetamorfosisTransform[]
-  MissionSubmission_MissionSubmission_reviewedByToUsuario                   MissionSubmission[]             @relation("MissionSubmission_reviewedByToUsuario")
-  MissionSubmission_MissionSubmission_userIdToUsuario                       MissionSubmission[]             @relation("MissionSubmission_userIdToUsuario")
+  MissionSubmission_MissionSubmission_reviewedByToUsuario                   MissionSubmission[]              @relation("MissionSubmission_reviewedByToUsuario")
+  MissionSubmission_MissionSubmission_userIdToUsuario                       MissionSubmission[]              @relation("MissionSubmission_userIdToUsuario")
   Notification                                                              Notification[]
-  Organization_Organization_schoolAdminIdToUsuario                          Organization?                   @relation("Organization_schoolAdminIdToUsuario")
+  Organization_Organization_schoolAdminIdToUsuario                          Organization?                    @relation("Organization_schoolAdminIdToUsuario")
   PLCallAttendance                                                          PLCallAttendance[]
   PLWeekendResult                                                           PLWeekendResult[]
-  PLWeeklyCall_PLWeeklyCall_cancelledByToUsuario                            PLWeeklyCall[]                  @relation("PLWeeklyCall_cancelledByToUsuario")
-  PLWeeklyCall_PLWeeklyCall_scheduledByIdToUsuario                          PLWeeklyCall[]                  @relation("PLWeeklyCall_scheduledByIdToUsuario")
+  PLWeeklyCall_PLWeeklyCall_cancelledByToUsuario                            PLWeeklyCall[]                   @relation("PLWeeklyCall_cancelledByToUsuario")
+  PLWeeklyCall_PLWeeklyCall_scheduledByIdToUsuario                          PLWeeklyCall[]                   @relation("PLWeeklyCall_scheduledByIdToUsuario")
   ParticipantSurvey                                                         ParticipantSurvey[]
-  PaymentCode_PaymentCode_createdByIdToUsuario                              PaymentCode[]                   @relation("PaymentCode_createdByIdToUsuario")
-  PaymentCode_PaymentCode_redeemedByIdToUsuario                             PaymentCode[]                   @relation("PaymentCode_redeemedByIdToUsuario")
+  PaymentCode_PaymentCode_createdByIdToUsuario                              PaymentCode[]                    @relation("PaymentCode_createdByIdToUsuario")
+  PaymentCode_PaymentCode_redeemedByIdToUsuario                             PaymentCode[]                    @relation("PaymentCode_redeemedByIdToUsuario")
   PerfilMentor                                                              PerfilMentor?
   PerfilTrainer                                                             PerfilTrainer?
   PersonalTask                                                              PersonalTask[]
   PhoenixSession                                                            PhoenixSession[]
   ProductAttendance                                                         ProductAttendance[]
-  ProgramEnrollment_ProgramEnrollment_mentorIdToUsuario                     ProgramEnrollment[]             @relation("ProgramEnrollment_mentorIdToUsuario")
-  ProgramEnrollment_ProgramEnrollment_userIdToUsuario                       ProgramEnrollment[]             @relation("ProgramEnrollment_userIdToUsuario")
+  ProgramEnrollment_ProgramEnrollment_mentorIdToUsuario                     ProgramEnrollment[]              @relation("ProgramEnrollment_mentorIdToUsuario")
+  ProgramEnrollment_ProgramEnrollment_userIdToUsuario                       ProgramEnrollment[]              @relation("ProgramEnrollment_userIdToUsuario")
   ProjectLogisticsItem                                                      ProjectLogisticsItem[]
   QuantumIdentity                                                           QuantumIdentity[]
   QuantumInsight                                                            QuantumInsight[]
   QuantumPattern                                                            QuantumPattern[]
   QuantumWebsite                                                            QuantumWebsite?
-  RefundRequest_RefundRequest_processedByToUsuario                          RefundRequest[]                 @relation("RefundRequest_processedByToUsuario")
-  RefundRequest_RefundRequest_requestedByToUsuario                          RefundRequest[]                 @relation("RefundRequest_requestedByToUsuario")
-  RefundRequest_RefundRequest_studentIdToUsuario                            RefundRequest[]                 @relation("RefundRequest_studentIdToUsuario")
-  ReporteAnonimo_ReporteAnonimo_estudianteIdToUsuario                       ReporteAnonimo[]                @relation("ReporteAnonimo_estudianteIdToUsuario")
-  ReporteAnonimo_ReporteAnonimo_mentorIdToUsuario                           ReporteAnonimo[]                @relation("ReporteAnonimo_mentorIdToUsuario")
-  ReporteAnonimoVision_ReporteAnonimoVision_reportedUserIdToUsuario         ReporteAnonimoVision[]          @relation("ReporteAnonimoVision_reportedUserIdToUsuario")
-  ReporteAnonimoVision_ReporteAnonimoVision_reporterIdToUsuario             ReporteAnonimoVision[]          @relation("ReporteAnonimoVision_reporterIdToUsuario")
-  ReporteAnonimoVision_ReporteAnonimoVision_revisadoPorToUsuario            ReporteAnonimoVision[]          @relation("ReporteAnonimoVision_revisadoPorToUsuario")
+  RefundRequest_RefundRequest_processedByToUsuario                          RefundRequest[]                  @relation("RefundRequest_processedByToUsuario")
+  RefundRequest_RefundRequest_requestedByToUsuario                          RefundRequest[]                  @relation("RefundRequest_requestedByToUsuario")
+  RefundRequest_RefundRequest_studentIdToUsuario                            RefundRequest[]                  @relation("RefundRequest_studentIdToUsuario")
+  ReporteAnonimo_ReporteAnonimo_estudianteIdToUsuario                       ReporteAnonimo[]                 @relation("ReporteAnonimo_estudianteIdToUsuario")
+  ReporteAnonimo_ReporteAnonimo_mentorIdToUsuario                           ReporteAnonimo[]                 @relation("ReporteAnonimo_mentorIdToUsuario")
+  ReporteAnonimoVision_ReporteAnonimoVision_reportedUserIdToUsuario         ReporteAnonimoVision[]           @relation("ReporteAnonimoVision_reportedUserIdToUsuario")
+  ReporteAnonimoVision_ReporteAnonimoVision_reporterIdToUsuario             ReporteAnonimoVision[]           @relation("ReporteAnonimoVision_reporterIdToUsuario")
+  ReporteAnonimoVision_ReporteAnonimoVision_revisadoPorToUsuario            ReporteAnonimoVision[]           @relation("ReporteAnonimoVision_revisadoPorToUsuario")
   ResenasMentoria                                                           ResenasMentoria[]
   RewardHistory                                                             RewardHistory[]
-  SchoolProduct_SchoolProduct_coordinatorIdToUsuario                        SchoolProduct[]                 @relation("SchoolProduct_coordinatorIdToUsuario")
-  SchoolProduct_SchoolProduct_createdByToUsuario                            SchoolProduct[]                 @relation("SchoolProduct_createdByToUsuario")
-  SchoolProduct_SchoolProduct_finishedByToUsuario                           SchoolProduct[]                 @relation("SchoolProduct_finishedByToUsuario")
-  SchoolProduct_SchoolProduct_trainerIdToUsuario                            SchoolProduct[]                 @relation("SchoolProduct_trainerIdToUsuario")
+  SchoolProduct_SchoolProduct_coordinatorIdToUsuario                        SchoolProduct[]                  @relation("SchoolProduct_coordinatorIdToUsuario")
+  SchoolProduct_SchoolProduct_createdByToUsuario                            SchoolProduct[]                  @relation("SchoolProduct_createdByToUsuario")
+  SchoolProduct_SchoolProduct_finishedByToUsuario                           SchoolProduct[]                  @relation("SchoolProduct_finishedByToUsuario")
+  SchoolProduct_SchoolProduct_trainerIdToUsuario                            SchoolProduct[]                  @relation("SchoolProduct_trainerIdToUsuario")
   ServiceLadderProgress                                                     ServiceLadderProgress?
   ServiceReview                                                             ServiceReview[]
   SmallGroup                                                                SmallGroup[]
-  SmallGroupMember_SmallGroupMember_movedByToUsuario                        SmallGroupMember[]              @relation("SmallGroupMember_movedByToUsuario")
-  SmallGroupMember_SmallGroupMember_userIdToUsuario                         SmallGroupMember[]              @relation("SmallGroupMember_userIdToUsuario")
+  SmallGroupMember_SmallGroupMember_movedByToUsuario                        SmallGroupMember[]               @relation("SmallGroupMember_movedByToUsuario")
+  SmallGroupMember_SmallGroupMember_userIdToUsuario                         SmallGroupMember[]               @relation("SmallGroupMember_userIdToUsuario")
   SocialReaction                                                            SocialReaction[]
   SolicitudMentoria                                                         SolicitudMentoria[]
-  StaffCommissionsLog_StaffCommissionsLog_relatedUserIdToUsuario            StaffCommissionsLog[]           @relation("StaffCommissionsLog_relatedUserIdToUsuario")
-  StaffCommissionsLog_StaffCommissionsLog_staffIdToUsuario                  StaffCommissionsLog[]           @relation("StaffCommissionsLog_staffIdToUsuario")
-  StudentGraduation_StudentGraduation_graduatedByToUsuario                  StudentGraduation[]             @relation("StudentGraduation_graduatedByToUsuario")
-  StudentGraduation_StudentGraduation_userIdToUsuario                       StudentGraduation[]             @relation("StudentGraduation_userIdToUsuario")
+  StaffCommissionsLog_StaffCommissionsLog_relatedUserIdToUsuario            StaffCommissionsLog[]            @relation("StaffCommissionsLog_relatedUserIdToUsuario")
+  StaffCommissionsLog_StaffCommissionsLog_staffIdToUsuario                  StaffCommissionsLog[]            @relation("StaffCommissionsLog_staffIdToUsuario")
+  StudentGraduation_StudentGraduation_graduatedByToUsuario                  StudentGraduation[]              @relation("StudentGraduation_graduatedByToUsuario")
+  StudentGraduation_StudentGraduation_userIdToUsuario                       StudentGraduation[]              @relation("StudentGraduation_userIdToUsuario")
   TaskInstance                                                              TaskInstance[]
-  TaskSubmission_TaskSubmission_reviewedByToUsuario                         TaskSubmission[]                @relation("TaskSubmission_reviewedByToUsuario")
-  TaskSubmission_TaskSubmission_usuarioIdToUsuario                          TaskSubmission[]                @relation("TaskSubmission_usuarioIdToUsuario")
-  Ticket_Ticket_ownerIdToUsuario                                            Ticket[]                        @relation("Ticket_ownerIdToUsuario")
-  Ticket_Ticket_transferredToToUsuario                                      Ticket[]                        @relation("Ticket_transferredToToUsuario")
+  TaskSubmission_TaskSubmission_reviewedByToUsuario                         TaskSubmission[]                 @relation("TaskSubmission_reviewedByToUsuario")
+  TaskSubmission_TaskSubmission_usuarioIdToUsuario                          TaskSubmission[]                 @relation("TaskSubmission_usuarioIdToUsuario")
+  Ticket_Ticket_ownerIdToUsuario                                            Ticket[]                         @relation("Ticket_ownerIdToUsuario")
+  Ticket_Ticket_transferredToToUsuario                                      Ticket[]                         @relation("Ticket_transferredToToUsuario")
   TicketPurchase                                                            TicketPurchase[]
   TimeCapsuleCampaign                                                       TimeCapsuleCampaign[]
-  TrainerApplication_TrainerApplication_reviewedByToUsuario                 TrainerApplication[]            @relation("TrainerApplication_reviewedByToUsuario")
-  TrainerApplication_TrainerApplication_usuarioIdToUsuario                  TrainerApplication?             @relation("TrainerApplication_usuarioIdToUsuario")
+  TrainerApplication_TrainerApplication_reviewedByToUsuario                 TrainerApplication[]             @relation("TrainerApplication_reviewedByToUsuario")
+  TrainerApplication_TrainerApplication_usuarioIdToUsuario                  TrainerApplication?              @relation("TrainerApplication_usuarioIdToUsuario")
   TrainerIntervention                                                       TrainerIntervention[]
   TrainerMission                                                            TrainerMission[]
   TrainerSurvey                                                             TrainerSurvey[]
@@ -5053,182 +5079,179 @@ model Usuario {
   Transaccion                                                               Transaccion[]
   TribeAuditChecklist                                                       TribeAuditChecklist[]
   TribeBankAccount                                                          TribeBankAccount[]
-  TribeBreachReport_TribeBreachReport_reportedByIdToUsuario                 TribeBreachReport[]             @relation("TribeBreachReport_reportedByIdToUsuario")
-  TribeBreachReport_TribeBreachReport_reportedUserIdToUsuario               TribeBreachReport[]             @relation("TribeBreachReport_reportedUserIdToUsuario")
-  TribeBreachReport_TribeBreachReport_resolvedByIdToUsuario                 TribeBreachReport[]             @relation("TribeBreachReport_resolvedByIdToUsuario")
+  TribeBreachReport_TribeBreachReport_reportedByIdToUsuario                 TribeBreachReport[]              @relation("TribeBreachReport_reportedByIdToUsuario")
+  TribeBreachReport_TribeBreachReport_reportedUserIdToUsuario               TribeBreachReport[]              @relation("TribeBreachReport_reportedUserIdToUsuario")
+  TribeBreachReport_TribeBreachReport_resolvedByIdToUsuario                 TribeBreachReport[]              @relation("TribeBreachReport_resolvedByIdToUsuario")
   TribeBudget                                                               TribeBudget[]
-  TribeBudgetPayment_TribeBudgetPayment_userIdToUsuario                     TribeBudgetPayment[]            @relation("TribeBudgetPayment_userIdToUsuario")
-  TribeBudgetPayment_TribeBudgetPayment_verifiedByIdToUsuario               TribeBudgetPayment[]            @relation("TribeBudgetPayment_verifiedByIdToUsuario")
-  TribeCaptainAssignment_TribeCaptainAssignment_nominatedByToUsuario        TribeCaptainAssignment[]        @relation("TribeCaptainAssignment_nominatedByToUsuario")
-  TribeCaptainAssignment_TribeCaptainAssignment_userIdToUsuario             TribeCaptainAssignment[]        @relation("TribeCaptainAssignment_userIdToUsuario")
+  TribeBudgetPayment_TribeBudgetPayment_userIdToUsuario                     TribeBudgetPayment[]             @relation("TribeBudgetPayment_userIdToUsuario")
+  TribeBudgetPayment_TribeBudgetPayment_verifiedByIdToUsuario               TribeBudgetPayment[]             @relation("TribeBudgetPayment_verifiedByIdToUsuario")
+  TribeCaptainAssignment_TribeCaptainAssignment_nominatedByToUsuario        TribeCaptainAssignment[]         @relation("TribeCaptainAssignment_nominatedByToUsuario")
+  TribeCaptainAssignment_TribeCaptainAssignment_userIdToUsuario             TribeCaptainAssignment[]         @relation("TribeCaptainAssignment_userIdToUsuario")
   TribeCommunityProject                                                     TribeCommunityProject[]
   TribeFoodAllergy                                                          TribeFoodAllergy[]
   TribeFundCampaign                                                         TribeFundCampaign[]
-  TribeFundContribution_TribeFundContribution_userIdToUsuario               TribeFundContribution[]         @relation("TribeFundContribution_userIdToUsuario")
-  TribeFundContribution_TribeFundContribution_verifiedByToUsuario           TribeFundContribution[]         @relation("TribeFundContribution_verifiedByToUsuario")
-  TribeIncome_TribeIncome_payerUserIdToUsuario                              TribeIncome[]                   @relation("TribeIncome_payerUserIdToUsuario")
-  TribeIncome_TribeIncome_verifiedByIdToUsuario                             TribeIncome[]                   @relation("TribeIncome_verifiedByIdToUsuario")
+  TribeFundContribution_TribeFundContribution_userIdToUsuario               TribeFundContribution[]          @relation("TribeFundContribution_userIdToUsuario")
+  TribeFundContribution_TribeFundContribution_verifiedByToUsuario           TribeFundContribution[]          @relation("TribeFundContribution_verifiedByToUsuario")
+  TribeIncome_TribeIncome_payerUserIdToUsuario                              TribeIncome[]                    @relation("TribeIncome_payerUserIdToUsuario")
+  TribeIncome_TribeIncome_verifiedByIdToUsuario                             TribeIncome[]                    @relation("TribeIncome_verifiedByIdToUsuario")
   TribeLogoProposal                                                         TribeLogoProposal[]
   TribeLogoVote                                                             TribeLogoVote[]
   TribeMemberSize                                                           TribeMemberSize[]
   TribeOath                                                                 TribeOath[]
-  TribePoll_TribePoll_closedByIdToUsuario                                   TribePoll[]                     @relation("TribePoll_closedByIdToUsuario")
-  TribePoll_TribePoll_createdByIdToUsuario                                  TribePoll[]                     @relation("TribePoll_createdByIdToUsuario")
+  TribePoll_TribePoll_closedByIdToUsuario                                   TribePoll[]                      @relation("TribePoll_closedByIdToUsuario")
+  TribePoll_TribePoll_createdByIdToUsuario                                  TribePoll[]                      @relation("TribePoll_createdByIdToUsuario")
   TribePollChat                                                             TribePollChat[]
   TribePollChatReaction                                                     TribePollChatReaction[]
-  TribePollChatReport_TribePollChatReport_reporterIdToUsuario               TribePollChatReport[]           @relation("TribePollChatReport_reporterIdToUsuario")
-  TribePollChatReport_TribePollChatReport_reviewedByToUsuario               TribePollChatReport[]           @relation("TribePollChatReport_reviewedByToUsuario")
+  TribePollChatReport_TribePollChatReport_reporterIdToUsuario               TribePollChatReport[]            @relation("TribePollChatReport_reporterIdToUsuario")
+  TribePollChatReport_TribePollChatReport_reviewedByToUsuario               TribePollChatReport[]            @relation("TribePollChatReport_reviewedByToUsuario")
   TribePollVote                                                             TribePollVote[]
   TribeShirtOrder                                                           TribeShirtOrder[]
-  TribeShirtPayment_TribeShirtPayment_userIdToUsuario                       TribeShirtPayment[]             @relation("TribeShirtPayment_userIdToUsuario")
-  TribeShirtPayment_TribeShirtPayment_verifiedByIdToUsuario                 TribeShirtPayment[]             @relation("TribeShirtPayment_verifiedByIdToUsuario")
+  TribeShirtPayment_TribeShirtPayment_userIdToUsuario                       TribeShirtPayment[]              @relation("TribeShirtPayment_userIdToUsuario")
+  TribeShirtPayment_TribeShirtPayment_verifiedByIdToUsuario                 TribeShirtPayment[]              @relation("TribeShirtPayment_verifiedByIdToUsuario")
   TribeShirtProduct                                                         TribeShirtProduct[]
-  TribeTask_TribeTask_assignedToIdToUsuario                                 TribeTask[]                     @relation("TribeTask_assignedToIdToUsuario")
-  TribeTask_TribeTask_createdByIdToUsuario                                  TribeTask[]                     @relation("TribeTask_createdByIdToUsuario")
+  TribeTask_TribeTask_assignedToIdToUsuario                                 TribeTask[]                      @relation("TribeTask_assignedToIdToUsuario")
+  TribeTask_TribeTask_createdByIdToUsuario                                  TribeTask[]                      @relation("TribeTask_createdByIdToUsuario")
   UserCollectionProgress                                                    UserCollectionProgress[]
   UserLicense                                                               UserLicense[]
-  UserServiceContribution_UserServiceContribution_reviewedByToUsuario       UserServiceContribution[]       @relation("UserServiceContribution_reviewedByToUsuario")
-  UserServiceContribution_UserServiceContribution_usuarioIdToUsuario        UserServiceContribution[]       @relation("UserServiceContribution_usuarioIdToUsuario")
+  UserServiceContribution_UserServiceContribution_reviewedByToUsuario       UserServiceContribution[]        @relation("UserServiceContribution_reviewedByToUsuario")
+  UserServiceContribution_UserServiceContribution_usuarioIdToUsuario        UserServiceContribution[]        @relation("UserServiceContribution_usuarioIdToUsuario")
   UserSong                                                                  UserSong[]
-  Usuario_Usuario_assignedMentorIdToUsuario                                 Usuario?                        @relation("Usuario_assignedMentorIdToUsuario", fields: [assignedMentorId], references: [id], onUpdate: NoAction)
-  other_Usuario_Usuario_assignedMentorIdToUsuario                           Usuario[]                       @relation("Usuario_assignedMentorIdToUsuario")
-  Organization_Usuario_communityOrganizationIdToOrganization                Organization?                   @relation("Usuario_communityOrganizationIdToOrganization", fields: [communityOrganizationId], references: [id])
-  Usuario_Usuario_coordinadorIdToUsuario                                    Usuario?                        @relation("Usuario_coordinadorIdToUsuario", fields: [coordinadorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_Usuario_Usuario_coordinadorIdToUsuario                              Usuario[]                       @relation("Usuario_coordinadorIdToUsuario")
-  Usuario_Usuario_gameChangerIdToUsuario                                    Usuario?                        @relation("Usuario_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_Usuario_Usuario_gameChangerIdToUsuario                              Usuario[]                       @relation("Usuario_gameChangerIdToUsuario")
-  Usuario_Usuario_mentorIdToUsuario                                         Usuario?                        @relation("Usuario_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_Usuario_Usuario_mentorIdToUsuario                                   Usuario[]                       @relation("Usuario_mentorIdToUsuario")
-  Organization_Usuario_organizationIdToOrganization                         Organization?                   @relation("Usuario_organizationIdToOrganization", fields: [organizationId], references: [id])
+  Usuario_Usuario_assignedMentorIdToUsuario                                 Usuario?                         @relation("Usuario_assignedMentorIdToUsuario", fields: [assignedMentorId], references: [id], onUpdate: NoAction)
+  other_Usuario_Usuario_assignedMentorIdToUsuario                           Usuario[]                        @relation("Usuario_assignedMentorIdToUsuario")
+  Organization_Usuario_communityOrganizationIdToOrganization                Organization?                    @relation("Usuario_communityOrganizationIdToOrganization", fields: [communityOrganizationId], references: [id])
+  Usuario_Usuario_coordinadorIdToUsuario                                    Usuario?                         @relation("Usuario_coordinadorIdToUsuario", fields: [coordinadorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_Usuario_Usuario_coordinadorIdToUsuario                              Usuario[]                        @relation("Usuario_coordinadorIdToUsuario")
+  Usuario_Usuario_gameChangerIdToUsuario                                    Usuario?                         @relation("Usuario_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_Usuario_Usuario_gameChangerIdToUsuario                              Usuario[]                        @relation("Usuario_gameChangerIdToUsuario")
+  Usuario_Usuario_mentorIdToUsuario                                         Usuario?                         @relation("Usuario_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_Usuario_Usuario_mentorIdToUsuario                                   Usuario[]                        @relation("Usuario_mentorIdToUsuario")
+  Organization_Usuario_organizationIdToOrganization                         Organization?                    @relation("Usuario_organizationIdToOrganization", fields: [organizationId], references: [id])
   Vision                                                                    Vision[]
   VisionCommissionConfig                                                    VisionCommissionConfig[]
-  VisionGameChanger_VisionGameChanger_asignadoPorIdToUsuario                VisionGameChanger[]             @relation("VisionGameChanger_asignadoPorIdToUsuario")
-  VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario                VisionGameChanger[]             @relation("VisionGameChanger_gameChangerIdToUsuario")
-  VisionMentor_VisionMentor_asignadoPorIdToUsuario                          VisionMentor[]                  @relation("VisionMentor_asignadoPorIdToUsuario")
-  VisionMentor_VisionMentor_mentorIdToUsuario                               VisionMentor[]                  @relation("VisionMentor_mentorIdToUsuario")
-  VisionParticipante_VisionParticipante_asignadoPorIdToUsuario              VisionParticipante[]            @relation("VisionParticipante_asignadoPorIdToUsuario")
-  VisionParticipante_VisionParticipante_gameChangerIdToUsuario              VisionParticipante[]            @relation("VisionParticipante_gameChangerIdToUsuario")
-  VisionParticipante_VisionParticipante_participanteIdToUsuario             VisionParticipante[]            @relation("VisionParticipante_participanteIdToUsuario")
-  VisionStaff_VisionStaff_assignedByToUsuario                               VisionStaff[]                   @relation("VisionStaff_assignedByToUsuario")
-  VisionStaff_VisionStaff_userIdToUsuario                                   VisionStaff[]                   @relation("VisionStaff_userIdToUsuario")
-  coordinator_commission_config                                             coordinator_commission_config[]
-  coordinator_commissions_coordinator_commissions_coordinatorIdToUsuario    coordinator_commissions[]       @relation("coordinator_commissions_coordinatorIdToUsuario")
-  coordinator_commissions_coordinator_commissions_relatedUserIdToUsuario    coordinator_commissions[]       @relation("coordinator_commissions_relatedUserIdToUsuario")
-  coordinator_commissions_coordinator_commissions_verifiedByToUsuario       coordinator_commissions[]       @relation("coordinator_commissions_verifiedByToUsuario")
-  vision_enrollments_vision_enrollments_coordinatorIdToUsuario              vision_enrollments[]            @relation("vision_enrollments_coordinatorIdToUsuario")
-  vision_enrollments_vision_enrollments_invitedByToUsuario                  vision_enrollments[]            @relation("vision_enrollments_invitedByToUsuario")
-  vision_enrollments_vision_enrollments_userIdToUsuario                     vision_enrollments[]            @relation("vision_enrollments_userIdToUsuario")
-  weekly_payout_summary_weekly_payout_summary_approvedByToUsuario           weekly_payout_summary[]         @relation("weekly_payout_summary_approvedByToUsuario")
-  weekly_payout_summary_weekly_payout_summary_generatedByToUsuario          weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
-  // Quantum Ambassadors relations
+  VisionGameChanger_VisionGameChanger_asignadoPorIdToUsuario                VisionGameChanger[]              @relation("VisionGameChanger_asignadoPorIdToUsuario")
+  VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario                VisionGameChanger[]              @relation("VisionGameChanger_gameChangerIdToUsuario")
+  VisionMentor_VisionMentor_asignadoPorIdToUsuario                          VisionMentor[]                   @relation("VisionMentor_asignadoPorIdToUsuario")
+  VisionMentor_VisionMentor_mentorIdToUsuario                               VisionMentor[]                   @relation("VisionMentor_mentorIdToUsuario")
+  VisionParticipante_VisionParticipante_asignadoPorIdToUsuario              VisionParticipante[]             @relation("VisionParticipante_asignadoPorIdToUsuario")
+  VisionParticipante_VisionParticipante_gameChangerIdToUsuario              VisionParticipante[]             @relation("VisionParticipante_gameChangerIdToUsuario")
+  VisionParticipante_VisionParticipante_participanteIdToUsuario             VisionParticipante[]             @relation("VisionParticipante_participanteIdToUsuario")
+  VisionStaff_VisionStaff_assignedByToUsuario                               VisionStaff[]                    @relation("VisionStaff_assignedByToUsuario")
+  VisionStaff_VisionStaff_userIdToUsuario                                   VisionStaff[]                    @relation("VisionStaff_userIdToUsuario")
   ambassador_wallet_as_ambassador                                           ambassador_wallet_transactions[] @relation("ambassador_wallet_ambassador")
   ambassador_wallet_as_referred                                             ambassador_wallet_transactions[] @relation("ambassador_wallet_referred")
   ambassador_withdrawals                                                    ambassador_withdrawal_requests[] @relation("ambassador_withdrawals")
   ambassador_withdrawal_approvals                                           ambassador_withdrawal_requests[] @relation("ambassador_withdrawal_approver")
-  // Event invitations (talleres)
-  EventInvitations                                                          EventRegistration[]              @relation("EventInvitations")
+  coordinator_commission_config                                             coordinator_commission_config[]
+  coordinator_commissions_coordinator_commissions_coordinatorIdToUsuario    coordinator_commissions[]        @relation("coordinator_commissions_coordinatorIdToUsuario")
+  coordinator_commissions_coordinator_commissions_relatedUserIdToUsuario    coordinator_commissions[]        @relation("coordinator_commissions_relatedUserIdToUsuario")
+  coordinator_commissions_coordinator_commissions_verifiedByToUsuario       coordinator_commissions[]        @relation("coordinator_commissions_verifiedByToUsuario")
+  vision_enrollments_vision_enrollments_coordinatorIdToUsuario              vision_enrollments[]             @relation("vision_enrollments_coordinatorIdToUsuario")
+  vision_enrollments_vision_enrollments_invitedByToUsuario                  vision_enrollments[]             @relation("vision_enrollments_invitedByToUsuario")
+  vision_enrollments_vision_enrollments_userIdToUsuario                     vision_enrollments[]             @relation("vision_enrollments_userIdToUsuario")
+  weekly_payout_summary_weekly_payout_summary_approvedByToUsuario           weekly_payout_summary[]          @relation("weekly_payout_summary_approvedByToUsuario")
+  weekly_payout_summary_weekly_payout_summary_generatedByToUsuario          weekly_payout_summary[]          @relation("weekly_payout_summary_generatedByToUsuario")
 
   @@index([communityOrganizationId])
 }
 
 model Vision {
-  id                            Int                            @id @default(autoincrement())
-  nombre                        String
-  descripcion                   String?
-  coordinadorId                 Int
-  isActive                      Boolean                        @default(true)
-  createdAt                     DateTime                       @default(now())
-  updatedAt                     DateTime
-  licensesAllocated             Int                            @default(0)
-  maxParticipantes              Int?
-  organizationId                Int?
-  endDate                       DateTime?
-  startDate                     DateTime?
-  advancedStartDate             DateTime?
-  advancedEndDate               DateTime?
-  plWeekend1StartDate           DateTime?
-  plWeekend1EndDate             DateTime?
-  plWeekend2StartDate           DateTime?
-  plWeekend2EndDate             DateTime?
-  plWeekend3StartDate           DateTime?
-  plWeekend3EndDate             DateTime?
-  forceCommunityServiceArea     Boolean                        @default(true)
-  forceTransformationArea       Boolean                        @default(true)
-  transformationGuestsTarget    Int?                           @default(4)
-  forceFinanzasArea             Boolean                        @default(true)
-  forceOcioArea                 Boolean                        @default(true)
-  forcePazMentalArea            Boolean                        @default(true)
-  forceRelacionesArea           Boolean                        @default(true)
-  forceSaludArea                Boolean                        @default(true)
-  forceTalentosArea             Boolean                        @default(true)
-  enabledLevels                 VisionLevel[]                  @default([PL])
-  financialConfigId             String?
-  platformFeePercent            Float                          @default(0)
-  tribeLogoUrl                  String?
-  tribeShirtDesignUrl           String?
-  tribeMission                  String?
-  AbandonedCheckout             AbandonedCheckout[]
-  AdvancedQuestionnaire         AdvancedQuestionnaire[]
-  ArchetypeAssignment           ArchetypeAssignment[]
-  AutomationMessageLog          AutomationMessageLog[]
-  BuddyPair                     BuddyPair[]
-  BusinessProfile               BusinessProfile[]
-  CashBatch                     CashBatch[]
-  CheckInRecord                 CheckInRecord[]
-  CollectiblePhoto              CollectiblePhoto[]
-  Expense                       Expense[]
-  FlightDeckEvent               FlightDeckEvent?
-  GCCallAttempt                 GCCallAttempt[]
-  GCCallLog                     GCCallLog[]
-  GiftCode                      GiftCode[]
-  GraduationGuest               GraduationGuest[]
-  LegacyCampaign                LegacyCampaign[]
-  LegacyCaptureSession          LegacyCaptureSession[]
-  LicenseAssignment             LicenseAssignment[]
-  MedicalForm                   MedicalForm[]
-  MentorPackageOrder            MentorPackageOrder[]
-  MetamorfosisAssignment        MetamorfosisAssignment[]
-  PLWeeklyCall                  PLWeeklyCall[]
-  PaymentCode                   PaymentCode[]
-  PendingTransferOrder          PendingTransferOrder[]
-  RefundRequest                 RefundRequest[]
-  SchoolProduct                 SchoolProduct[]
-  SmallGroup                    SmallGroup[]
-  StaffCommissionsLog           StaffCommissionsLog[]
-  Ticket                        Ticket[]
-  TimeCapsuleCampaign           TimeCapsuleCampaign[]
-  TrainerMission                TrainerMission[]
-  TribeAuditChecklist           TribeAuditChecklist[]
-  TribeBankAccount              TribeBankAccount?
-  TribeBreachReport             TribeBreachReport[]
-  TribeBudget                   TribeBudget[]
-  TribeCaptaincy                TribeCaptaincy[]
-  TribeCommunityProject         TribeCommunityProject[]
-  TribeFoodAllergy              TribeFoodAllergy[]
-  TribeFundCampaign             TribeFundCampaign[]
-  TribeIncome                   TribeIncome[]
-  TribeLogoProposal             TribeLogoProposal[]
-  TribeMemberSize               TribeMemberSize[]
-  TribeOath                     TribeOath[]
-  TribePoll                     TribePoll[]
-  TribeShirtOrder               TribeShirtOrder[]
-  TribeShirtProduct             TribeShirtProduct[]
-  TribeTask                     TribeTask[]
-  UserSong                      UserSong[]
-  Usuario                       Usuario                        @relation(fields: [coordinadorId], references: [id], onDelete: Cascade)
-  Organization                  Organization?                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  VisionCommissionConfig        VisionCommissionConfig?
-  VisionEscrow                  VisionEscrow?
-  VisionGameChanger             VisionGameChanger[]
-  VisionMentor                  VisionMentor[]
-  VisionParticipante            VisionParticipante[]
-  VisionStaff                   VisionStaff[]
-  VisionTicket                  VisionTicket[]
-  coordinator_commission_config coordinator_commission_config?
-  coordinator_commissions       coordinator_commissions[]
-  vision_enrollments            vision_enrollments[]
-  weekly_payout_summary         weekly_payout_summary[]
+  id                             Int                              @id @default(autoincrement())
+  nombre                         String
+  descripcion                    String?
+  coordinadorId                  Int
+  isActive                       Boolean                          @default(true)
+  createdAt                      DateTime                         @default(now())
+  updatedAt                      DateTime
+  licensesAllocated              Int                              @default(0)
+  maxParticipantes               Int?
+  organizationId                 Int?
+  endDate                        DateTime?
+  startDate                      DateTime?
+  advancedStartDate              DateTime?
+  advancedEndDate                DateTime?
+  plWeekend1StartDate            DateTime?
+  plWeekend1EndDate              DateTime?
+  plWeekend2StartDate            DateTime?
+  plWeekend2EndDate              DateTime?
+  plWeekend3StartDate            DateTime?
+  plWeekend3EndDate              DateTime?
+  forceCommunityServiceArea      Boolean                          @default(true)
+  forceTransformationArea        Boolean                          @default(true)
+  transformationGuestsTarget     Int?                             @default(4)
+  forceFinanzasArea              Boolean                          @default(true)
+  forceOcioArea                  Boolean                          @default(true)
+  forcePazMentalArea             Boolean                          @default(true)
+  forceRelacionesArea            Boolean                          @default(true)
+  forceSaludArea                 Boolean                          @default(true)
+  forceTalentosArea              Boolean                          @default(true)
+  enabledLevels                  VisionLevel[]                    @default([PL])
+  financialConfigId              String?
+  platformFeePercent             Float                            @default(0)
+  tribeLogoUrl                   String?
+  tribeShirtDesignUrl            String?
+  tribeMission                   String?
+  AbandonedCheckout              AbandonedCheckout[]
+  AdvancedQuestionnaire          AdvancedQuestionnaire[]
+  ArchetypeAssignment            ArchetypeAssignment[]
+  AutomationMessageLog           AutomationMessageLog[]
+  BuddyPair                      BuddyPair[]
+  BusinessProfile                BusinessProfile[]
+  CashBatch                      CashBatch[]
+  CheckInRecord                  CheckInRecord[]
+  CollectiblePhoto               CollectiblePhoto[]
+  Expense                        Expense[]
+  FlightDeckEvent                FlightDeckEvent?
+  GCCallAttempt                  GCCallAttempt[]
+  GCCallLog                      GCCallLog[]
+  GiftCode                       GiftCode[]
+  GraduationGuest                GraduationGuest[]
+  LegacyCampaign                 LegacyCampaign[]
+  LegacyCaptureSession           LegacyCaptureSession[]
+  LicenseAssignment              LicenseAssignment[]
+  MedicalForm                    MedicalForm[]
+  MentorPackageOrder             MentorPackageOrder[]
+  MetamorfosisAssignment         MetamorfosisAssignment[]
+  PLWeeklyCall                   PLWeeklyCall[]
+  PaymentCode                    PaymentCode[]
+  PendingTransferOrder           PendingTransferOrder[]
+  RefundRequest                  RefundRequest[]
+  SchoolProduct                  SchoolProduct[]
+  SmallGroup                     SmallGroup[]
+  StaffCommissionsLog            StaffCommissionsLog[]
+  Ticket                         Ticket[]
+  TimeCapsuleCampaign            TimeCapsuleCampaign[]
+  TrainerMission                 TrainerMission[]
+  TribeAuditChecklist            TribeAuditChecklist[]
+  TribeBankAccount               TribeBankAccount?
+  TribeBreachReport              TribeBreachReport[]
+  TribeBudget                    TribeBudget[]
+  TribeCaptaincy                 TribeCaptaincy[]
+  TribeCommunityProject          TribeCommunityProject[]
+  TribeFoodAllergy               TribeFoodAllergy[]
+  TribeFundCampaign              TribeFundCampaign[]
+  TribeIncome                    TribeIncome[]
+  TribeLogoProposal              TribeLogoProposal[]
+  TribeMemberSize                TribeMemberSize[]
+  TribeOath                      TribeOath[]
+  TribePoll                      TribePoll[]
+  TribeShirtOrder                TribeShirtOrder[]
+  TribeShirtProduct              TribeShirtProduct[]
+  TribeTask                      TribeTask[]
+  UserSong                       UserSong[]
+  Usuario                        Usuario                          @relation(fields: [coordinadorId], references: [id], onDelete: Cascade)
+  Organization                   Organization?                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  VisionCommissionConfig         VisionCommissionConfig?
+  VisionEscrow                   VisionEscrow?
+  VisionGameChanger              VisionGameChanger[]
+  VisionMentor                   VisionMentor[]
+  VisionParticipante             VisionParticipante[]
+  VisionStaff                    VisionStaff[]
+  VisionTicket                   VisionTicket[]
   ambassador_wallet_transactions ambassador_wallet_transactions[]
+  coordinator_commission_config  coordinator_commission_config?
+  coordinator_commissions        coordinator_commissions[]
+  vision_enrollments             vision_enrollments[]
+  weekly_payout_summary          weekly_payout_summary[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -5417,23 +5440,23 @@ model WeeklyPayrollPeriod {
 }
 
 model coordinator_commission_config {
-  id                 Int          @id @default(autoincrement())
-  visionId           Int          @unique
-  organizationId     Int
-  basicSeatedRate    Decimal      @default(300.00) @db.Decimal(10, 2)
-  advanceSeatedRate  Decimal      @default(500.00) @db.Decimal(10, 2)
-  advanceComboRate   Decimal      @default(700.00) @db.Decimal(10, 2)
-  plStartRate        Decimal      @default(400.00) @db.Decimal(10, 2)
-  plWeek3Rate        Decimal      @default(400.00) @db.Decimal(10, 2)
-  plGuestRate        Decimal      @default(400.00) @db.Decimal(10, 2)
-  plGradRate         Decimal      @default(400.00) @db.Decimal(10, 2)
-  isActive           Boolean      @default(true)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime
-  createdBy          Int
-  Usuario            Usuario      @relation(fields: [createdBy], references: [id])
-  Organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Vision             Vision       @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  id                Int          @id @default(autoincrement())
+  visionId          Int          @unique
+  organizationId    Int
+  basicSeatedRate   Decimal      @default(300.00) @db.Decimal(10, 2)
+  advanceSeatedRate Decimal      @default(500.00) @db.Decimal(10, 2)
+  plStartRate       Decimal      @default(400.00) @db.Decimal(10, 2)
+  plGuestRate       Decimal      @default(400.00) @db.Decimal(10, 2)
+  plGradRate        Decimal      @default(400.00) @db.Decimal(10, 2)
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime
+  createdBy         Int
+  advanceComboRate  Decimal      @default(700.00) @db.Decimal(10, 2)
+  plWeek3Rate       Decimal      @default(400.00) @db.Decimal(10, 2)
+  Usuario           Usuario      @relation(fields: [createdBy], references: [id])
+  Organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Vision            Vision       @relation(fields: [visionId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([visionId])
@@ -5538,6 +5561,56 @@ model weekly_payout_summary {
   @@index([status])
   @@index([visionId])
   @@index([weekStartDate])
+}
+
+model ambassador_wallet_transactions {
+  id                Int                   @id @default(autoincrement())
+  ambassadorId      Int
+  referredUserId    Int
+  ticketId          String?
+  productType       AmbassadorProductType
+  saleAmount        Decimal               @db.Decimal(10, 2)
+  commissionPercent Decimal               @db.Decimal(5, 2)
+  commissionAmount  Decimal               @db.Decimal(10, 2)
+  status            AmbassadorTxStatus    @default(CLEARED)
+  withdrawnAt       DateTime?
+  spentAt           DateTime?
+  notes             String?
+  organizationId    Int
+  visionId          Int?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  ambassador        Usuario               @relation("ambassador_wallet_ambassador", fields: [ambassadorId], references: [id])
+  Organization      Organization          @relation(fields: [organizationId], references: [id])
+  referredUser      Usuario               @relation("ambassador_wallet_referred", fields: [referredUserId], references: [id])
+  Ticket            Ticket?               @relation(fields: [ticketId], references: [id])
+  Vision            Vision?               @relation(fields: [visionId], references: [id])
+
+  @@index([ambassadorId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([organizationId])
+}
+
+model ambassador_withdrawal_requests {
+  id             Int              @id @default(autoincrement())
+  ambassadorId   Int
+  amount         Decimal          @db.Decimal(10, 2)
+  bankClabe      String
+  bankName       String?
+  accountHolder  String?
+  status         WithdrawalStatus @default(PENDING)
+  approvedBy     Int?
+  approvedAt     DateTime?
+  rejectedReason String?
+  transferRef    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  ambassador     Usuario          @relation("ambassador_withdrawals", fields: [ambassadorId], references: [id])
+  approver       Usuario?         @relation("ambassador_withdrawal_approver", fields: [approvedBy], references: [id])
+
+  @@index([ambassadorId])
+  @@index([status])
 }
 
 enum AbandonedCheckoutStatus {
@@ -5757,12 +5830,12 @@ enum CommissionStatus {
 enum CommissionTriggerEvent {
   BASIC_SEATED
   ADVANCE_SEATED
-  ADVANCE_COMBO_SEATED
   PL_START
-  PL_WEEK3_CHECKPOINT
   PL_GUEST_PAID
   PL_GRADUATION
   MANUAL_ADJUSTMENT
+  ADVANCE_COMBO_SEATED
+  PL_WEEK3_CHECKPOINT
   REFUND_ADJUSTMENT
 }
 
@@ -5894,12 +5967,12 @@ enum EstadoSuscripcion {
 }
 
 enum EventRegistrationStatus {
-  PENDING_PAYMENT
   REGISTERED
   CONFIRMED
   ATTENDED
   NO_SHOW
   CANCELLED
+  PENDING_PAYMENT
 }
 
 enum EvidenceStatus {
@@ -6630,76 +6703,19 @@ enum WalletTxType {
   DEBIT
 }
 
-// ============================================
-// QUANTUM AMBASSADORS - Sistema de Comisiones por Referidos
-// ============================================
-
-model ambassador_wallet_transactions {
-  id                Int                       @id @default(autoincrement())
-  ambassadorId      Int                       // Usuario que recibe la comisión
-  referredUserId    Int                       // Usuario que pagó usando el código
-  ticketId          String?                   // Ticket/orden relacionada (String porque Ticket.id es String)
-  productType       AmbassadorProductType     // BASIC, COMBO, ADVANCED, PL
-  saleAmount        Decimal                   @db.Decimal(10, 2) // Monto de la venta
-  commissionPercent Decimal                   @db.Decimal(5, 2)  // Porcentaje (0.20, 0.10)
-  commissionAmount  Decimal                   @db.Decimal(10, 2) // Monto de la comisión
-  status            AmbassadorTxStatus        @default(CLEARED)  // Directo a disponible (pago ya confirmado)
-  withdrawnAt       DateTime?                 // Cuando se retira a banco
-  spentAt           DateTime?                 // Cuando se usa internamente
-  notes             String?
-  organizationId    Int
-  visionId          Int?
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
-  
-  // Relaciones
-  ambassador        Usuario                   @relation("ambassador_wallet_ambassador", fields: [ambassadorId], references: [id])
-  referredUser      Usuario                   @relation("ambassador_wallet_referred", fields: [referredUserId], references: [id])
-  Ticket            Ticket?                   @relation(fields: [ticketId], references: [id])
-  Organization      Organization              @relation(fields: [organizationId], references: [id])
-  Vision            Vision?                   @relation(fields: [visionId], references: [id])
-
-  @@index([ambassadorId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([organizationId])
-}
-
-model ambassador_withdrawal_requests {
-  id              Int                         @id @default(autoincrement())
-  ambassadorId    Int
-  amount          Decimal                     @db.Decimal(10, 2)
-  bankClabe       String
-  bankName        String?
-  accountHolder   String?
-  status          WithdrawalStatus            @default(PENDING)
-  approvedBy      Int?
-  approvedAt      DateTime?
-  rejectedReason  String?
-  transferRef     String?                     // Referencia de transferencia bancaria
-  createdAt       DateTime                    @default(now())
-  updatedAt       DateTime                    @updatedAt
-  
-  ambassador      Usuario                     @relation("ambassador_withdrawals", fields: [ambassadorId], references: [id])
-  approver        Usuario?                    @relation("ambassador_withdrawal_approver", fields: [approvedBy], references: [id])
-
-  @@index([ambassadorId])
-  @@index([status])
-}
-
 enum AmbassadorProductType {
-  BASIC           // 20%
-  COMBO           // 20% (Jornada Completa)
-  ADVANCED        // 10%
-  PL              // 10%
-  WORKSHOP        // 20% (Talleres)
+  BASIC
+  COMBO
+  ADVANCED
+  PL
+  WORKSHOP
 }
 
 enum AmbassadorTxStatus {
-  CLEARED         // Disponible para usar/retirar
-  WITHDRAWN       // Retirado a banco
-  SPENT           // Usado en compras internas
-  CANCELLED       // Cancelado por reembolso
+  CLEARED
+  WITHDRAWN
+  SPENT
+  CANCELLED
 }
 
 enum WithdrawalStatus {

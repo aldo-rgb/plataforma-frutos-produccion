@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
-import PersonalQRWidget from './PersonalQRWidget';
+import PersonalQRWidget from '../../PersonalQRWidget';
 
 interface Product {
   id: number;

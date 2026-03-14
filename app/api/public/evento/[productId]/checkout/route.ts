@@ -26,7 +26,14 @@ export async function POST(
       email, 
       telefono, 
       invitedByUserId,
-      provider = 'stripe' // 'stripe' o 'mercadopago'
+      provider = 'stripe', // 'stripe' o 'mercadopago'
+      // Datos de facturación
+      requiresInvoice = false,
+      invoiceRfc,
+      invoiceName,
+      invoiceZipCode,
+      invoiceRegime,
+      invoiceCfdiUse,
     } = body;
 
     // Validaciones
@@ -157,6 +164,14 @@ export async function POST(
           invitedByUserId: invitedByUserId ? parseInt(invitedByUserId) : null,
           status: EventRegistrationStatus.PENDING_PAYMENT,
           paymentStatus: 'PENDING',
+          // Datos de facturación
+          requiresInvoice: requiresInvoice || false,
+          invoiceRfc: requiresInvoice ? invoiceRfc?.toUpperCase() : null,
+          invoiceName: requiresInvoice ? invoiceName?.toUpperCase() : null,
+          invoiceZipCode: requiresInvoice ? invoiceZipCode : null,
+          invoiceRegime: requiresInvoice ? invoiceRegime : null,
+          invoiceCfdiUse: requiresInvoice ? invoiceCfdiUse : null,
+          invoiceStatus: requiresInvoice ? 'PENDING' : null,
         },
       });
     } else {
@@ -168,6 +183,14 @@ export async function POST(
           telefono: telefono?.trim() || null,
           invitedByUserId: invitedByUserId ? parseInt(invitedByUserId) : null,
           status: EventRegistrationStatus.PENDING_PAYMENT,
+          // Datos de facturación
+          requiresInvoice: requiresInvoice || false,
+          invoiceRfc: requiresInvoice ? invoiceRfc?.toUpperCase() : null,
+          invoiceName: requiresInvoice ? invoiceName?.toUpperCase() : null,
+          invoiceZipCode: requiresInvoice ? invoiceZipCode : null,
+          invoiceRegime: requiresInvoice ? invoiceRegime : null,
+          invoiceCfdiUse: requiresInvoice ? invoiceCfdiUse : null,
+          invoiceStatus: requiresInvoice ? 'PENDING' : null,
         },
       });
     }
