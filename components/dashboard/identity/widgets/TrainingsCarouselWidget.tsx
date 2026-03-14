@@ -80,13 +80,13 @@ export default function TrainingsCarouselWidget() {
     const referralParam = userReferralCode ? `?ref=${userReferralCode}` : '';
     const shareUrl = `${baseUrl}/evento/${workshop.id}${referralParam}`;
     
-    const shareTitle = `¡Te invito al taller "${workshop.name}"!`;
-    const shareText = `🎪 ¡Te invito al taller "${workshop.name}"!
+    const shareTitle = `Te invito al taller "${workshop.name}"`;
+    const shareText = `¡Te invito al taller "${workshop.name}"!
 
-📅 ${formatDate(workshop.startDate)}
-📍 ${workshop.location || 'Por confirmar'}
+- ${formatDate(workshop.startDate)}
+- ${workshop.location || 'Por confirmar'}
 
-👉 Regístrate aquí: ${shareUrl}`;
+Regístrate aquí: ${shareUrl}`;
 
     // Intentar usar Web Share API nativo (funciona en móviles)
     if (navigator.share) {
