@@ -61,7 +61,6 @@ export async function GET(
           select: {
             id: true,
             nombre: true,
-            apellido: true,
             email: true,
           },
         },
@@ -72,7 +71,7 @@ export async function GET(
     const mappedRegistrations = registrations.map(reg => ({
       ...reg,
       comoTeEnteraste: reg.InvitedByUser 
-        ? `${reg.InvitedByUser.nombre} ${reg.InvitedByUser.apellido || ''}`.trim()
+        ? reg.InvitedByUser.nombre
         : reg.comoTeEnteraste,
     }));
 

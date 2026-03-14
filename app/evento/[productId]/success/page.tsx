@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle, Loader2, Calendar, MapPin, Mail, ArrowRight, PartyPopper, Ticket, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function EventSuccessPage() {
   const params = useParams();
@@ -137,7 +138,7 @@ export default function EventSuccessPage() {
           <p className="text-slate-400 mb-6">Tu lugar está confirmado</p>
         </motion.div>
 
-        {/* Ticket Code - Prominente */}
+        {/* Ticket Code - Prominente con QR */}
         {eventData?.ticketCode && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -145,12 +146,26 @@ export default function EventSuccessPage() {
             transition={{ delay: 0.35 }}
             className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 border-2 border-amber-500/50 rounded-2xl p-5 mb-6"
           >
-            <div className="flex items-center justify-center gap-2 mb-3">
+            <div className="flex items-center justify-center gap-2 mb-4">
               <Ticket className="w-6 h-6 text-amber-400" />
               <span className="text-amber-400 font-semibold text-sm uppercase tracking-wider">Tu Ticket de Entrada</span>
             </div>
-            <div className="bg-slate-900/80 rounded-xl p-4 flex items-center justify-between gap-3">
-              <code className="text-xl md:text-2xl font-mono font-bold text-white tracking-wider">
+            
+            {/* QR Code */}
+            <div className="bg-white rounded-xl p-4 mb-4 flex items-center justify-center">
+              <QRCodeSVG 
+                value={eventData.ticketCode}
+                size={160}
+                level="H"
+                includeMargin={false}
+                bgColor="#ffffff"
+                fgColor="#000000"
+              />
+            </div>
+
+            {/* Código de texto */}
+            <div className="bg-slate-900/80 rounded-xl p-3 flex items-center justify-between gap-3">
+              <code className="text-lg md:text-xl font-mono font-bold text-white tracking-wider">
                 {eventData.ticketCode}
               </code>
               <button
@@ -166,7 +181,7 @@ export default function EventSuccessPage() {
               </button>
             </div>
             <p className="text-amber-300/70 text-xs mt-3 text-center">
-              Guarda este código. Lo necesitarás para entrar al evento.
+              Presenta este QR o código en la entrada del evento.
             </p>
           </motion.div>
         )}

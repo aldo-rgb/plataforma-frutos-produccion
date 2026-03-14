@@ -191,8 +191,8 @@ export async function POST(
       if (!payerUser) {
         console.log('👤 Creando nuevo usuario para:', registration.email);
         const bcrypt = require('bcryptjs');
-        const tempPassword = Math.random().toString(36).slice(-8);
-        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        const defaultPassword = 'Quantum123';
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
         
         // Generar referralCode único
         const timestamp = Date.now().toString(36).toUpperCase();
@@ -332,8 +332,8 @@ export async function POST(
             if (!payerUser) {
               console.log('👤 [Stripe] Creando nuevo usuario para:', registration.email);
               const bcrypt = require('bcryptjs');
-              const tempPassword = Math.random().toString(36).slice(-8);
-              const hashedPassword = await bcrypt.hash(tempPassword, 10);
+              const defaultPassword = 'Quantum123';
+              const hashedPassword = await bcrypt.hash(defaultPassword, 10);
               
               // Generar referralCode único
               const timestamp = Date.now().toString(36).toUpperCase();
@@ -495,8 +495,8 @@ export async function POST(
               if (!payerUser) {
                 console.log('👤 [MercadoPago] Creando nuevo usuario para:', registration.email);
                 const bcrypt = require('bcryptjs');
-                const tempPassword = Math.random().toString(36).slice(-8);
-                const hashedPassword = await bcrypt.hash(tempPassword, 10);
+                const defaultPassword = 'Quantum123';
+                const hashedPassword = await bcrypt.hash(defaultPassword, 10);
                 
                 // Generar referralCode único
                 const timestamp = Date.now().toString(36).toUpperCase();
