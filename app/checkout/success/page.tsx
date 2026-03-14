@@ -260,8 +260,8 @@ function SuccessContent() {
                       backgroundPosition: 'center',
                     }}
                   />
-                  {/* Dark Overlay - más transparente para ver CORO2 */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-900/75 to-black/80" />
+                  {/* Dark Overlay - semi transparente para ver CORO2 */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-900/60 to-black/70" />
 
                   {/* Scan Lines Effect */}
                   <div className="absolute inset-0 overflow-hidden pointer-events-none">

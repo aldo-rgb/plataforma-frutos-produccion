@@ -2210,11 +2210,11 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
     {/* MODAL DE CÓDIGO GENERADO - Solo Ticket */}
     {showCodeModal && generatedCode && (
       <div 
-        className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto"
         onClick={() => setShowCodeModal(false)}
       >
         <div 
-          className="max-w-[320px] w-full"
+          className="max-w-[320px] w-full my-8"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Título */}
@@ -2246,8 +2246,8 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                   backgroundPosition: 'center',
                 }}
               />
-              {/* Dark Overlay - más transparente para ver CORO2 */}
-              <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-900/75 to-black/80" />
+              {/* Dark Overlay - semi transparente para ver CORO2 */}
+              <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-900/60 to-black/70" />
 
               {/* Scan Lines Effect */}
               <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -2569,8 +2569,8 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                         backgroundPosition: 'center',
                       }}
                     />
-                    {/* Dark Overlay - más transparente para ver CORO2 */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-900/75 to-black/80" />
+                    {/* Dark Overlay - semi transparente para ver CORO2 */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-900/60 to-black/70" />
 
                     {/* Scan Lines Effect */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none">

@@ -51,9 +51,9 @@ export function BasicTicket({ ticket, userName, userInitials, userPhoto }: Basic
             backgroundPosition: 'center',
           }}
         />
-        {/* Dark Overlay - más transparente para ver CORO2 */}
+        {/* Dark Overlay - semi transparente para ver CORO2 */}
         <div className={`absolute inset-0 ${
-          isActive ? 'bg-gradient-to-b from-slate-950/70 via-slate-900/75 to-black/80' : 'bg-slate-800/90'
+          isActive ? 'bg-gradient-to-b from-slate-950/50 via-slate-900/60 to-black/70' : 'bg-slate-800/90'
         }`} />
 
         {/* Scan Lines Effect */}
