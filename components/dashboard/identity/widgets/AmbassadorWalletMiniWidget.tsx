@@ -317,7 +317,7 @@ function CommissionInfoModal({ onClose }: { onClose: () => void }) {
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <span className="text-pink-400 font-semibold">Todos los Talleres</span>
-                  <p className="text-xs text-slate-400 mt-1">El Camino del Héroe, Parejas, y más</p>
+                  <p className="text-xs text-slate-400 mt-1">El Camino del Lider, Parejas, y más</p>
                 </div>
                 <span className="text-2xl font-bold text-white">20%</span>
               </div>

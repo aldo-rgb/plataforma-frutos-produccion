@@ -316,7 +316,7 @@ Regístrate aquí: ${shareUrl}`;
     );
     
     return (
-      <div className="bg-gradient-to-br from-violet-500/20 to-purple-500/20 p-0.5 rounded-xl">
+      <div className="bg-gradient-to-br from-blue-600/20 to-slate-800/20 p-0.5 rounded-xl">
         <div className="bg-slate-900/95 rounded-xl overflow-hidden relative h-48 sm:h-56 md:h-64">
           {/* Background Image */}
           <div className="absolute inset-0">
@@ -324,15 +324,15 @@ Regístrate aquí: ${shareUrl}`;
               src="/CORO2.png"
               alt="Vision Background"
               fill
-              className="object-cover opacity-30"
+              className="object-cover opacity-40"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-slate-900/40" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/70 to-blue-900/30" />
           </div>
           
           <div className="relative p-3 h-full flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold px-2 py-1 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white">
+              <span className="text-xs font-bold px-2 py-1 rounded-full bg-gradient-to-r from-blue-600 to-blue-800 text-white">
                 🎯 Próxima Visión
               </span>
               {basicProduct && (
@@ -378,7 +378,7 @@ Regístrate aquí: ${shareUrl}`;
               {/* Botón Invitar */}
               <button
                 onClick={() => setShowQRModal(true)}
-                className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500 text-white text-xs font-medium rounded-lg transition-all"
+                className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white text-xs font-medium rounded-lg transition-all"
               >
                 <UserPlus className="w-3 h-3" />
                 <span>Invitar</span>
