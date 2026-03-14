@@ -2467,11 +2467,218 @@ Con estas correcciones:
 3. Se muestra mensaje claro sugiriendo PL si ya graduó de ADVANCED
 
 ================================================================================
-FIN DE LA DOCUMENTACIÓN
+FIN DE LA DOCUMENTACIÓN ORIGINAL
+================================================================================
+
+================================================================================
+22. SISTEMA DE FACTURACIÓN ELECTRÓNICA (CFDI 4.0) - MARZO 2026
+================================================================================
+
+Se implementó un sistema completo de facturación electrónica mexicana usando
+Facturapi para emisión de CFDI 4.0.
+
+--------------------------------------------------------------------------------
+22.1 Arquitectura del Sistema
+--------------------------------------------------------------------------------
+
+Archivos creados:
+- lib/facturapi.ts - Integración con Facturapi multi-organización
+- app/api/invoices/generate/route.ts - Generar factura
+- app/api/invoices/retry/route.ts - Reintentar factura fallida
+- app/api/invoices/list/route.ts - Listar facturas
+- app/api/invoices/[invoiceId]/route.ts - Descargar PDF/XML
+- app/dashboard/school-admin/facturas/page.tsx - Dashboard de facturas
+
+--------------------------------------------------------------------------------
+22.2 Modelo FacturapiConfig
+--------------------------------------------------------------------------------
+
+Cada organización tiene su propia configuración de Facturapi:
+
+```prisma
+model FacturapiConfig {
+  id             Int          @id @default(autoincrement())
+  organizationId Int          @unique
+  apiKey         String       // API Key de Facturapi
+  isLiveMode     Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+```
+
+--------------------------------------------------------------------------------
+22.3 Campos de Facturación en EventRegistration
+--------------------------------------------------------------------------------
+
+```prisma
+model EventRegistration {
+  // ... campos existentes ...
+  
+  // Datos fiscales del cliente
+  requiresInvoice  Boolean  @default(false)
+  invoiceRfc       String?
+  invoiceName      String?
+  invoiceRegime    String?
+  invoiceZipCode   String?
+  invoiceCfdiUse   String?
+  
+  // Estado de la factura
+  invoiceStatus    String?  @default("PENDING")
+  invoiceId        String?
+  invoicePdfUrl    String?
+  invoiceXmlUrl    String?
+  invoiceError     String?
+}
+```
+
+Estados de invoiceStatus:
+- PENDING: Pendiente de emisión
+- ISSUED: Factura emitida exitosamente
+- ERROR: Error en la emisión
+- NOT_REQUESTED: No solicitó factura
+
+--------------------------------------------------------------------------------
+22.4 Flujo de Facturación
+--------------------------------------------------------------------------------
+
+1. Usuario marca "Requiero factura" en el formulario de registro
+2. Ingresa RFC, razón social, régimen fiscal, código postal, uso CFDI
+3. Después del pago, se auto-genera la factura via processInvoice()
+4. Si hay error, admin puede reintentar desde el dashboard
+5. Usuario puede descargar PDF/XML desde su ticket
+
+--------------------------------------------------------------------------------
+22.5 APIs de Facturación
+--------------------------------------------------------------------------------
+
+POST /api/invoices/generate
+- Body: { registrationId }
+- Genera factura para un registro específico
+
+POST /api/invoices/retry
+- Body: { registrationId }
+- Reintenta factura que falló
+
+GET /api/invoices/list?organizationId=X
+- Lista todas las facturas de una organización
+
+GET /api/invoices/[invoiceId]?format=pdf|xml
+- Descarga PDF o XML de factura
+
+--------------------------------------------------------------------------------
+22.6 Dashboard de Facturas (/dashboard/school-admin/facturas)
+--------------------------------------------------------------------------------
+
+Funcionalidades:
+- Lista de registros con solicitud de factura
+- Filtros: Todas | Emitidas | Pendientes | Con Error
+- Ver error detallado de facturas fallidas
+- Reintentar factura individual
+- Descargar PDF/XML directamente
+
+================================================================================
+23. MEJORAS EN PÁGINA DE REGISTROS - MARZO 2026
+================================================================================
+
+--------------------------------------------------------------------------------
+23.1 Modal de Confirmación para Eliminar
+--------------------------------------------------------------------------------
+
+Se reemplazó el confirm() nativo del navegador por un modal diseñado con:
+- Backdrop con blur
+- Icono de advertencia
+- Nombre del registro a eliminar
+- Botones Cancelar/Eliminar con loading state
+
+Archivos modificados:
+- app/dashboard/school-admin/productos/[productId]/registros/page.tsx
+
+--------------------------------------------------------------------------------
+23.2 Fix Error 500 al Eliminar Registro
+--------------------------------------------------------------------------------
+
+El problema era referencia incorrecta al campo de relación:
+
+ANTES (incorrecto):
+```typescript
+include: { product: { select: { organizationId: true } } }
+registration.product.organizationId
+```
+
+DESPUÉS (correcto):
+```typescript
+include: { SchoolProduct: { select: { organizationId: true } } }
+registration.SchoolProduct.organizationId
+```
+
+Archivos modificados:
+- app/api/school-admin/products/[productId]/registrations/[registrationId]/route.ts
+
+--------------------------------------------------------------------------------
+23.3 Mostrar "Quién Invitó" en Lista de Registros
+--------------------------------------------------------------------------------
+
+La columna "QUIÉN INVITÓ" ahora muestra el nombre del usuario invitador.
+
+Se modificó la API para incluir la relación InvitedByUser:
+
+```typescript
+const registrations = await prisma.eventRegistration.findMany({
+  where: { productId: parseInt(productId) },
+  include: {
+    InvitedByUser: {
+      select: { id: true, nombre: true, apellido: true, email: true },
+    },
+  },
+});
+
+const mappedRegistrations = registrations.map(reg => ({
+  ...reg,
+  comoTeEnteraste: reg.InvitedByUser 
+    ? `${reg.InvitedByUser.nombre} ${reg.InvitedByUser.apellido || ''}`.trim()
+    : reg.comoTeEnteraste,
+}));
+```
+
+--------------------------------------------------------------------------------
+23.4 Limpieza de Código
+--------------------------------------------------------------------------------
+
+Se eliminó:
+- Botón "Exportar CSV"
+- Función exportToCSV()
+- Import de Download de lucide-react
+
+================================================================================
+24. GUÍA DE CONFIGURACIÓN DE FACTURACIÓN
+================================================================================
+
+Para habilitar facturación en una organización:
+
+1. Crear cuenta en Facturapi (https://www.facturapi.io/)
+
+2. Obtener API Key (sk_test_... para pruebas, sk_live_... para producción)
+
+3. Insertar configuración en base de datos:
+```sql
+INSERT INTO "FacturapiConfig" ("organizationId", "apiKey", "isLiveMode")
+VALUES (1, 'sk_test_xxx', false);
+```
+
+4. Configurar datos del emisor en dashboard de Facturapi:
+   - RFC
+   - Razón social
+   - Régimen fiscal
+   - Domicilio fiscal
+
+5. Para producción: subir certificados CSD (.cer y .key) a Facturapi
+
+================================================================================
+FIN DE LA DOCUMENTACIÓN ACTUALIZADA - MARZO 2026
 ================================================================================
 
 Esta documentación debe permitirte continuar exactamente donde quedamos, con 
 todo el contexto de lo que se ha hecho, los problemas resueltos, y los que 
 quedan pendientes.
-
 
