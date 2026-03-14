@@ -849,7 +849,10 @@ export default function QuantumBusinessBuilderPage() {
       setPreviewDescripcion(existingProfile.description || '');
       setPreviewOferta(existingProfile.discountOffer || '');
       // Mapear categoryId a slug de categoría
-      if (existingProfile.category?.name) {
+      if (existingProfile.category?.slug) {
+        // Preferir usar el slug de la categoría de la BD
+        setPreviewCategoria(existingProfile.category.slug);
+      } else if (existingProfile.category?.name) {
         const cat = BUSINESS_CATEGORIES.find(c => c.label.includes(existingProfile.category.name));
         setPreviewCategoria(cat?.value || '');
       }
@@ -857,6 +860,10 @@ export default function QuantumBusinessBuilderPage() {
       setPreviewWhatsapp(existingProfile.whatsappPhone || '');
       setPreviewFotos(existingProfile.galleryImages || []);
       setPreviewLogo(existingProfile.logoUrl || '');
+      // Cargar website existente
+      if (existingProfile.website) {
+        setPreviewWebsite(existingProfile.website);
+      }
       // Construir dirección desde city/state/coverageZone
       const direccion = existingProfile.coverageZone || 
         [existingProfile.city, existingProfile.state].filter(Boolean).join(', ');
@@ -1464,8 +1471,12 @@ export default function QuantumBusinessBuilderPage() {
         ? previewNombre 
         : (customName || selectedName || selectedIdea?.nombre || '');
       
-      // Mapear categoría string a categoryId si existe
-      const categoryIndex = BUSINESS_CATEGORIES.findIndex(c => c.value === previewCategoria);
+      // Usar el categoryId del perfil existente si está editando, o buscar por slug
+      let categoryIdToSave: number | undefined = existingProfile?.categoryId;
+      if (!categoryIdToSave && previewCategoria) {
+        // Buscar en las categorías de la BD por slug (se cargan al inicio)
+        // Por ahora, usar el slug directamente y dejar que el backend lo resuelva
+      }
       
       // Determinar status basado en el switch Irrazonable y si es publicar
       // Si es irrazonable Y se publica -> ACTIVE (público en directorio)
@@ -1479,9 +1490,9 @@ export default function QuantumBusinessBuilderPage() {
         description: isFromOptimizador ? previewDescripcion : descripcion,
         discountOffer: isFromOptimizador ? previewOferta : ofertaTribu,
         logoUrl: isFromOptimizador ? (previewLogo || undefined) : (selectedLogo || undefined),
-        // Mapear a campos de la API
-        categorySlug: previewCategoria, // String de categoría
-        categoryId: categoryIndex > 0 ? categoryIndex : undefined,
+        // Mapear a campos de la API - usar categoryId existente o slug para resolver en backend
+        categorySlug: previewCategoria, // String de categoría (slug)
+        categoryId: categoryIdToSave,
         whatsappPhone: previewWhatsapp || previewTelefono,
         website: previewWebsite,
         galleryImages: previewFotos,

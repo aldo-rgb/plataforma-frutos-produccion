@@ -273,6 +273,7 @@ export async function PATCH(request: NextRequest) {
     const {
       headline,
       categoryId,
+      categorySlug, // Nuevo: aceptar slug de categoría
       description,
       discountOffer,
       city,
@@ -295,7 +296,27 @@ export async function PATCH(request: NextRequest) {
       }
       updateData.headline = headline;
     }
-    if (categoryId !== undefined) updateData.categoryId = categoryId;
+    
+    // Resolver categoryId: preferir categoryId directo, sino buscar por slug
+    if (categoryId !== undefined) {
+      updateData.categoryId = categoryId;
+    } else if (categorySlug !== undefined && categorySlug !== '') {
+      // Buscar la categoría por slug
+      const category = await prisma.businessCategory.findFirst({
+        where: { 
+          OR: [
+            { slug: categorySlug },
+            { slug: categorySlug.toLowerCase() },
+            // También buscar por nombre similar
+            { name: { contains: categorySlug, mode: 'insensitive' } }
+          ]
+        }
+      });
+      if (category) {
+        updateData.categoryId = category.id;
+      }
+    }
+    
     if (description !== undefined) updateData.description = description;
     if (discountOffer !== undefined) updateData.discountOffer = discountOffer;
     if (city !== undefined) updateData.city = city;
