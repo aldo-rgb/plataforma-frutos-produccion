@@ -18,6 +18,9 @@ interface PaymentCode {
   status: 'ACTIVE' | 'REDEEMED' | 'CANCELLED';
   createdAt: string;
   visionName?: string;
+  ticketId?: string;
+  participantName?: string;
+  ticketLevel?: string;
 }
 
 interface ExpenseSummary {
@@ -1009,7 +1012,10 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
           reference: referenceText,
           status: 'REDEEMED', // Ya confirmado
           createdAt: new Date().toISOString(),
-          visionName: visionRegistrada
+          visionName: visionRegistrada,
+          ticketId: registerData.enrollment?.ticketId,
+          participantName: newUserForm.nombre,
+          ticketLevel: isComboRegistro ? 'FULL' : 'BASIC'
         });
         
         setShowCodeModal(true);
@@ -1082,7 +1088,10 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
           reference: paymentCodeInfo?.reference || `Avanzado - ${selectedParticipante.nombre}`,
           status: 'REDEEMED',
           createdAt: new Date().toISOString(),
-          visionName: visionRegistrada
+          visionName: visionRegistrada,
+          ticketId: registerData.enrollment?.ticketId || registerData.ticket?.id,
+          participantName: selectedParticipante.nombre,
+          ticketLevel: isComboRegistro ? 'COMBO' : 'ADVANCED'
         });
         
         setShowCodeModal(true);
@@ -1155,7 +1164,10 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
           reference: paymentCodeInfo?.reference || `Liderato - ${selectedParticipante.nombre}`,
           status: 'REDEEMED',
           createdAt: new Date().toISOString(),
-          visionName: visionRegistrada
+          visionName: visionRegistrada,
+          ticketId: registerData.enrollment?.ticketId || registerData.ticket?.id,
+          participantName: selectedParticipante.nombre,
+          ticketLevel: 'PL'
         });
         
         setShowCodeModal(true);
@@ -2284,6 +2296,86 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                 </div>
               </div>
 
+              {/* TICKET VISUAL CON QR - Solo cuando está REDEEMED y tiene ticketId */}
+              {generatedCode.status === 'REDEEMED' && generatedCode.ticketId && (
+                <div 
+                  id="cash-ticket-card"
+                  className="mx-4 mt-4 rounded-xl overflow-hidden relative"
+                  style={{ 
+                    boxShadow: '0 0 30px rgba(0, 240, 255, 0.2)',
+                    border: '2px solid #00F0FF',
+                  }}
+                >
+                  {/* CORO2.png Background */}
+                  <div 
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage: 'url(/CORO2.png)',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      opacity: 0.15,
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-900/85 to-black/95" />
+
+                  {/* Header ACCESS GRANTED */}
+                  <div className="relative z-10 p-2">
+                    <div 
+                      className="text-center py-1.5 px-3 rounded-lg bg-[#00F0FF]/10"
+                      style={{ border: '1px solid rgba(0, 240, 255, 0.3)' }}
+                    >
+                      <p 
+                        className="text-[10px] font-bold tracking-[0.3em] text-[#00F0FF]"
+                        style={{ textShadow: '0 0 10px rgba(0, 240, 255, 0.5)' }}
+                      >
+                        ▸ ACCESS GRANTED ◂
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Info del participante */}
+                  <div className="relative z-10 px-3 pb-2 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8px] text-slate-500 uppercase tracking-wider">Participante:</span>
+                      <span className="text-[10px] text-[#00F0FF] font-bold">{generatedCode.participantName?.toUpperCase()}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8px] text-slate-500 uppercase tracking-wider">Nivel:</span>
+                      <span className="text-[10px] text-[#00F0FF] font-bold">{generatedCode.ticketLevel}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8px] text-slate-500 uppercase tracking-wider">Visión:</span>
+                      <span className="text-[10px] text-[#00F0FF] font-bold">{generatedCode.visionName}</span>
+                    </div>
+                  </div>
+
+                  {/* QR Code */}
+                  <div className="relative z-10 flex flex-col items-center py-3">
+                    <div 
+                      className="p-2 rounded-lg"
+                      style={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        boxShadow: '0 0 20px rgba(0, 240, 255, 0.3)'
+                      }}
+                    >
+                      <QRCodeSVG
+                        value={generatedCode.ticketId}
+                        size={100}
+                        level="H"
+                        fgColor="#0f172a"
+                        bgColor="transparent"
+                      />
+                    </div>
+                    <p 
+                      className="text-center text-[6px] mt-2 tracking-wide text-[#00F0FF]/60"
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      ID: {generatedCode.ticketId.toUpperCase()}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Código Principal */}
               <div className="p-6 text-center">
                 <p className="text-xs text-slate-500 mb-2 uppercase tracking-wider">Referencia</p>
@@ -2393,6 +2485,46 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                 Compartir
               </button>
             </div>
+
+            {/* Warning Message y Guardar Ticket - Solo cuando hay ticket */}
+            {generatedCode.status === 'REDEEMED' && generatedCode.ticketId && (
+              <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                <p className="text-yellow-400 text-xs font-medium text-center mb-2">
+                  ⚠️ <strong>¡IMPORTANTE!</strong> Guarda este ticket para ingresar al evento.
+                </p>
+                <button
+                  onClick={async () => {
+                    const ticketElement = document.getElementById('cash-ticket-card');
+                    if (ticketElement) {
+                      try {
+                        const html2canvas = (await import('html2canvas')).default;
+                        const canvas = await html2canvas(ticketElement, {
+                          backgroundColor: '#0f172a',
+                          scale: 2
+                        });
+                        const link = document.createElement('a');
+                        link.download = `ticket-${generatedCode.ticketId}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        showNotification('success', '¡Ticket guardado!');
+                      } catch {
+                        const ticketText = `🎫 *TICKET DE INGRESO*\n\n` +
+                          `👤 *Participante:* ${generatedCode.participantName}\n` +
+                          `🎯 *Visión:* ${generatedCode.visionName}\n` +
+                          `🔑 *ID:* ${generatedCode.ticketId}\n\n` +
+                          `📱 Presenta este código en la entrada.`;
+                        navigator.clipboard.writeText(ticketText);
+                        showNotification('success', '¡Información copiada!');
+                      }
+                    }
+                  }}
+                  className="w-full py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-bold rounded-lg transition-all flex items-center justify-center gap-2 text-sm"
+                >
+                  <Download size={16} />
+                  Guardar Ticket
+                </button>
+              </div>
+            )}
 
             {/* Tip */}
             <div 
