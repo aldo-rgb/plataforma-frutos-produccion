@@ -2443,7 +2443,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
     {/* MODAL DE ESTADO DEL PAGO CON TARJETA */}
     {showPOSStatusModal && (
       <div 
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-start justify-center p-4 overflow-y-auto"
         onClick={(e) => {
           // Solo cerrar si el pago está completado o hay error
           if (['completed', 'error', 'cancelled'].includes(posPaymentStatus.stage)) {
@@ -2452,7 +2452,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
         }}
       >
         <div 
-          className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+          className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border rounded-2xl w-full max-w-sm shadow-2xl my-8"
           style={{ borderColor: `${orgInfo.brandColor}40` }}
           onClick={(e) => e.stopPropagation()}
         >
