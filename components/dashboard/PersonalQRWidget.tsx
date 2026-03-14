@@ -35,7 +35,7 @@ export default function PersonalQRWidget({
   const [orgLogo, setOrgLogo] = useState<string | null>(organizationLogo || null);
   const [orgName, setOrgName] = useState<string>(organizationName);
   const [logoLoaded, setLogoLoaded] = useState(false);
-  const [basicPrice, setBasicPrice] = useState<number>(1500);
+  const [basicPrice, setBasicPrice] = useState<number>(6500);
   const [currency, setCurrency] = useState<string>('MXN');
   const [registrationURL, setRegistrationURL] = useState<string>('');
   const [organizationId, setOrganizationId] = useState<number | null | undefined>(propOrganizationId);
