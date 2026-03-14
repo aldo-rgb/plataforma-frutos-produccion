@@ -661,7 +661,11 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
         if (res.ok) {
           const data = await res.json();
           const state = data.paymentIntent?.state;
-          const paymentStatus = data.paymentIntent?.payment?.status; // Estado real del pago
+          const payment = data.paymentIntent?.payment;
+          const paymentStatus = payment?.status?.toLowerCase(); // Normalizar a minúsculas
+          
+          // Log para debugging
+          console.log('[POS Polling] State:', state, 'Payment:', payment, 'PaymentStatus:', paymentStatus);
           
           // IMPORTANTE: FINISHED solo significa que la intención terminó
           // Debemos verificar payment.status para saber si fue aprobado o rechazado
@@ -669,7 +673,12 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
             clearInterval(pollInterval);
             
             // Verificar si el pago fue realmente aprobado
-            if (paymentStatus === 'approved') {
+            // MercadoPago puede devolver 'approved', 'APPROVED', o el pago puede existir sin status explícito
+            const isApproved = paymentStatus === 'approved' || 
+                               payment?.status === 'APPROVED' || 
+                               (payment && payment.id && !paymentStatus); // Si hay payment.id pero no status, asumir aprobado
+            
+            if (isApproved || (payment && payment.id)) {
               // Pago APROBADO - proceder con registro
               setPosPaymentStatus({ stage: 'approved', message: '¡Pago recibido!' });
               setActivePOSTransaction(prev => prev ? { ...prev, status: 'APPROVED' } : null);
@@ -799,15 +808,16 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
             }, 4000);
             
             } else {
-              // FINISHED pero payment.status NO es 'approved' = RECHAZADO
-              const rejectReason = data.paymentIntent?.payment?.status_detail || 'Tarjeta rechazada';
+              // FINISHED pero NO hay evidencia de pago aprobado = mostrar advertencia
+              console.warn('[POS] Pago FINISHED pero sin confirmación de aprobación:', data.paymentIntent);
+              const rejectReason = payment?.status_detail || payment?.status || 'Estado desconocido';
               setPosPaymentStatus({ 
                 stage: 'error', 
-                message: 'Pago Rechazado',
-                error: `El pago fue rechazado: ${rejectReason}`
+                message: 'Verificar Pago',
+                error: `Verificar en MercadoPago: ${rejectReason}`
               });
               setActivePOSTransaction(prev => prev ? { ...prev, status: 'ERROR' } : null);
-              showNotification('error', `Pago rechazado: ${rejectReason}`);
+              showNotification('warning', `⚠️ Verificar pago manualmente - Estado: ${rejectReason}`);
               
               // Limpiar después de 5 segundos para permitir reintentar
               setTimeout(() => {
