@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     // Buscar usuario por email
     const usuario = await prisma.usuario.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase() },
       select: {
         id: true,
         nombre: true,
@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Buscar el ticket más reciente del usuario
+    // Buscar el ticket más reciente del usuario (ownerId, no userId)
     const ticket = await prisma.ticket.findFirst({
-      where: { userId: usuario.id },
+      where: { ownerId: usuario.id },
       orderBy: { createdAt: 'desc' },
       include: {
         Vision: {
@@ -35,12 +35,12 @@ export async function GET(request: NextRequest) {
             id: true,
             nombre: true,
             startDate: true,
-            Organization: {
-              select: {
-                id: true,
-                name: true,
-              }
-            }
+          }
+        },
+        Organization: {
+          select: {
+            id: true,
+            name: true,
           }
         }
       }
@@ -54,11 +54,11 @@ export async function GET(request: NextRequest) {
       success: true,
       ticket: {
         id: ticket.id,
-        ticketCode: ticket.ticketCode,
+        ticketCode: ticket.id, // El ID del ticket es el código (UUID)
         level: ticket.level,
         status: ticket.status,
         visionName: ticket.Vision?.nombre || 'Sin visión',
-        organizationName: ticket.Vision?.Organization?.name || 'Impacto Cuántico',
+        organizationName: ticket.Organization?.name || 'Impacto Cuántico',
         userName: usuario.nombre,
         userEmail: usuario.email,
         startDate: ticket.Vision?.startDate?.toISOString() || null,
