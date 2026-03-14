@@ -440,17 +440,21 @@ export async function createEventInvoice(params: {
       customer: customerId,
       items: [
         {
-          description: params.productName,
-          product_key: config.defaultSatKey || PRODUCT_KEYS.TALLER_EDUCATIVO,
-          price: params.amount,
           quantity: 1,
-          tax_included: true,
-          taxes: [
-            {
-              type: 'IVA',
-              rate: 0.16,
-            },
-          ],
+          product: {
+            description: params.productName,
+            product_key: config.defaultSatKey || PRODUCT_KEYS.TALLER_EDUCATIVO,
+            unit_key: config.defaultUnitKey || 'E48',
+            unit_name: 'Servicio',
+            price: params.amount,
+            tax_included: true,
+            taxes: [
+              {
+                type: 'IVA',
+                rate: 0.16,
+              },
+            ],
+          },
         },
       ],
       payment_form: facturapi.getPaymentForm(params.paymentProvider),
