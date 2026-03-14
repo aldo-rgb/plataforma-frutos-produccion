@@ -27,6 +27,7 @@ export async function POST(
       telefono, 
       invitedByUserId,
       provider = 'stripe', // 'stripe' o 'mercadopago'
+      simulatePayment = false, // Flag para simular pago (testing)
       // Datos de facturación
       requiresInvoice = false,
       invoiceRfc,
