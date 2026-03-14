@@ -53,8 +53,12 @@ export async function GET(
     }
 
     // Obtener registros con información del usuario que invitó
+    // Solo mostrar registros con pago completado
     const registrations = await prisma.eventRegistration.findMany({
-      where: { productId: parseInt(productId) },
+      where: { 
+        productId: parseInt(productId),
+        paymentStatus: 'PAID',
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         InvitedByUser: {
