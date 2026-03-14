@@ -237,169 +237,181 @@ function SuccessContent() {
               </motion.div>
             ) : ticketData ? (
               <motion.div
-                initial={{ opacity: 0, y: 20, rotateX: -10 }}
-                animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5, type: 'spring', stiffness: 100 }}
-                className="relative mx-auto max-w-md mb-6 perspective-1000"
+                className="relative mx-auto w-[300px] mb-6"
               >
-                {/* Main Ticket Container */}
-                <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl overflow-hidden shadow-2xl shadow-cyan-500/20">
-                  
-                  {/* Top Decorative Band */}
-                  <div className={`h-2 w-full ${
-                    ticketData.level === 'BASIC' 
-                      ? 'bg-gradient-to-r from-cyan-500 via-teal-400 to-cyan-500' 
-                      : ticketData.level === 'ADVANCED' 
-                        ? 'bg-gradient-to-r from-purple-500 via-fuchsia-400 to-purple-500'
-                        : 'bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500'
-                  }`} />
-                  
-                  {/* Holographic Shine Effect */}
-                  <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                    <div className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-gradient-to-br from-transparent via-white/5 to-transparent rotate-12 animate-pulse" />
+                {/* Main Card - Cyberpunk Style */}
+                <div 
+                  className="relative w-full rounded-2xl overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-black"
+                  style={{
+                    boxShadow: '0 0 40px rgba(0, 240, 255, 0.3), inset 0 1px 0 rgba(0, 240, 255, 0.2)',
+                    border: '2px solid #00F0FF',
+                  }}
+                >
+                  {/* Circuit Board Pattern Background */}
+                  <div className="absolute inset-0 opacity-10">
+                    <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <pattern id="circuit-success" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+                          <path d="M10 10h30M10 10v30M40 10v15M25 25h15M25 25v15" stroke="#00F0FF" strokeWidth="0.5" fill="none"/>
+                          <circle cx="10" cy="10" r="2" fill="#00F0FF"/>
+                          <circle cx="40" cy="10" r="2" fill="#00F0FF"/>
+                          <circle cx="40" cy="25" r="2" fill="#00F0FF"/>
+                          <circle cx="25" cy="25" r="2" fill="#00F0FF"/>
+                          <circle cx="25" cy="40" r="2" fill="#00F0FF"/>
+                          <circle cx="10" cy="40" r="2" fill="#00F0FF"/>
+                        </pattern>
+                      </defs>
+                      <rect width="100%" height="100%" fill="url(#circuit-success)"/>
+                    </svg>
                   </div>
-                  
-                  {/* Ticket Header */}
-                  <div className="relative px-6 pt-5 pb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className={`p-2 rounded-xl ${
-                          ticketData.level === 'BASIC' 
-                            ? 'bg-cyan-500/20' 
-                            : ticketData.level === 'ADVANCED' 
-                              ? 'bg-purple-500/20'
-                              : 'bg-yellow-500/20'
-                        }`}>
-                          <Ticket className={`w-5 h-5 ${
-                            ticketData.level === 'BASIC' 
-                              ? 'text-cyan-400' 
-                              : ticketData.level === 'ADVANCED' 
-                                ? 'text-purple-400'
-                                : 'text-yellow-400'
-                          }`} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-slate-500 uppercase tracking-widest">Impacto Cuántico</p>
-                          <p className={`text-sm font-bold ${
-                            ticketData.level === 'BASIC' 
-                              ? 'text-cyan-400' 
-                              : ticketData.level === 'ADVANCED' 
-                                ? 'text-purple-400'
-                                : 'text-yellow-400'
-                          }`}>BOLETO DE INGRESO</p>
-                        </div>
-                      </div>
-                      <div className={`px-3 py-1.5 rounded-full font-black text-xs tracking-wider ${
-                        ticketData.level === 'BASIC' 
-                          ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow-lg shadow-cyan-500/30' 
-                          : ticketData.level === 'ADVANCED' 
-                            ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-lg shadow-purple-500/30'
-                            : 'bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow-lg shadow-yellow-500/30'
-                      }`}>
-                        {ticketData.level === 'BASIC' ? '✨ BÁSICO' : 
-                         ticketData.level === 'ADVANCED' ? '🚀 AVANZADO' : '👑 PL'}
+
+                  {/* Scan Lines Effect */}
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div 
+                      className="absolute inset-0 opacity-5"
+                      style={{
+                        background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 240, 255, 0.1) 2px, rgba(0, 240, 255, 0.1) 4px)',
+                      }}
+                    />
+                  </div>
+
+                  {/* Header - ACCESS GRANTED */}
+                  <div className="relative z-10 p-4">
+                    <div 
+                      className="text-center py-2 px-4 rounded-lg bg-[#00F0FF]/10"
+                      style={{ border: '1px solid rgba(0, 240, 255, 0.3)' }}
+                    >
+                      <p 
+                        className="text-xs tracking-[0.3em] font-bold text-[#00F0FF]"
+                        style={{ fontFamily: 'monospace' }}
+                      >
+                        ▸ ACCESS GRANTED ◂
+                      </p>
+                    </div>
+                    
+                    {/* NO TRANSFERIBLE Warning */}
+                    <div 
+                      className="mt-2 text-center py-1 px-3 rounded bg-red-900/30"
+                      style={{ border: '1px solid rgba(239, 68, 68, 0.3)' }}
+                    >
+                      <p className="text-[10px] tracking-wider text-red-400 font-medium">
+                        ⚠ NO TRANSFERIBLE
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Logo Section with Rotating Ring */}
+                  <div className="relative z-10 flex justify-center my-4">
+                    <div className="relative">
+                      {/* Rotating Ring */}
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                        className="absolute -inset-3"
+                      >
+                        <svg className="w-full h-full" viewBox="0 0 100 100">
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="45"
+                            fill="none"
+                            stroke="#00F0FF"
+                            strokeWidth="1"
+                            strokeDasharray="10 5"
+                            opacity="0.5"
+                          />
+                        </svg>
+                      </motion.div>
+                      
+                      {/* Hexagon Container */}
+                      <div 
+                        className="relative w-20 h-20 flex items-center justify-center"
+                        style={{
+                          clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                          background: 'linear-gradient(180deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 240, 255, 0.05) 100%)',
+                        }}
+                      >
+                        {/* Quantum Symbol */}
+                        <svg viewBox="0 0 100 100" className="w-12 h-12">
+                          <ellipse cx="50" cy="50" rx="35" ry="15" fill="none" stroke="#00F0FF" strokeWidth="2" transform="rotate(-45 50 50)"/>
+                          <ellipse cx="50" cy="50" rx="35" ry="15" fill="none" stroke="#00F0FF" strokeWidth="2" transform="rotate(45 50 50)"/>
+                          <circle cx="50" cy="50" r="6" fill="#00F0FF"/>
+                        </svg>
                       </div>
                     </div>
                   </div>
 
-                  {/* Perforated Line */}
-                  <div className="relative px-4">
-                    <div className="flex items-center">
-                      <div className="w-4 h-8 bg-slate-950 rounded-r-full -ml-4" />
-                      <div className="flex-1 border-t-2 border-dashed border-slate-700 mx-2" />
-                      <div className="w-4 h-8 bg-slate-950 rounded-l-full -mr-4" />
+                  {/* User Data Rows */}
+                  <div className="relative z-10 px-4 space-y-1">
+                    <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                      <span className="text-[10px] tracking-wider text-slate-500" style={{ fontFamily: 'monospace' }}>CODENAME:</span>
+                      <span className="text-xs font-bold text-[#00F0FF]" style={{ fontFamily: 'monospace' }}>
+                        {ticketData.userName.split(' ')[0].toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                      <span className="text-[10px] tracking-wider text-slate-500" style={{ fontFamily: 'monospace' }}>LEVEL:</span>
+                      <span className={`text-xs font-bold ${
+                        ticketData.level === 'BASIC' ? 'text-[#00F0FF]' : 
+                        ticketData.level === 'ADVANCED' ? 'text-purple-400' : 'text-yellow-400'
+                      }`} style={{ fontFamily: 'monospace' }}>
+                        {ticketData.level === 'BASIC' ? 'BÁSICO' : ticketData.level === 'ADVANCED' ? 'AVANZADO' : 'PL'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                      <span className="text-[10px] tracking-wider text-slate-500" style={{ fontFamily: 'monospace' }}>STATUS:</span>
+                      <span className="text-xs font-bold text-emerald-400" style={{ fontFamily: 'monospace' }}>PARTICIPANTE</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                      <span className="text-[10px] tracking-wider text-slate-500" style={{ fontFamily: 'monospace' }}>VISION:</span>
+                      <span className="text-xs font-bold text-[#00F0FF]" style={{ fontFamily: 'monospace' }}>
+                        {ticketData.visionName}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                      <span className="text-[10px] tracking-wider text-slate-500" style={{ fontFamily: 'monospace' }}>FECHA:</span>
+                      <span className="text-xs font-bold text-[#00F0FF]" style={{ fontFamily: 'monospace' }}>
+                        {ticketData.startDate ? new Date(ticketData.startDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }).toUpperCase() : 'POR DEFINIR'}
+                      </span>
                     </div>
                   </div>
 
                   {/* QR Code Section */}
-                  <div className="px-6 py-5">
-                    <div className="flex justify-center mb-4">
-                      <div className="relative">
-                        {/* QR Glow */}
-                        <div className={`absolute inset-0 rounded-2xl blur-xl opacity-30 ${
-                          ticketData.level === 'BASIC' 
-                            ? 'bg-cyan-500' 
-                            : ticketData.level === 'ADVANCED' 
-                              ? 'bg-purple-500'
-                              : 'bg-yellow-500'
-                        }`} />
-                        <div className="relative bg-white p-4 rounded-2xl shadow-2xl">
-                          <QRCodeSVG 
-                            value={`https://impactocuantico.com/ticket/${ticketData.ticketCode}`}
-                            size={160}
-                            level="H"
-                            includeMargin={false}
-                            imageSettings={{
-                              src: '',
-                              height: 0,
-                              width: 0,
-                              excavate: false
-                            }}
-                          />
-                        </div>
+                  <div className="relative z-10 p-4">
+                    <div className="flex justify-center">
+                      <div 
+                        className="p-3 rounded-lg"
+                        style={{
+                          background: '#000',
+                          border: '2px solid #00F0FF',
+                        }}
+                      >
+                        <QRCodeSVG
+                          value={`TICKET:${ticketData.ticketCode}`}
+                          size={100}
+                          bgColor="transparent"
+                          fgColor="#00F0FF"
+                          level="M"
+                        />
                       </div>
                     </div>
-
-                    {/* Ticket Code */}
-                    <div className="text-center mb-5">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">Código de Ticket</p>
-                      <p className="text-base sm:text-lg font-mono font-bold text-white tracking-wider bg-slate-800/50 px-4 py-2 rounded-lg inline-block">
-                        {ticketData.ticketCode}
-                      </p>
-                    </div>
-
-                    {/* Event Info */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur rounded-xl p-3 border border-slate-700/50">
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">👤 Participante</p>
-                        <p className="text-white font-semibold truncate text-sm">{ticketData.userName}</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur rounded-xl p-3 border border-slate-700/50">
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">🎯 Visión</p>
-                        <p className="text-white font-semibold truncate text-sm">{ticketData.visionName}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur rounded-xl p-3 border border-slate-700/50 mb-4">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">🏛️ Organización</p>
-                      <p className="text-white font-semibold text-sm">{ticketData.organizationName}</p>
-                    </div>
-                  </div>
-
-                  {/* Bottom Perforated Line */}
-                  <div className="relative px-4">
-                    <div className="flex items-center">
-                      <div className="w-4 h-8 bg-slate-950 rounded-r-full -ml-4" />
-                      <div className="flex-1 border-t-2 border-dashed border-slate-700 mx-2" />
-                      <div className="w-4 h-8 bg-slate-950 rounded-l-full -mr-4" />
-                    </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2 text-slate-400">
-                      <Sparkles className="w-4 h-4" />
-                      <p className="text-xs font-medium">Presenta este QR en la entrada del evento</p>
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <p className="text-[10px] text-slate-600 text-center mt-2">
-                      El evento del año • Transformación garantizada
+                    <p 
+                      className="text-center text-[8px] mt-2 tracking-wide text-[#00F0FF]/60"
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      ID: {ticketData.ticketCode.toUpperCase()}
                     </p>
                   </div>
 
-                  {/* Bottom Decorative Band */}
-                  <div className={`h-2 w-full ${
-                    ticketData.level === 'BASIC' 
-                      ? 'bg-gradient-to-r from-cyan-500 via-teal-400 to-cyan-500' 
-                      : ticketData.level === 'ADVANCED' 
-                        ? 'bg-gradient-to-r from-purple-500 via-fuchsia-400 to-purple-500'
-                        : 'bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500'
-                  }`} />
+                  {/* Glowing Edge Effect */}
+                  <div 
+                    className="absolute inset-0 rounded-2xl pointer-events-none"
+                    style={{ boxShadow: 'inset 0 0 30px rgba(0, 240, 255, 0.1)' }}
+                  />
                 </div>
-
-                {/* Floating particles decoration */}
-                <div className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-cyan-500/30 animate-ping" />
-                <div className="absolute -bottom-2 -left-2 w-3 h-3 rounded-full bg-purple-500/30 animate-ping" style={{ animationDelay: '0.5s' }} />
               </motion.div>
             ) : (
               /* Fallback: Info Card sin ticket */
