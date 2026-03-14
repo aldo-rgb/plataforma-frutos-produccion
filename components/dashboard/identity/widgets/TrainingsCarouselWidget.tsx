@@ -343,7 +343,7 @@ Un espacio para abrir posibilidades a tu vida.
     
     return (
       <div className="bg-gradient-to-br from-blue-600/20 to-slate-800/20 p-0.5 rounded-xl">
-        <div className="bg-slate-900/95 rounded-xl overflow-hidden relative h-48 sm:h-56 md:h-64">
+        <div className="bg-slate-900/95 rounded-xl overflow-hidden relative h-64 sm:h-80 md:h-96">
           {/* Background Image */}
           <div className="absolute inset-0">
             <Image
@@ -424,7 +424,7 @@ Un espacio para abrir posibilidades a tu vida.
       <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 p-0.5 rounded-xl">
         <div className="bg-slate-900/95 rounded-xl overflow-hidden">
           {/* Workshop Image with all content inside */}
-          <div className="relative h-48 sm:h-56 md:h-64 w-full">
+          <div className="relative h-64 sm:h-80 md:h-96 w-full">
             {workshop.imageUrl ? (
               <Image
                 src={workshop.imageUrl}
