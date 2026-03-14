@@ -2535,89 +2535,171 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
             {/* Estado completado: mostrar código de confirmación */}
             {posPaymentStatus.stage === 'completed' && posPaymentStatus.confirmationCode && (
               <>
-                {/* Ticket Visual con QR */}
+                {/* Ticket Visual con QR - Estilo Cyberpunk */}
                 {posPaymentStatus.ticketId && (
                   <div 
                     id="treasury-ticket-card"
-                    className="mt-4 rounded-xl overflow-hidden"
+                    className="mt-4 rounded-2xl overflow-hidden relative"
                     style={{ 
-                      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                      border: `2px solid ${orgInfo.brandColor}40`
+                      background: 'linear-gradient(180deg, #020617 0%, #0f172a 50%, #000000 100%)',
+                      boxShadow: '0 0 40px rgba(0, 240, 255, 0.3), inset 0 1px 0 rgba(0, 240, 255, 0.2)',
+                      border: '2px solid #00F0FF',
                     }}
                   >
-                    {/* Header del ticket */}
-                    <div 
-                      className="px-4 py-3 text-center"
-                      style={{ background: `linear-gradient(135deg, ${orgInfo.brandColor}40, ${orgInfo.brandColor}20)` }}
-                    >
-                      <p className="text-xs text-slate-400 uppercase tracking-wider">
-                        {posPaymentStatus.organizationName || 'Quantum Matter'}
-                      </p>
-                      <h3 className="text-lg font-bold text-white">
-                        🎫 Ticket de Ingreso
-                      </h3>
+                    {/* Circuit Board Pattern Background */}
+                    <div className="absolute inset-0 opacity-10">
+                      <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <pattern id="circuit-treasury" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+                            <path d="M10 10h30M10 10v30M40 10v15M25 25h15M25 25v15" stroke="#00F0FF" strokeWidth="0.5" fill="none"/>
+                            <circle cx="10" cy="10" r="2" fill="#00F0FF"/>
+                            <circle cx="40" cy="10" r="2" fill="#00F0FF"/>
+                            <circle cx="40" cy="25" r="2" fill="#00F0FF"/>
+                            <circle cx="25" cy="25" r="2" fill="#00F0FF"/>
+                            <circle cx="25" cy="40" r="2" fill="#00F0FF"/>
+                            <circle cx="10" cy="40" r="2" fill="#00F0FF"/>
+                          </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#circuit-treasury)"/>
+                      </svg>
                     </div>
 
-                    {/* QR Code */}
-                    <div className="p-4 flex justify-center">
-                      <div className="p-3 bg-white rounded-xl">
-                        <QRCodeSVG 
-                          value={posPaymentStatus.ticketId}
-                          size={140}
-                          level="H"
-                          includeMargin={false}
-                        />
+                    {/* Scan Lines Effect */}
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                      <div 
+                        className="absolute inset-0 opacity-5"
+                        style={{
+                          background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 240, 255, 0.1) 2px, rgba(0, 240, 255, 0.1) 4px)',
+                        }}
+                      />
+                    </div>
+
+                    {/* Header - ACCESS GRANTED */}
+                    <div className="relative z-10 p-3">
+                      <div 
+                        className="text-center py-2 px-4 rounded-lg bg-[#00F0FF]/10"
+                        style={{ border: '1px solid rgba(0, 240, 255, 0.3)' }}
+                      >
+                        <p 
+                          className="text-xs tracking-[0.3em] font-bold text-[#00F0FF]"
+                          style={{ fontFamily: 'monospace' }}
+                        >
+                          ▸ ACCESS GRANTED ◂
+                        </p>
+                      </div>
+                      
+                      {/* NO TRANSFERIBLE Warning */}
+                      <div 
+                        className="mt-2 text-center py-1 px-3 rounded bg-red-900/30"
+                        style={{ border: '1px solid rgba(239, 68, 68, 0.3)' }}
+                      >
+                        <p className="text-[10px] tracking-wider text-red-400 font-medium">
+                          ⚠ NO TRANSFERIBLE
+                        </p>
                       </div>
                     </div>
 
-                    {/* Ticket ID */}
-                    <div className="px-4 pb-2 text-center">
-                      <code className="text-xs font-mono text-slate-400">
-                        {posPaymentStatus.ticketId}
-                      </code>
-                    </div>
-
-                    {/* Info del ticket */}
-                    <div className="px-4 pb-4 space-y-2">
-                      <div className="flex justify-between items-center py-2 border-t border-slate-700/50">
-                        <span className="text-slate-400 text-sm">👤 Participante</span>
-                        <span className="text-white font-medium text-sm">{posPaymentStatus.participantName}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-t border-slate-700/50">
-                        <span className="text-slate-400 text-sm">🎯 Visión</span>
-                        <span className="text-white font-medium text-sm">{posPaymentStatus.visionName}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-t border-slate-700/50">
-                        <span className="text-slate-400 text-sm">🏷️ Nivel</span>
-                        <span 
-                          className="px-2 py-1 rounded-full text-xs font-bold"
-                          style={{ 
-                            backgroundColor: posPaymentStatus.isCombo 
-                              ? '#22c55e20' 
-                              : posPaymentStatus.ticketLevel === 'BASIC' 
-                                ? '#3b82f620' 
-                                : posPaymentStatus.ticketLevel === 'ADVANCED' 
-                                  ? '#f59e0b20' 
-                                  : '#8b5cf620',
-                            color: posPaymentStatus.isCombo 
-                              ? '#22c55e' 
-                              : posPaymentStatus.ticketLevel === 'BASIC' 
-                                ? '#3b82f6' 
-                                : posPaymentStatus.ticketLevel === 'ADVANCED' 
-                                  ? '#f59e0b' 
-                                  : '#8b5cf6'
+                    {/* Logo Section with Rotating Ring */}
+                    <div className="relative z-10 flex justify-center my-3">
+                      <div className="relative">
+                        {/* Rotating Ring */}
+                        <div className="absolute -inset-2 animate-spin" style={{ animationDuration: '8s' }}>
+                          <svg className="w-full h-full" viewBox="0 0 100 100">
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="45"
+                              fill="none"
+                              stroke="#00F0FF"
+                              strokeWidth="1"
+                              strokeDasharray="10 5"
+                              opacity="0.5"
+                            />
+                          </svg>
+                        </div>
+                        
+                        {/* Hexagon Container */}
+                        <div 
+                          className="relative w-16 h-16 flex items-center justify-center"
+                          style={{
+                            clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                            background: 'linear-gradient(180deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 240, 255, 0.05) 100%)',
                           }}
                         >
-                          {posPaymentStatus.isCombo 
-                            ? '✨ FULL (B+A+L)' 
-                            : posPaymentStatus.ticketLevel === 'BASIC' 
-                              ? '🌱 BÁSICO' 
-                              : posPaymentStatus.ticketLevel === 'ADVANCED' 
-                                ? '🔥 AVANZADO' 
-                                : '👑 LIDERATO'}
+                          {/* Quantum Symbol */}
+                          <svg viewBox="0 0 100 100" className="w-10 h-10">
+                            <ellipse cx="50" cy="50" rx="35" ry="15" fill="none" stroke="#00F0FF" strokeWidth="2" transform="rotate(-45 50 50)"/>
+                            <ellipse cx="50" cy="50" rx="35" ry="15" fill="none" stroke="#00F0FF" strokeWidth="2" transform="rotate(45 50 50)"/>
+                            <circle cx="50" cy="50" r="6" fill="#00F0FF"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* User Data Rows */}
+                    <div className="relative z-10 px-3 space-y-1">
+                      <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                        <span className="text-[10px] tracking-wider text-slate-500" style={{ fontFamily: 'monospace' }}>CODENAME:</span>
+                        <span className="text-xs font-bold text-[#00F0FF]" style={{ fontFamily: 'monospace' }}>
+                          {posPaymentStatus.participantName?.split(' ')[0].toUpperCase() || 'AGENT'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                        <span className="text-[10px] tracking-wider text-slate-500" style={{ fontFamily: 'monospace' }}>LEVEL:</span>
+                        <span className={`text-xs font-bold ${
+                          posPaymentStatus.isCombo ? 'text-green-400' :
+                          posPaymentStatus.ticketLevel === 'BASIC' ? 'text-[#00F0FF]' : 
+                          posPaymentStatus.ticketLevel === 'ADVANCED' ? 'text-purple-400' : 'text-yellow-400'
+                        }`} style={{ fontFamily: 'monospace' }}>
+                          {posPaymentStatus.isCombo ? 'FULL (B+A+L)' :
+                           posPaymentStatus.ticketLevel === 'BASIC' ? 'BÁSICO' : 
+                           posPaymentStatus.ticketLevel === 'ADVANCED' ? 'AVANZADO' : 'PL'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                        <span className="text-[10px] tracking-wider text-slate-500" style={{ fontFamily: 'monospace' }}>STATUS:</span>
+                        <span className="text-xs font-bold text-emerald-400" style={{ fontFamily: 'monospace' }}>PARTICIPANTE</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                        <span className="text-[10px] tracking-wider text-slate-500" style={{ fontFamily: 'monospace' }}>VISION:</span>
+                        <span className="text-xs font-bold text-[#00F0FF]" style={{ fontFamily: 'monospace' }}>
+                          {posPaymentStatus.visionName || 'N/A'}
                         </span>
                       </div>
                     </div>
+
+                    {/* QR Code Section */}
+                    <div className="relative z-10 p-3">
+                      <div className="flex justify-center">
+                        <div 
+                          className="p-2 rounded-lg"
+                          style={{
+                            background: '#000',
+                            border: '2px solid #00F0FF',
+                          }}
+                        >
+                          <QRCodeSVG
+                            value={`TICKET:${posPaymentStatus.ticketId}`}
+                            size={90}
+                            bgColor="transparent"
+                            fgColor="#00F0FF"
+                            level="M"
+                          />
+                        </div>
+                      </div>
+                      <p 
+                        className="text-center text-[7px] mt-2 tracking-wide text-[#00F0FF]/60"
+                        style={{ fontFamily: 'monospace' }}
+                      >
+                        ID: {posPaymentStatus.ticketId.toUpperCase()}
+                      </p>
+                    </div>
+
+                    {/* Glowing Edge Effect */}
+                    <div 
+                      className="absolute inset-0 rounded-2xl pointer-events-none"
+                      style={{ boxShadow: 'inset 0 0 30px rgba(0, 240, 255, 0.1)' }}
+                    />
                   </div>
                 )}
 
