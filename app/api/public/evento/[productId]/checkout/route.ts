@@ -214,29 +214,42 @@ export async function POST(
       // @ts-ignore - Stripe API version mismatch
       const stripe = new Stripe(gateway.secretKey, { apiVersion: '2024-12-18.acacia' });
 
-      // Obtener URL base de múltiples fuentes
-      const requestUrl = new URL(request.url);
-      const hostHeader = request.headers.get('host') || request.headers.get('x-forwarded-host');
+      // Obtener URL base - priorizar headers del request para Vercel/producción
+      const hostHeader = request.headers.get('x-forwarded-host') || request.headers.get('host');
       const protocol = request.headers.get('x-forwarded-proto') || 'https';
       
-      let baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '';
+      // Construir baseUrl: primero desde request headers, luego env vars
+      let baseUrl = '';
       
-      // Si no hay URL configurada, usar la del request
-      if (!baseUrl && hostHeader) {
+      if (hostHeader) {
+        // En producción (Vercel), usar los headers del request
         baseUrl = `${protocol}://${hostHeader}`;
+      } else if (process.env.NEXTAUTH_URL) {
+        baseUrl = process.env.NEXTAUTH_URL;
+      } else if (process.env.NEXT_PUBLIC_APP_URL) {
+        baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+      } else if (process.env.VERCEL_URL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`;
       }
       
-      // Asegurar que tenga esquema
+      // Asegurar que tenga esquema https en producción
       if (baseUrl && !baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
         baseUrl = `https://${baseUrl}`;
       }
-      
-      // En producción, forzar https
       if (process.env.NODE_ENV === 'production' && baseUrl.startsWith('http://')) {
         baseUrl = baseUrl.replace('http://', 'https://');
       }
 
-      console.log('[Stripe Checkout] Using baseUrl:', baseUrl);
+      // Validación final
+      if (!baseUrl) {
+        console.error('[Stripe Checkout] ERROR: No se pudo determinar baseUrl');
+        return NextResponse.json(
+          { success: false, error: 'Error de configuración del servidor' },
+          { status: 500 }
+        );
+      }
+
+      console.log('[Stripe Checkout] Using baseUrl:', baseUrl, '| Host:', hostHeader, '| Proto:', protocol);
 
       const stripeSession = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -289,25 +302,38 @@ export async function POST(
       const client = new MercadoPagoConfig({ accessToken: gateway.secretKey });
       const preference = new Preference(client);
 
-      // Obtener URL base de múltiples fuentes (igual que Stripe)
-      const hostHeader = request.headers.get('host') || request.headers.get('x-forwarded-host');
-      const protocol = request.headers.get('x-forwarded-proto') || 'https';
+      // Obtener URL base - priorizar headers del request para Vercel/producción
+      const mpHostHeader = request.headers.get('x-forwarded-host') || request.headers.get('host');
+      const mpProtocol = request.headers.get('x-forwarded-proto') || 'https';
       
-      let mpBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '';
+      let mpBaseUrl = '';
       
-      if (!mpBaseUrl && hostHeader) {
-        mpBaseUrl = `${protocol}://${hostHeader}`;
+      if (mpHostHeader) {
+        mpBaseUrl = `${mpProtocol}://${mpHostHeader}`;
+      } else if (process.env.NEXTAUTH_URL) {
+        mpBaseUrl = process.env.NEXTAUTH_URL;
+      } else if (process.env.NEXT_PUBLIC_APP_URL) {
+        mpBaseUrl = process.env.NEXT_PUBLIC_APP_URL;
+      } else if (process.env.VERCEL_URL) {
+        mpBaseUrl = `https://${process.env.VERCEL_URL}`;
       }
       
       if (mpBaseUrl && !mpBaseUrl.startsWith('http://') && !mpBaseUrl.startsWith('https://')) {
         mpBaseUrl = `https://${mpBaseUrl}`;
       }
-      
       if (process.env.NODE_ENV === 'production' && mpBaseUrl.startsWith('http://')) {
         mpBaseUrl = mpBaseUrl.replace('http://', 'https://');
       }
 
-      console.log('[MercadoPago Checkout] Using baseUrl:', mpBaseUrl);
+      if (!mpBaseUrl) {
+        console.error('[MercadoPago Checkout] ERROR: No se pudo determinar baseUrl');
+        return NextResponse.json(
+          { success: false, error: 'Error de configuración del servidor' },
+          { status: 500 }
+        );
+      }
+
+      console.log('[MercadoPago Checkout] Using baseUrl:', mpBaseUrl, '| Host:', mpHostHeader, '| Proto:', mpProtocol);
 
       const preferenceData = await preference.create({
         body: {

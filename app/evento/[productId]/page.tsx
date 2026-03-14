@@ -1293,9 +1293,9 @@ export default function EventoPage() {
                       </div>
 
                       {/* Toggle factura */}
-                      <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl border border-slate-700">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-amber-500/20 rounded-lg">
+                      <div className="flex items-center justify-between gap-4 p-4 bg-slate-800 rounded-xl border border-slate-700">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="p-2 bg-amber-500/20 rounded-lg flex-shrink-0">
                             <CreditCard className="w-5 h-5 text-amber-400" />
                           </div>
                           <span className="text-white font-medium">Requiero factura</span>
@@ -1303,13 +1303,13 @@ export default function EventoPage() {
                         <button
                           type="button"
                           onClick={() => setRequiresInvoice(!requiresInvoice)}
-                          className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
+                          className={`relative w-14 h-7 rounded-full transition-colors flex-shrink-0 ${
                             requiresInvoice ? 'bg-cyan-500' : 'bg-slate-600'
                           }`}
                         >
                           <span 
-                            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-md ${
-                              requiresInvoice ? 'translate-x-6' : 'translate-x-0.5'
+                            className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform shadow-md ${
+                              requiresInvoice ? 'translate-x-8' : 'translate-x-1'
                             }`}
                           />
                         </button>
