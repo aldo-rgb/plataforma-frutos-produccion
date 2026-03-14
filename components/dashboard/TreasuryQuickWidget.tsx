@@ -2547,14 +2547,13 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               </div>
             )}
 
-            {/* Estado completado: mostrar código de confirmación */}
-            {posPaymentStatus.stage === 'completed' && posPaymentStatus.confirmationCode && (
+            {/* Estado completado: mostrar ticket de confirmación */}
+            {posPaymentStatus.stage === 'completed' && posPaymentStatus.ticketId && (
               <>
                 {/* Ticket Visual con QR - Estilo Cyberpunk */}
-                {posPaymentStatus.ticketId && (
-                  <div 
-                    id="treasury-ticket-card"
-                    className="mt-4 rounded-2xl overflow-hidden relative"
+                <div 
+                  id="treasury-ticket-card"
+                  className="mt-4 rounded-2xl overflow-hidden relative"
                     style={{ 
                       boxShadow: '0 0 40px rgba(0, 240, 255, 0.3), inset 0 1px 0 rgba(0, 240, 255, 0.2)',
                       border: '2px solid #00F0FF',
@@ -2709,11 +2708,9 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                       style={{ boxShadow: 'inset 0 0 30px rgba(0, 240, 255, 0.1)' }}
                     />
                   </div>
-                )}
 
                 {/* Warning Message - Guardar Ticket */}
-                {posPaymentStatus.ticketId && (
-                  <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
                     <p className="text-yellow-400 text-xs font-medium text-center mb-2">
                       ⚠️ <strong>¡IMPORTANTE!</strong> Guarda este ticket para ingresar al evento.
                     </p>
@@ -2750,24 +2747,25 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                       Guardar Ticket
                     </button>
                   </div>
-                )}
 
-                {/* Código de Confirmación */}
-                <div 
-                  className="mt-4 p-4 rounded-xl border-2 border-dashed"
-                  style={{ 
-                    backgroundColor: `${orgInfo.brandColor}15`,
-                    borderColor: `${orgInfo.brandColor}40`
-                  }}
-                >
-                  <p className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Código de Confirmación</p>
-                  <code 
-                    className="text-2xl font-mono font-black tracking-wider block"
-                    style={{ color: orgInfo.brandColor }}
+                {/* Código de Confirmación - solo si existe */}
+                {posPaymentStatus.confirmationCode && (
+                  <div 
+                    className="mt-4 p-4 rounded-xl border-2 border-dashed"
+                    style={{ 
+                      backgroundColor: `${orgInfo.brandColor}15`,
+                      borderColor: `${orgInfo.brandColor}40`
+                    }}
                   >
-                    {posPaymentStatus.confirmationCode}
-                  </code>
-                </div>
+                    <p className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Código de Confirmación</p>
+                    <code 
+                      className="text-2xl font-mono font-black tracking-wider block"
+                      style={{ color: orgInfo.brandColor }}
+                    >
+                      {posPaymentStatus.confirmationCode}
+                    </code>
+                  </div>
+                )}
 
                 {/* Info del participante (solo si no hay ticket visual) */}
                 {!posPaymentStatus.ticketId && (
