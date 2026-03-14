@@ -421,7 +421,7 @@ function SuccessContent() {
                   <button
                     onClick={() => {
                       // Crear elemento para descargar como imagen
-                      const ticketElement = document.querySelector('.relative.mx-auto.w-\\[300px\\]');
+                      const ticketElement = document.getElementById('success-ticket-card');
                       if (ticketElement) {
                         import('html2canvas').then(({ default: html2canvas }) => {
                           html2canvas(ticketElement as HTMLElement, {
