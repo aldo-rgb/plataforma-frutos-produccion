@@ -299,6 +299,9 @@ async function createMercadoPagoPreference(
         expectations: (userData.expectations || '').substring(0, 200),
       },
       appliedCodes: orderData.appliedCodes || [],
+      // Datos de facturación
+      requiresInvoice: orderData.requiresInvoice || false,
+      invoiceData: orderData.requiresInvoice ? orderData.invoiceData : null,
     }),
     statement_descriptor: organizationName.substring(0, 22),
   };
@@ -403,6 +406,9 @@ async function createStripeCheckout(
       goals: userData.goals ? JSON.stringify(userData.goals) : '[]',
       expectations: (userData.expectations || '').substring(0, 450),
       appliedCodes: JSON.stringify(orderData.appliedCodes || []),
+      // Datos de facturación
+      requiresInvoice: orderData.requiresInvoice ? 'true' : 'false',
+      invoiceData: orderData.requiresInvoice ? JSON.stringify(orderData.invoiceData) : '',
     },
   });
 

@@ -259,6 +259,9 @@ async function createMercadoPagoPreference(
     amount: orderData.amount,
     pendingDebt: orderData.pendingDebt || 0,
     prices: orderData.prices,
+    // Datos de facturación
+    requiresInvoice: orderData.requiresInvoice || false,
+    invoiceData: orderData.requiresInvoice ? orderData.invoiceData : null,
   });
   
   const preferenceRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
@@ -352,6 +355,9 @@ async function createStripeCheckout(
       amount: orderData.amount.toString(),
       pendingDebt: (orderData.pendingDebt || 0).toString(),
       orderDataJson: JSON.stringify(orderData),
+      // Datos de facturación
+      requiresInvoice: orderData.requiresInvoice ? 'true' : 'false',
+      invoiceData: orderData.requiresInvoice ? JSON.stringify(orderData.invoiceData) : '',
     },
   });
 

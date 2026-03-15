@@ -602,6 +602,9 @@ async function getOrderDataFromStripe(sessionId: string): Promise<any | null> {
               expectations: session.metadata.expectations || '',
             },
             appliedCodes: session.metadata.appliedCodes ? JSON.parse(session.metadata.appliedCodes) : [],
+            // Datos de facturación
+            requiresInvoice: session.metadata.requiresInvoice === 'true',
+            invoiceData: session.metadata.invoiceData ? JSON.parse(session.metadata.invoiceData) : null,
           };
 
           // Marcar como aprobado si el pago fue exitoso

@@ -65,6 +65,9 @@ export async function GET(request: NextRequest) {
                   packageType: session.metadata.packageType,
                   amount: parseFloat(session.metadata.amount),
                   pendingDebt: parseFloat(session.metadata.pendingDebt || '0'),
+                  // Datos de facturación
+                  requiresInvoice: session.metadata.requiresInvoice === 'true',
+                  invoiceData: session.metadata.invoiceData ? JSON.parse(session.metadata.invoiceData) : null,
                 };
               }
             }
