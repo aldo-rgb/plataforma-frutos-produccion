@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { CheckCircle, Loader2, Calendar, MapPin, Mail, ArrowRight, PartyPopper, Ticket, Copy, Check } from 'lucide-react';
+import { CheckCircle, Loader2, Calendar, MapPin, Mail, ArrowRight, PartyPopper, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
-import { QRCodeSVG } from 'qrcode.react';
+import { QuantumTicketCard } from '@/components/tickets/QuantumTicketCard';
 
 export default function EventSuccessPage() {
   const params = useParams();
@@ -25,6 +25,7 @@ export default function EventSuccessPage() {
     startDate: string | null;
     location: string | null;
     ticketCode?: string;
+    productImage?: string | null;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,76 +114,67 @@ export default function EventSuccessPage() {
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-slate-900/80 border border-emerald-500/30 rounded-3xl p-8 max-w-md w-full text-center"
+        className="max-w-md w-full"
       >
-        {/* Success Icon */}
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: 'spring' }}
-          className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6"
-        >
-          <CheckCircle className="w-10 h-10 text-white" />
-        </motion.div>
+        {/* Success Header */}
+        <div className="text-center mb-6">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: 'spring' }}
+            className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4"
+          >
+            <CheckCircle className="w-8 h-8 text-white" />
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <h1 className="text-2xl font-bold text-white mb-1 flex items-center justify-center gap-2">
+              <PartyPopper className="w-6 h-6 text-yellow-400" />
+              ¡Pago Exitoso!
+            </h1>
+            <p className="text-slate-400 text-sm">Tu lugar está confirmado</p>
+          </motion.div>
+        </div>
 
-        {/* Title */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <h1 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-2">
-            <PartyPopper className="w-8 h-8 text-yellow-400" />
-            ¡Pago Exitoso!
-          </h1>
-          <p className="text-slate-400 mb-6">Tu lugar está confirmado</p>
-        </motion.div>
-
-        {/* Ticket Code - Prominente con QR */}
+        {/* Quantum Ticket Card */}
         {eventData?.ticketCode && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.35 }}
-            className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 border-2 border-amber-500/50 rounded-2xl p-5 mb-6"
+            transition={{ delay: 0.4 }}
+            className="mb-6"
           >
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Ticket className="w-6 h-6 text-amber-400" />
-              <span className="text-amber-400 font-semibold text-sm uppercase tracking-wider">Tu Ticket de Entrada</span>
-            </div>
+            <QuantumTicketCard
+              eventName={eventData.eventName}
+              userName={eventData.userName}
+              ticketCode={eventData.ticketCode}
+              productImage={eventData.productImage}
+              isTransferable={false}
+            />
             
-            {/* QR Code */}
-            <div className="bg-white rounded-xl p-4 mb-4 flex items-center justify-center">
-              <QRCodeSVG 
-                value={eventData.ticketCode}
-                size={160}
-                level="H"
-                includeMargin={false}
-                bgColor="#ffffff"
-                fgColor="#000000"
-              />
-            </div>
-
-            {/* Código de texto */}
-            <div className="bg-slate-900/80 rounded-xl p-3 flex items-center justify-between gap-3">
-              <code className="text-lg md:text-xl font-mono font-bold text-white tracking-wider">
-                {eventData.ticketCode}
-              </code>
+            {/* Copy Button */}
+            <div className="flex justify-center mt-4">
               <button
                 onClick={copyTicketCode}
-                className="p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors flex-shrink-0"
-                title="Copiar código"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-800/80 hover:bg-slate-700/80 border border-cyan-500/30 rounded-xl transition-colors text-sm"
               >
                 {copied ? (
-                  <Check className="w-5 h-5 text-green-400" />
+                  <>
+                    <Check className="w-4 h-4 text-green-400" />
+                    <span className="text-green-400">¡Copiado!</span>
+                  </>
                 ) : (
-                  <Copy className="w-5 h-5 text-amber-400" />
+                  <>
+                    <Copy className="w-4 h-4 text-cyan-400" />
+                    <span className="text-slate-300">Copiar código</span>
+                  </>
                 )}
               </button>
             </div>
-            <p className="text-amber-300/70 text-xs mt-3 text-center">
-              Presenta este QR o código en la entrada del evento.
-            </p>
           </motion.div>
         )}
 
@@ -191,11 +183,9 @@ export default function EventSuccessPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-slate-800/50 rounded-xl p-4 mb-6 text-left space-y-3"
-          >
-            <h2 className="font-semibold text-white text-lg">{eventData.eventName}</h2>
-            
+            transition={{ delay: 0.5 }}
+            className="bg-slate-900/80 border border-slate-700/50 rounded-xl p-4 mb-6 text-left space-y-2"
+          >            
             <div className="flex items-center gap-2 text-slate-400 text-sm">
               <Mail className="w-4 h-4" />
               <span>{eventData.userEmail}</span>
@@ -226,30 +216,30 @@ export default function EventSuccessPage() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-slate-500 text-sm mb-6"
+          transition={{ delay: 0.6 }}
+          className="text-slate-500 text-xs text-center mb-4"
         >
-          Te hemos enviado un correo con los detalles de tu registro y las instrucciones para el evento.
+          Te hemos enviado un correo con los detalles de tu registro.
         </motion.p>
 
         {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.7 }}
           className="space-y-3"
         >
           <Link
             href="/login"
-            className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-xl font-bold hover:opacity-90 transition-opacity"
+            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-xl font-bold hover:opacity-90 transition-opacity text-sm"
           >
             Inicia sesión en tu cuenta
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-4 h-4" />
           </Link>
           
           <Link
             href={`/evento/${productId}`}
-            className="w-full inline-flex items-center justify-center px-6 py-3 bg-slate-800 text-slate-300 rounded-xl font-medium hover:bg-slate-700 transition-colors"
+            className="w-full inline-flex items-center justify-center px-6 py-2.5 bg-slate-800 text-slate-300 rounded-xl font-medium hover:bg-slate-700 transition-colors text-sm"
           >
             Volver al evento
           </Link>

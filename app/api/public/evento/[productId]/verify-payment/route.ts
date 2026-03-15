@@ -154,6 +154,7 @@ export async function POST(
             promoPrice: true,
             type: true,
             visionId: true,
+            imageUrl: true,
           }
         },
       }
@@ -177,6 +178,7 @@ export async function POST(
           startDate: registration.SchoolProduct.startDate,
           location: registration.SchoolProduct.location,
           ticketCode: registration.ticketCode,
+          productImage: registration.SchoolProduct.imageUrl,
         }
       });
     }
@@ -323,6 +325,7 @@ export async function POST(
           ticketCode,
           userId: payerUser.id,
           invoice: invoiceResult,
+          productImage: registration.SchoolProduct.imageUrl,
         }
       });
     }
@@ -464,6 +467,7 @@ export async function POST(
                 ticketCode,
                 userId: payerUser.id,
                 invoice: invoiceResult,
+                productImage: registration.SchoolProduct.imageUrl,
               }
             });
           }
@@ -621,6 +625,7 @@ export async function POST(
                   ticketCode,
                   userId: payerUser.id,
                   invoice: invoiceResult,
+                  productImage: registration.SchoolProduct.imageUrl,
                 }
               });
             }
@@ -644,6 +649,7 @@ export async function POST(
           location: registration.SchoolProduct.location,
           ticketCode: registration.ticketCode,
           userId: registration.userId,
+          productImage: registration.SchoolProduct.imageUrl,
         }
       });
     }
