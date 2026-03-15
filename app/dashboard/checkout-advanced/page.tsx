@@ -71,7 +71,7 @@ interface AppliedPayment {
   description: string;
 }
 
-type PaymentMethod = 'GIFT_CODE' | 'STRIPE' | 'TRANSFER';
+type PaymentMethod = 'GIFT_CODE' | 'STRIPE' | 'MERCADOPAGO' | 'TRANSFER';
 
 export default function CheckoutAdvancedPage() {
   const router = useRouter();
@@ -293,7 +293,7 @@ export default function CheckoutAdvancedPage() {
     if (!upgradeData) return;
 
     // Check if fully paid (for gift codes) or if paying with card
-    if (remaining > 0 && paymentMethod !== 'STRIPE') {
+    if (remaining > 0 && paymentMethod !== 'STRIPE' && paymentMethod !== 'MERCADOPAGO') {
       setError(`Aún falta por pagar $${remaining.toLocaleString()} MXN`);
       return;
     }
@@ -327,7 +327,7 @@ export default function CheckoutAdvancedPage() {
 
     try {
       // If paying with card (STRIPE/MercadoPago), redirect to payment gateway
-      if (paymentMethod === 'STRIPE' && remaining > 0) {
+      if ((paymentMethod === 'STRIPE' || paymentMethod === 'MERCADOPAGO') && remaining > 0) {
         // Log the request data
         const requestData = {
           visionId: upgradeData.targetVisionId,
@@ -339,6 +339,7 @@ export default function CheckoutAdvancedPage() {
           appliedCodes: appliedPayments.filter(p => p.type === 'GIFT_CODE').map(p => p.code),
           requiresInvoice,
           invoiceData: requiresInvoice ? invoiceData : null,
+          paymentMethod: paymentMethod, // Enviar el método de pago seleccionado
         };
         console.log('🔍 DEBUG create-payment request:', requestData);
         
@@ -625,7 +626,7 @@ export default function CheckoutAdvancedPage() {
                 Método de Pago
               </h3>
 
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-3 gap-3 mb-6">
                 <button
                   onClick={() => setPaymentMethod('GIFT_CODE')}
                   className={`p-4 rounded-xl border-2 transition-all ${
@@ -637,6 +638,19 @@ export default function CheckoutAdvancedPage() {
                   <Banknote className={`w-6 h-6 mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-purple-400' : 'text-slate-400'}`} />
                   <p className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-white' : 'text-slate-400'}`}>
                     Código de Referencia
+                  </p>
+                </button>
+                <button
+                  onClick={() => setPaymentMethod('MERCADOPAGO')}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    paymentMethod === 'MERCADOPAGO'
+                      ? 'border-purple-500 bg-purple-500/10'
+                      : 'border-slate-700 hover:border-slate-600'
+                  }`}
+                >
+                  <Wallet className={`w-6 h-6 mx-auto mb-2 ${paymentMethod === 'MERCADOPAGO' ? 'text-purple-400' : 'text-slate-400'}`} />
+                  <p className={`text-xs font-medium text-center ${paymentMethod === 'MERCADOPAGO' ? 'text-white' : 'text-slate-400'}`}>
+                    Transferencia o Meses sin intereses
                   </p>
                 </button>
                 <button

@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       appliedCodes = [],
       requiresInvoice = false,
       invoiceData = null,
+      paymentMethod = null, // STRIPE o MERCADOPAGO
     } = body;
     
     // DEBUG: Log received data
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
       amount,
       pendingDebt,
       appliedCodesCount: appliedCodes?.length,
+      paymentMethod,
     });
 
     if (!visionId || !organizationId || !packageType || !amount) {
@@ -86,9 +88,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Obtener configuración de pasarela de pago de la organización
-    const gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
-      where: { organizationId: organizationId, isActive: true },
-    });
+    // Si se especificó un método de pago, buscar esa pasarela específica
+    let gatewayConfig;
+    
+    if (paymentMethod && (paymentMethod === 'STRIPE' || paymentMethod === 'MERCADOPAGO')) {
+      // Buscar la pasarela específica solicitada
+      gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+        where: { 
+          organizationId: organizationId, 
+          isActive: true,
+          provider: paymentMethod,
+        },
+      });
+      
+      // Si no existe la pasarela solicitada, buscar cualquier activa
+      if (!gatewayConfig) {
+        logger.debug(`⚠️ Pasarela ${paymentMethod} no encontrada, buscando alternativa`);
+        gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+          where: { organizationId: organizationId, isActive: true },
+        });
+      }
+    } else {
+      // Si no se especificó método, usar la primera activa
+      gatewayConfig = await prisma.paymentGatewayConfig.findFirst({
+        where: { organizationId: organizationId, isActive: true },
+      });
+    }
 
     if (!gatewayConfig || !gatewayConfig.isActive) {
       return NextResponse.json(
