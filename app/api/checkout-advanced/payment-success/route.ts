@@ -380,10 +380,13 @@ export async function GET(request: NextRequest) {
 
         logger.debug(`✅ Inscripción ADVANCED creada para usuario ${userId} en visión ${visionId}`);
 
+        // Check if this is a COMBO package (either COMBO or COMBO_BASE)
+        const isComboPackage = packageType === 'COMBO' || packageType === 'COMBO_BASE';
+        
         // If COMBO or APARTADO, also create PL with full/partial payment
-        if (packageType === 'COMBO' || packageType === 'APARTADO') {
-          const plPaymentStatus = packageType === 'COMBO' ? 'PAID' : 'PENDING';
-          const plTicketStatus = packageType === 'COMBO' ? 'ACTIVE' : 'PENDING_PAYMENT';
+        if (isComboPackage || packageType === 'APARTADO') {
+          const plPaymentStatus = isComboPackage ? 'PAID' : 'PENDING';
+          const plTicketStatus = isComboPackage ? 'ACTIVE' : 'PENDING_PAYMENT';
           const plTicketType = packageType === 'APARTADO' ? 'APARTADO' : 'STANDARD';
           
           await tx.vision_enrollments.create({
@@ -392,7 +395,7 @@ export async function GET(request: NextRequest) {
               visionId: visionId,
               coordinatorId: coordinatorId,
               level: 'PL',
-              enrollmentStatus: packageType === 'COMBO' ? 'ACTIVE' : 'PENDING',
+              enrollmentStatus: isComboPackage ? 'ACTIVE' : 'PENDING',
               paymentStatus: plPaymentStatus,
               enrolledAt: new Date(),
               updatedAt: new Date(),
@@ -410,7 +413,7 @@ export async function GET(request: NextRequest) {
               status: plTicketStatus,
               paymentStatus: plPaymentStatus,
               costAtPurchase: prices?.PL || 9000,
-              amountPaid: packageType === 'COMBO' ? (prices?.PL || 9000) : (pendingDebt ? amount - (prices?.APARTADO || 2500) : 0),
+              amountPaid: isComboPackage ? (prices?.PL || 9000) : (pendingDebt ? amount - (prices?.APARTADO || 2500) : 0),
               isTransferable: false,
               validUntil: vision.plWeekend3EndDate || null,
               updatedAt: new Date(),
@@ -489,7 +492,7 @@ export async function GET(request: NextRequest) {
         let productType: 'BASIC' | 'COMBO' | 'ADVANCED' | 'PL' = 'ADVANCED';
         if (isPLOnly) {
           productType = 'PL';
-        } else if (packageType === 'COMBO') {
+        } else if (packageType === 'COMBO' || packageType === 'COMBO_BASE') {
           productType = 'COMBO';
         }
 
