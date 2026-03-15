@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
       pendingDebt,
       appliedCodesCount: appliedCodes?.length,
       paymentMethod,
+      requiresInvoice,
+      hasInvoiceData: !!invoiceData,
     });
 
     if (!visionId || !organizationId || !packageType || !amount) {
