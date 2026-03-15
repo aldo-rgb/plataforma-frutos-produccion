@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
       if (existingPL) {
         logger.debug('Usuario ya tiene inscripción PL, redirigiendo a success');
         return NextResponse.redirect(
-          new URL('/dashboard/upgrade-advanced/success?already=true', request.url)
+          new URL('/upgrade-advanced/success?already=true', request.url)
         );
       }
     } else {
@@ -206,7 +206,7 @@ export async function GET(request: NextRequest) {
       if (existingAdvanced) {
         logger.debug('Usuario ya tiene inscripción ADVANCED, redirigiendo a success');
         return NextResponse.redirect(
-          new URL('/dashboard/upgrade-advanced/success?already=true', request.url)
+          new URL('/upgrade-advanced/success?already=true', request.url)
         );
       }
     }
@@ -560,10 +560,11 @@ export async function GET(request: NextRequest) {
       packageType,
       visionName: vision.nombre,
       amount,
+      requiresInvoice: requiresInvoice,
     };
 
-    // Redirect to success page with data in query param
-    const successUrl = new URL('/dashboard/upgrade-advanced/success', request.url);
+    // Redirect to success page with data in query param (public route)
+    const successUrl = new URL('/upgrade-advanced/success', request.url);
     successUrl.searchParams.set('data', encodeURIComponent(JSON.stringify(successData)));
 
     return NextResponse.redirect(successUrl);

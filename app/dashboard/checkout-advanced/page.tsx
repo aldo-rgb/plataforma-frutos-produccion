@@ -422,8 +422,18 @@ export default function CheckoutAdvancedPage() {
       // Clear session storage
       sessionStorage.removeItem('pendingUpgrade');
 
-      // Redirect to success
-      router.push('/dashboard/upgrade-advanced/success');
+      // Build success URL with data for public success page
+      const successData = {
+        level: enrollData.enrollment?.level || 'ADVANCED',
+        packageType: upgradeData.packageType || 'ADVANCED_ONLY',
+        visionName: upgradeData.targetVisionName,
+        amount: 0,
+        organizationName: upgradeData.targetOrganizationName,
+        startDate: upgradeData.advancedStartDate,
+      };
+      
+      // Redirect to public success page
+      router.push(`/upgrade-advanced/success?data=${encodeURIComponent(JSON.stringify(successData))}`);
     } catch (e: any) {
       console.error('Upgrade error:', e);
       setError(e.message || 'Error al procesar el upgrade');
@@ -763,7 +773,7 @@ export default function CheckoutAdvancedPage() {
                     Pago con tarjeta de crédito/débito
                   </p>
                   <p className="text-slate-400 text-sm mb-4">
-                    Serás redirigido a Mercado Pago para completar tu pago de forma segura
+                    Serás redirigido a Stripe para completar tu pago de forma segura
                   </p>
                   <div className="flex items-center justify-center gap-2 text-emerald-400 text-sm">
                     <Shield className="w-4 h-4" />
