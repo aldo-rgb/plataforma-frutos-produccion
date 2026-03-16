@@ -231,9 +231,22 @@ export async function sendWhatsAppTextMessage(
 
     if (!response.ok) {
       console.error('❌ WhatsApp API Error:', data);
+      
+      // Detectar error específico de ventana de 24 horas
+      const errorMessage = data.error?.message || 'Failed to send message';
+      const errorCode = data.error?.code;
+      
+      // Error 131047 = fuera de ventana de 24 horas, necesita plantilla
+      if (errorCode === 131047 || errorMessage.includes('24 hour') || errorMessage.includes('template') || errorMessage.includes('Re-engagement')) {
+        return {
+          success: false,
+          error: 'El usuario no ha iniciado conversación. WhatsApp requiere plantillas aprobadas por Meta para mensajes fuera de la ventana de 24 horas.'
+        };
+      }
+      
       return {
         success: false,
-        error: data.error?.message || 'Failed to send message'
+        error: errorMessage
       };
     }
 
