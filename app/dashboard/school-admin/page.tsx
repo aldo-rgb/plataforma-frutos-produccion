@@ -721,7 +721,7 @@ export default function SchoolAdminDashboard() {
         )}
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 w-full">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6 w-full">
           <KpiCard
             icon={<Users className="text-cyan-400" />}
             label="Usuarios Totales"
@@ -748,13 +748,6 @@ export default function SchoolAdminDashboard() {
               return '✅ Activos';
             })()}
             color={data.pendingOrders.length > 0 ? 'blue' : 'yellow'}
-          />
-          <KpiCard
-            icon={<Phone className="text-cyan-400" />}
-            label="Llamadas Disponibles"
-            value={(data.callsAvailable || 0).toString()}
-            trend={`${data.totalAllocated || 0} bloqueadas / ${data.totalPurchased || 0} totales`}
-            color="cyan"
           />
         </div>
 
