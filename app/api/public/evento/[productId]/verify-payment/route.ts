@@ -5,6 +5,7 @@ import Stripe from 'stripe';
 import { Decimal } from '@prisma/client/runtime/library';
 import { EventRegistrationStatus, AmbassadorProductType } from '@prisma/client';
 import { createEventInvoice, getFacturapiConfig } from '@/lib/facturapi';
+import { sendWelcomeNotifications, DEFAULT_PASSWORD } from '@/lib/welcome-notification';
 import logger from '@/lib/logger';
 
 // Tasa de comisión para talleres: 20%
@@ -380,6 +381,22 @@ export async function POST(
                 select: { id: true, nombre: true, referralCode: true }
               });
               console.log('✅ [Stripe] Usuario creado:', payerUser.id, payerUser.referralCode);
+
+              // 📱 Enviar WhatsApp de bienvenida con plantilla quantum_confirmar
+              const org = await prisma.organization.findUnique({
+                where: { id: registration.organizationId },
+                select: { name: true }
+              });
+              
+              sendWelcomeNotifications({
+                userId: payerUser.id,
+                email: registration.email.toLowerCase(),
+                telefono: registration.telefono || '',
+                nombre: registration.nombre,
+                password: defaultPassword,
+                organizationName: org?.name || 'Impacto Cuántico',
+                visionName: registration.SchoolProduct.name,
+              }).catch(err => console.error('Error enviando notificación de bienvenida:', err));
             }
 
             // ====== GENERAR TICKET CODE ======
@@ -544,6 +561,22 @@ export async function POST(
                   select: { id: true, nombre: true, referralCode: true }
                 });
                 console.log('✅ [MercadoPago] Usuario creado:', payerUser.id, payerUser.referralCode);
+
+                // 📱 Enviar WhatsApp de bienvenida con plantilla quantum_confirmar
+                const org = await prisma.organization.findUnique({
+                  where: { id: registration.organizationId },
+                  select: { name: true }
+                });
+                
+                sendWelcomeNotifications({
+                  userId: payerUser.id,
+                  email: registration.email.toLowerCase(),
+                  telefono: registration.telefono || '',
+                  nombre: registration.nombre,
+                  password: defaultPassword,
+                  organizationName: org?.name || 'Impacto Cuántico',
+                  visionName: registration.SchoolProduct.name,
+                }).catch(err => console.error('Error enviando notificación de bienvenida:', err));
               }
 
               // ====== GENERAR TICKET CODE ======
