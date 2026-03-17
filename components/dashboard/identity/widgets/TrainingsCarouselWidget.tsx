@@ -471,11 +471,11 @@ Un espacio para abrir posibilidades a tu vida.
                 )}
               </div>
 
-              {/* CTA Buttons */}
-              <div className="flex gap-2">
+              {/* CTA Buttons - 50/50 layout */}
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => window.location.href = `/evento/${workshop.id}`}
-                  className="flex-1 py-1.5 px-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
+                  className="py-1.5 px-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
                 >
                   <span>Ver detalles</span>
                   <ExternalLink className="w-3 h-3" />
@@ -484,11 +484,11 @@ Un espacio para abrir posibilidades a tu vida.
                 {/* Share Button */}
                 <button
                   onClick={() => handleShareWorkshop(workshop)}
-                  className="py-1.5 px-3 bg-green-500 hover:bg-green-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
+                  className="py-1.5 px-2 bg-green-500 hover:bg-green-400 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all"
                   title="Compartir por WhatsApp"
                 >
                   <MessageCircle className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Invitar</span>
+                  <span>Invitar</span>
                 </button>
               </div>
             </div>
