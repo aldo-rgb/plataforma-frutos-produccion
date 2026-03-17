@@ -769,7 +769,7 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950/20 to-slate-950 flex items-center justify-center p-4"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950/20 to-slate-950 flex items-center justify-center p-4 pt-20"
     >
       <div className="max-w-2xl w-full text-center">
         {/* Logo animado */}
@@ -852,7 +852,7 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-8 px-4"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pt-20 pb-8 px-4"
     >
       <div className="max-w-3xl mx-auto text-center">
         {/* Header */}
@@ -1352,7 +1352,7 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-8 px-4"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pt-20 pb-8 px-4"
     >
       <div className="max-w-4xl mx-auto">
         {/* Header */}
@@ -1612,7 +1612,7 @@ export default function QuantumWebEngine() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-8 px-4"
+        className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pt-20 pb-8 px-4"
       >
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -1877,7 +1877,7 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-8 px-4"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pt-20 pb-8 px-4"
     >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
@@ -2092,7 +2092,7 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-8 px-4"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pt-20 pb-8 px-4"
     >
       <div className="max-w-2xl mx-auto">
         {/* Header */}
@@ -2329,7 +2329,7 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-8 px-4"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pt-20 pb-8 px-4"
     >
       <div className="max-w-3xl mx-auto">
         {/* Header */}
@@ -2491,7 +2491,7 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-8 px-4"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pt-20 pb-8 px-4"
     >
       <div className="max-w-4xl mx-auto">
         {/* Header */}
@@ -2732,7 +2732,7 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950/20 to-slate-950 flex items-center justify-center p-4"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950/20 to-slate-950 flex items-center justify-center p-4 pt-20"
     >
       <div className="max-w-lg w-full text-center">
         {/* Success Animation */}
