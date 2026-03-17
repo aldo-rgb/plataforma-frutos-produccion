@@ -1471,13 +1471,6 @@ export default function QuantumBusinessBuilderPage() {
         ? previewNombre 
         : (customName || selectedName || selectedIdea?.nombre || '');
       
-      // Usar el categoryId del perfil existente si está editando, o buscar por slug
-      let categoryIdToSave: number | undefined = existingProfile?.categoryId;
-      if (!categoryIdToSave && previewCategoria) {
-        // Buscar en las categorías de la BD por slug (se cargan al inicio)
-        // Por ahora, usar el slug directamente y dejar que el backend lo resuelva
-      }
-      
       // Determinar status basado en el switch Irrazonable y si es publicar
       // Si es irrazonable Y se publica -> ACTIVE (público en directorio)
       // Si es razonable O es borrador -> HIDDEN (privado, solo actividad)
@@ -1490,9 +1483,9 @@ export default function QuantumBusinessBuilderPage() {
         description: isFromOptimizador ? previewDescripcion : descripcion,
         discountOffer: isFromOptimizador ? previewOferta : ofertaTribu,
         logoUrl: isFromOptimizador ? (previewLogo || undefined) : (selectedLogo || undefined),
-        // Mapear a campos de la API - usar categoryId existente o slug para resolver en backend
+        // IMPORTANTE: Enviar solo categorySlug para que el backend resuelva la categoría
+        // No enviar categoryId para permitir actualización de categoría
         categorySlug: previewCategoria, // String de categoría (slug)
-        categoryId: categoryIdToSave,
         whatsappPhone: previewWhatsapp || previewTelefono,
         website: previewWebsite,
         galleryImages: previewFotos,
