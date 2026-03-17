@@ -5,7 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { 
   Store, Star, ExternalLink, ArrowRight, Loader2, 
-  Plus, Eye, MessageSquare, TrendingUp, Sparkles
+  Plus, Eye, MessageSquare, TrendingUp, Sparkles,
+  MapPin, Phone, Globe, CheckCircle, Award
 } from 'lucide-react';
 
 interface BusinessData {
@@ -22,9 +23,23 @@ interface BusinessData {
   profile?: {
     id: number;
     headline: string;
+    description: string;
+    logoUrl: string | null;
+    galleryImages: string[];
     avgRating: number;
     totalReviews: number;
     status: string;
+    city: string;
+    state: string;
+    whatsappPhone: string;
+    website: string | null;
+    isVerified: boolean;
+    isPLGraduate: boolean;
+    BusinessCategory: {
+      id: number;
+      name: string;
+      icon: string | null;
+    };
   };
 }
 
@@ -98,6 +113,12 @@ export default function MyBusinessWidget() {
   // Si tiene negocio, mostrar info y acceso
   const website = data?.website;
   const profile = data?.profile;
+  
+  // Determinar el logo a mostrar (prioridad: website > profile)
+  const logoUrl = website?.logoUrl || profile?.logoUrl;
+  const businessName = website?.businessName || profile?.headline || 'Tu Negocio';
+  // Primera imagen de galería como fallback
+  const galleryImage = profile?.galleryImages?.[0];
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 to-teal-600 p-6 shadow-lg h-full">
@@ -109,32 +130,50 @@ export default function MyBusinessWidget() {
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            {website?.logoUrl ? (
-              <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/20">
+            {logoUrl ? (
+              <div className="w-14 h-14 rounded-xl overflow-hidden bg-white/20 ring-2 ring-white/30">
                 <Image 
-                  src={website.logoUrl} 
-                  alt={website.businessName}
-                  width={48}
-                  height={48}
+                  src={logoUrl} 
+                  alt={businessName}
+                  width={56}
+                  height={56}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : galleryImage ? (
+              <div className="w-14 h-14 rounded-xl overflow-hidden bg-white/20 ring-2 ring-white/30">
+                <Image 
+                  src={galleryImage} 
+                  alt={businessName}
+                  width={56}
+                  height={56}
                   className="w-full h-full object-cover"
                 />
               </div>
             ) : (
-              <div className="p-2.5 bg-white/20 rounded-xl">
-                <Store className="w-6 h-6 text-white" />
+              <div className="p-3 bg-white/20 rounded-xl ring-2 ring-white/30">
+                <Store className="w-7 h-7 text-white" />
               </div>
             )}
-            <div>
-              <h3 className="font-bold text-white text-lg line-clamp-1">
-                {website?.businessName || 'Tu Negocio'}
-              </h3>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-white text-lg line-clamp-1">
+                  {businessName}
+                </h3>
+                {profile?.isVerified && (
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0" />
+                )}
+                {profile?.isPLGraduate && (
+                  <Award className="w-4 h-4 text-yellow-300 flex-shrink-0" />
+                )}
+              </div>
               {profile && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 mt-0.5">
                   <div className="flex items-center gap-0.5">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star 
                         key={star} 
-                        className={`w-3 h-3 ${star <= Math.round(profile.avgRating) ? 'text-yellow-400 fill-yellow-400' : 'text-white/30'}`} 
+                        className={`w-3.5 h-3.5 ${star <= Math.round(profile.avgRating) ? 'text-yellow-400 fill-yellow-400' : 'text-white/30'}`} 
                       />
                     ))}
                   </div>
@@ -147,37 +186,77 @@ export default function MyBusinessWidget() {
           </div>
         </div>
 
-        {/* Stats */}
-        {website && (
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex items-center gap-1.5 text-white/80 text-sm">
-              <Eye className="w-4 h-4" />
-              <span>{website.viewCount} visitas</span>
-            </div>
-            {profile && profile.totalReviews > 0 && (
-              <div className="flex items-center gap-1.5 text-white/80 text-sm">
-                <MessageSquare className="w-4 h-4" />
-                <span>{profile.totalReviews} reseñas</span>
-              </div>
+        {/* Category & Location */}
+        {profile && (
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            {profile.BusinessCategory && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/15 rounded-full text-xs text-white/90">
+                {profile.BusinessCategory.icon && <span>{profile.BusinessCategory.icon}</span>}
+                {profile.BusinessCategory.name}
+              </span>
+            )}
+            {profile.city && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/15 rounded-full text-xs text-white/90">
+                <MapPin className="w-3 h-3" />
+                {profile.city}, {profile.state}
+              </span>
             )}
           </div>
         )}
 
-        {/* Status Badge */}
-        {website && (
-          <div className="mb-4">
-            {website.isPublished ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/20 text-green-200 text-xs font-medium rounded-full">
-                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                Publicado
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/20 text-yellow-200 text-xs font-medium rounded-full">
-                Borrador
-              </span>
-            )}
-          </div>
+        {/* Description preview */}
+        {profile?.description && (
+          <p className="text-white/80 text-xs line-clamp-2 mb-3">
+            {profile.description}
+          </p>
         )}
+
+        {/* Stats Row */}
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
+          {website && (
+            <div className="flex items-center gap-1.5 text-white/80 text-xs">
+              <Eye className="w-3.5 h-3.5" />
+              <span>{website.viewCount} visitas</span>
+            </div>
+          )}
+          {profile && profile.totalReviews > 0 && (
+            <div className="flex items-center gap-1.5 text-white/80 text-xs">
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>{profile.totalReviews} reseñas</span>
+            </div>
+          )}
+          {profile?.website && (
+            <div className="flex items-center gap-1.5 text-white/80 text-xs">
+              <Globe className="w-3.5 h-3.5" />
+              <span className="truncate max-w-[100px]">{profile.website.replace(/https?:\/\//, '')}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Status Badge */}
+        <div className="mb-3 flex flex-wrap gap-2">
+          {website?.isPublished ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/20 text-green-200 text-xs font-medium rounded-full">
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+              Página Publicada
+            </span>
+          ) : website ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/20 text-yellow-200 text-xs font-medium rounded-full">
+              Página en Borrador
+            </span>
+          ) : null}
+          
+          {profile?.status === 'APPROVED' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/20 text-green-200 text-xs font-medium rounded-full">
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+              Directorio Activo
+            </span>
+          ) : profile?.status === 'PENDING' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/20 text-yellow-200 text-xs font-medium rounded-full">
+              Pendiente Aprobación
+            </span>
+          ) : null}
+        </div>
 
         {/* Actions */}
         <div className="mt-auto flex flex-col gap-2">
@@ -199,7 +278,7 @@ export default function MyBusinessWidget() {
             className="flex items-center justify-center gap-2 bg-white/20 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-white/30 transition-colors text-sm"
           >
             <Sparkles className="w-4 h-4" />
-            {website ? 'Editar Mi Negocio' : 'Completar Perfil'}
+            {website || profile ? 'Editar Mi Negocio' : 'Completar Perfil'}
           </Link>
         </div>
       </div>

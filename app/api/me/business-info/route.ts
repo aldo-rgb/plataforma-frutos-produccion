@@ -40,9 +40,25 @@ export async function GET() {
       select: {
         id: true,
         headline: true,
+        description: true,
+        logoUrl: true,
+        galleryImages: true,
         avgRating: true,
         totalReviews: true,
         status: true,
+        city: true,
+        state: true,
+        whatsappPhone: true,
+        website: true,
+        isVerified: true,
+        isPLGraduate: true,
+        BusinessCategory: {
+          select: {
+            id: true,
+            name: true,
+            icon: true,
+          }
+        }
       }
     });
 
