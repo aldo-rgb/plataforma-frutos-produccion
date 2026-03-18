@@ -170,10 +170,12 @@ export async function POST(request: NextRequest) {
     );
 
     if (!emailResult.success) {
-      logger.error('❌ Failed to send password reset email:', emailResult.error);
+      logger.error(`❌ Failed to send password reset email to ${user.email}:`, emailResult.error);
+      console.error(`❌ FORGOT-PASSWORD: Email FAILED to ${user.email} - Error: ${emailResult.error}`);
       // Aún así responder con éxito por seguridad
     } else {
-      logger.info(`✅ Password reset email sent to: ${user.email}`);
+      logger.info(`✅ Password reset email sent to: ${user.email} - ID: ${emailResult.messageId}`);
+      console.log(`✅ FORGOT-PASSWORD: Email SENT to ${user.email} - MessageID: ${emailResult.messageId}`);
     }
 
     return NextResponse.json({ success: true });
