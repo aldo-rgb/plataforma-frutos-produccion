@@ -259,7 +259,7 @@ function LoginForm() {
           <div className="mt-6 flex flex-col items-center gap-2 text-sm text-slate-500">
             <div>
               ¿Olvidaste tu contraseña?{' '}
-              <Link href="#" className="text-blue-400 hover:text-blue-300 hover:underline transition-colors">
+              <Link href="/auth/forgot-password" className="text-blue-400 hover:text-blue-300 hover:underline transition-colors">
                 Recuperar acceso
               </Link>
             </div>
