@@ -226,13 +226,13 @@ export async function GET(request: Request) {
         createdAt: 'desc'
       },
       include: {
-        Reporter: {
+        Usuario_ReporteAnonimoVision_reporterIdToUsuario: {
           select: {
             nombre: true,
             email: true
           }
         },
-        ReportedUser: {
+        Usuario_ReporteAnonimoVision_reportedUserIdToUsuario: {
           select: {
             nombre: true,
             email: true,
@@ -244,7 +244,7 @@ export async function GET(request: Request) {
             name: true
           }
         },
-        RevisadoPorUser: {
+        Usuario_ReporteAnonimoVision_revisadoPorToUsuario: {
           select: {
             nombre: true
           }
@@ -256,17 +256,17 @@ export async function GET(request: Request) {
     const reportesFormateados = reportes.map(reporte => ({
       id: reporte.id,
       organizationName: reporte.Organization.name,
-      reporterNombre: reporte.Reporter.nombre,
-      reporterEmail: reporte.Reporter.email,
-      reportedUserNombre: reporte.ReportedUser?.nombre || null,
-      reportedUserEmail: reporte.ReportedUser?.email || null,
-      reportedUserRol: reporte.ReportedUser?.rol || null,
+      reporterNombre: reporte.Usuario_ReporteAnonimoVision_reporterIdToUsuario.nombre,
+      reporterEmail: reporte.Usuario_ReporteAnonimoVision_reporterIdToUsuario.email,
+      reportedUserNombre: reporte.Usuario_ReporteAnonimoVision_reportedUserIdToUsuario?.nombre || null,
+      reportedUserEmail: reporte.Usuario_ReporteAnonimoVision_reportedUserIdToUsuario?.email || null,
+      reportedUserRol: reporte.Usuario_ReporteAnonimoVision_reportedUserIdToUsuario?.rol || null,
       tipoReportado: reporte.tipoReportado,
       mensaje: reporte.mensaje,
       categoria: reporte.categoria,
       estado: reporte.estado,
       notaInterna: reporte.notaInterna,
-      revisadoPorNombre: reporte.RevisadoPorUser?.nombre || null,
+      revisadoPorNombre: reporte.Usuario_ReporteAnonimoVision_revisadoPorToUsuario?.nombre || null,
       revisadoAt: reporte.revisadoAt?.toISOString() || null,
       createdAt: reporte.createdAt.toISOString()
     }));
