@@ -631,4 +631,199 @@ export async function sendWelcomeCredentialsEmail(
 
   return sendEmail(email, subject, html);
 }
-// Force rebuild Tue Feb  3 19:40:09 CST 2026
+
+/**
+ * Envía email corporativo de bienvenida con ticket visual
+ * Diseño profesional con colores oscuros y ticket integrado
+ */
+export async function sendCorporateWelcomeEmail(
+  email: string,
+  data: {
+    nombre: string;
+    password: string;
+    organizationName: string;
+    visionName: string;
+    visionDate?: string;
+    level: 'BÁSICO' | 'AVANZADO' | 'PL';
+    ticketId: string;
+    loginUrl?: string;
+    autoLoginUrl?: string;
+  }
+): Promise<SendEmailResult> {
+  const loginUrl = data.loginUrl || 'https://www.quantummatter.app/login';
+  const autoLoginUrl = data.autoLoginUrl;
+  const subject = `Tu Acceso a ${data.organizationName} - ${data.visionName}`;
+  
+  // Colores según nivel
+  const levelColors: Record<string, { primary: string; accent: string; glow: string }> = {
+    'BÁSICO': { primary: '#00F0FF', accent: '#0891B2', glow: 'rgba(0, 240, 255, 0.3)' },
+    'AVANZADO': { primary: '#A855F7', accent: '#7C3AED', glow: 'rgba(168, 85, 247, 0.3)' },
+    'PL': { primary: '#F59E0B', accent: '#D97706', glow: 'rgba(245, 158, 11, 0.3)' },
+  };
+  
+  const colors = levelColors[data.level] || levelColors['BÁSICO'];
+  
+  // Generar URL del QR (link al ticket en la plataforma)
+  const ticketUrl = \`https://www.quantummatter.app/dashboard/mis-tickets?ticket=\${data.ticketId}\`;
+  const qrApiUrl = \`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=\${encodeURIComponent(ticketUrl)}&bgcolor=0a1929&color=00F0FF\`;
+  
+  const html = \`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #020617; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        
+        <!-- Header Corporativo -->
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="https://www.quantummatter.app/logo-quantum.png" alt="Quantum Matter" style="height: 50px; margin-bottom: 15px;" onerror="this.style.display='none'">
+          <h1 style="color: #f1f5f9; font-size: 24px; margin: 0; font-weight: 600; letter-spacing: -0.5px;">
+            Bienvenido a \${data.organizationName}
+          </h1>
+          <p style="color: #64748b; font-size: 14px; margin: 8px 0 0 0;">
+            Tu registro ha sido completado exitosamente
+          </p>
+        </div>
+
+        <!-- Ticket Visual -->
+        <div style="background: linear-gradient(145deg, #0f172a 0%, #020617 100%); border: 1px solid #1e293b; border-radius: 16px; overflow: hidden; margin-bottom: 25px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+          
+          <!-- Ticket Header -->
+          <div style="background: linear-gradient(90deg, \${colors.primary}15 0%, transparent 100%); border-bottom: 1px solid #1e293b; padding: 15px 20px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td>
+                  <span style="color: \${colors.primary}; font-size: 11px; font-weight: 700; letter-spacing: 3px; font-family: 'Courier New', monospace;">
+                    ▸ ACCESS GRANTED ◂
+                  </span>
+                </td>
+                <td style="text-align: right;">
+                  <span style="background: #7f1d1d; color: #fca5a5; font-size: 9px; padding: 4px 8px; border-radius: 4px; font-weight: 600; letter-spacing: 1px;">
+                    ⚠ NO TRANSFERIBLE
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+          <!-- Ticket Body -->
+          <div style="padding: 25px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="vertical-align: top; width: 60%;">
+                  <!-- Info del participante -->
+                  <div style="margin-bottom: 15px;">
+                    <span style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Courier New', monospace;">CODENAME:</span>
+                    <div style="color: \${colors.primary}; font-size: 20px; font-weight: 700; margin-top: 3px; font-family: 'Courier New', monospace;">
+                      \${data.nombre.split(' ')[0].toUpperCase()}
+                    </div>
+                  </div>
+                  
+                  <div style="margin-bottom: 12px;">
+                    <span style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Courier New', monospace;">LEVEL:</span>
+                    <div style="color: #f1f5f9; font-size: 14px; font-weight: 600; margin-top: 3px;">
+                      \${data.level}
+                    </div>
+                  </div>
+                  
+                  <div style="margin-bottom: 12px;">
+                    <span style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Courier New', monospace;">STATUS:</span>
+                    <div style="color: #22c55e; font-size: 14px; font-weight: 600; margin-top: 3px;">
+                      PARTICIPANTE
+                    </div>
+                  </div>
+                  
+                  <div style="margin-bottom: 12px;">
+                    <span style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Courier New', monospace;">VISION:</span>
+                    <div style="color: #f1f5f9; font-size: 14px; font-weight: 600; margin-top: 3px;">
+                      \${data.visionName}
+                    </div>
+                  </div>
+                  
+                  \${data.visionDate ? \`
+                  <div>
+                    <span style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Courier New', monospace;">FECHA:</span>
+                    <div style="color: \${colors.primary}; font-size: 14px; font-weight: 600; margin-top: 3px;">
+                      \${data.visionDate}
+                    </div>
+                  </div>
+                  \` : ''}
+                </td>
+                <td style="vertical-align: middle; text-align: right; width: 40%;">
+                  <!-- QR Code -->
+                  <div style="background: #0a1929; border: 2px solid \${colors.primary}40; border-radius: 12px; padding: 12px; display: inline-block;">
+                    <img src="\${qrApiUrl}" alt="QR Ticket" style="width: 120px; height: 120px; display: block;">
+                  </div>
+                </td>
+              </tr>
+            </table>
+            
+            <!-- Ticket ID -->
+            <div style="border-top: 1px dashed #1e293b; margin-top: 20px; padding-top: 15px; text-align: center;">
+              <span style="color: #475569; font-size: 10px; font-family: 'Courier New', monospace; letter-spacing: 1px;">
+                ID: \${data.ticketId.toUpperCase()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Credenciales de Acceso -->
+        <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+          <h2 style="color: #f1f5f9; font-size: 16px; margin: 0 0 20px 0; font-weight: 600;">
+            Credenciales de Acceso
+          </h2>
+          
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding-bottom: 15px;">
+                <span style="color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">📧 Correo electrónico</span>
+                <div style="color: #f1f5f9; font-size: 16px; font-weight: 500; margin-top: 5px;">
+                  \${email}
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="border-top: 1px solid #1e293b; padding-top: 15px;">
+                <span style="color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">🔑 Contraseña temporal</span>
+                <div style="color: \${colors.primary}; font-size: 22px; font-weight: 700; margin-top: 5px; letter-spacing: 2px; font-family: 'Courier New', monospace;">
+                  \${data.password}
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Nota importante -->
+        <div style="background: #1c1917; border-left: 3px solid #f59e0b; border-radius: 0 8px 8px 0; padding: 15px 20px; margin-bottom: 25px;">
+          <p style="color: #fbbf24; font-size: 13px; margin: 0; line-height: 1.5;">
+            <strong>Importante:</strong> Al iniciar sesión por primera vez, te pediremos crear tu contraseña personal.
+          </p>
+        </div>
+
+        <!-- Botón CTA -->
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="\${autoLoginUrl || loginUrl}" style="display: inline-block; background: linear-gradient(135deg, \${colors.primary} 0%, \${colors.accent} 100%); color: #020617; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.5px; text-transform: uppercase;">
+            Confirmar Asistencia
+          </a>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding-top: 30px; border-top: 1px solid #1e293b;">
+          <p style="color: #64748b; font-size: 12px; margin: 0;">
+            \${data.organizationName} • Quantum Matter
+          </p>
+          <p style="color: #475569; font-size: 11px; margin: 10px 0 0 0;">
+            Si tienes dudas, contacta a tu coordinador.
+          </p>
+        </div>
+
+      </div>
+    </body>
+    </html>
+  \`;
+
+  return sendEmail(email, subject, html);
+}

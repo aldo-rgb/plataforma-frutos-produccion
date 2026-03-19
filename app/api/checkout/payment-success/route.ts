@@ -427,6 +427,13 @@ export async function GET(request: NextRequest) {
 
     // Enviar notificaciones de bienvenida (Email + WhatsApp)
     try {
+      // Mapear el nivel del ticket
+      const ticketLevelMap: Record<string, 'BÁSICO' | 'AVANZADO' | 'PL'> = {
+        'BASIC': 'BÁSICO',
+        'ADVANCED': 'AVANZADO',
+        'PL': 'PL'
+      };
+      
       await sendWelcomeNotifications({
         userId: result.user.id,
         email: userData.email,
@@ -434,7 +441,12 @@ export async function GET(request: NextRequest) {
         nombre: userData.nombre,
         password: finalPassword, // Contraseña en texto plano (Quantum123 por defecto)
         organizationName: organization.name,
-        visionName: vision?.nombre
+        visionName: vision?.nombre,
+        ticket: result.basicTicket ? {
+          id: result.basicTicket.id,
+          level: ticketLevelMap[result.basicTicket.level] || 'BÁSICO',
+          visionDate: vision?.fechaInicio ? new Date(vision.fechaInicio).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).toUpperCase() : undefined
+        } : undefined
       });
       logger.debug('✅ Notificaciones de bienvenida enviadas');
     } catch (notifError) {

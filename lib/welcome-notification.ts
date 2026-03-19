@@ -4,7 +4,7 @@
  * completa exitosamente cualquier flujo de pago
  */
 
-import { sendWelcomeCredentialsEmail } from '@/lib/email';
+import { sendWelcomeCredentialsEmail, sendCorporateWelcomeEmail } from '@/lib/email';
 import { sendWelcomeWithAutoLoginButton } from '@/lib/whatsapp';
 import { prisma } from '@/lib/prisma';
 import { randomBytes } from 'crypto';
@@ -18,6 +18,12 @@ interface WelcomeNotificationData {
   organizationName: string;
   visionName?: string;
   loginUrl?: string;
+  // Datos del ticket para email corporativo
+  ticket?: {
+    id: string;
+    level: 'BÁSICO' | 'AVANZADO' | 'PL';
+    visionDate?: string;
+  };
 }
 
 interface NotificationResult {
@@ -79,14 +85,32 @@ export async function sendWelcomeNotifications(
 
   // Enviar Email con credenciales y botón de auto-login
   try {
-    const emailResult = await sendWelcomeCredentialsEmail(data.email, {
-      nombre: data.nombre,
-      password: data.password,
-      organizationName: data.organizationName,
-      visionName: data.visionName,
-      loginUrl: data.loginUrl,
-      autoLoginUrl: autoLoginUrl // Incluir URL de auto-login
-    });
+    let emailResult;
+    
+    // Usar email corporativo si tenemos datos del ticket
+    if (data.ticket && data.visionName) {
+      emailResult = await sendCorporateWelcomeEmail(data.email, {
+        nombre: data.nombre,
+        password: data.password,
+        organizationName: data.organizationName,
+        visionName: data.visionName,
+        visionDate: data.ticket.visionDate,
+        level: data.ticket.level,
+        ticketId: data.ticket.id,
+        loginUrl: data.loginUrl,
+        autoLoginUrl: autoLoginUrl
+      });
+    } else {
+      // Fallback al email anterior
+      emailResult = await sendWelcomeCredentialsEmail(data.email, {
+        nombre: data.nombre,
+        password: data.password,
+        organizationName: data.organizationName,
+        visionName: data.visionName,
+        loginUrl: data.loginUrl,
+        autoLoginUrl: autoLoginUrl
+      });
+    }
     
     result.emailSent = emailResult.success;
     if (!emailResult.success) {
