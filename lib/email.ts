@@ -664,10 +664,13 @@ export async function sendCorporateWelcomeEmail(
   const colors = levelColors[data.level] || levelColors['BÁSICO'];
   
   // Generar URL del QR (link al ticket en la plataforma)
-  const ticketUrl = \`https://www.quantummatter.app/dashboard/mis-tickets?ticket=\${data.ticketId}\`;
-  const qrApiUrl = \`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=\${encodeURIComponent(ticketUrl)}&bgcolor=0a1929&color=00F0FF\`;
+  const ticketUrl = `https://www.quantummatter.app/dashboard/mis-tickets?ticket=${data.ticketId}`;
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ticketUrl)}&bgcolor=0a1929&color=00F0FF`;
   
-  const html = \`
+  // Nombre corto para CODENAME
+  const codename = data.nombre.split(' ')[0].toUpperCase();
+  
+  const html = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -681,7 +684,7 @@ export async function sendCorporateWelcomeEmail(
         <div style="text-align: center; margin-bottom: 30px;">
           <img src="https://www.quantummatter.app/logo-quantum.png" alt="Quantum Matter" style="height: 50px; margin-bottom: 15px;" onerror="this.style.display='none'">
           <h1 style="color: #f1f5f9; font-size: 24px; margin: 0; font-weight: 600; letter-spacing: -0.5px;">
-            Bienvenido a \${data.organizationName}
+            Bienvenido a ${data.organizationName}
           </h1>
           <p style="color: #64748b; font-size: 14px; margin: 8px 0 0 0;">
             Tu registro ha sido completado exitosamente
@@ -692,11 +695,11 @@ export async function sendCorporateWelcomeEmail(
         <div style="background: linear-gradient(145deg, #0f172a 0%, #020617 100%); border: 1px solid #1e293b; border-radius: 16px; overflow: hidden; margin-bottom: 25px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
           
           <!-- Ticket Header -->
-          <div style="background: linear-gradient(90deg, \${colors.primary}15 0%, transparent 100%); border-bottom: 1px solid #1e293b; padding: 15px 20px;">
+          <div style="background: linear-gradient(90deg, ${colors.primary}15 0%, transparent 100%); border-bottom: 1px solid #1e293b; padding: 15px 20px;">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td>
-                  <span style="color: \${colors.primary}; font-size: 11px; font-weight: 700; letter-spacing: 3px; font-family: 'Courier New', monospace;">
+                  <span style="color: ${colors.primary}; font-size: 11px; font-weight: 700; letter-spacing: 3px; font-family: 'Courier New', monospace;">
                     ▸ ACCESS GRANTED ◂
                   </span>
                 </td>
@@ -717,15 +720,15 @@ export async function sendCorporateWelcomeEmail(
                   <!-- Info del participante -->
                   <div style="margin-bottom: 15px;">
                     <span style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Courier New', monospace;">CODENAME:</span>
-                    <div style="color: \${colors.primary}; font-size: 20px; font-weight: 700; margin-top: 3px; font-family: 'Courier New', monospace;">
-                      \${data.nombre.split(' ')[0].toUpperCase()}
+                    <div style="color: ${colors.primary}; font-size: 20px; font-weight: 700; margin-top: 3px; font-family: 'Courier New', monospace;">
+                      ${codename}
                     </div>
                   </div>
                   
                   <div style="margin-bottom: 12px;">
                     <span style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Courier New', monospace;">LEVEL:</span>
                     <div style="color: #f1f5f9; font-size: 14px; font-weight: 600; margin-top: 3px;">
-                      \${data.level}
+                      ${data.level}
                     </div>
                   </div>
                   
@@ -739,23 +742,23 @@ export async function sendCorporateWelcomeEmail(
                   <div style="margin-bottom: 12px;">
                     <span style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Courier New', monospace;">VISION:</span>
                     <div style="color: #f1f5f9; font-size: 14px; font-weight: 600; margin-top: 3px;">
-                      \${data.visionName}
+                      ${data.visionName}
                     </div>
                   </div>
                   
-                  \${data.visionDate ? \`
+                  ${data.visionDate ? `
                   <div>
                     <span style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Courier New', monospace;">FECHA:</span>
-                    <div style="color: \${colors.primary}; font-size: 14px; font-weight: 600; margin-top: 3px;">
-                      \${data.visionDate}
+                    <div style="color: ${colors.primary}; font-size: 14px; font-weight: 600; margin-top: 3px;">
+                      ${data.visionDate}
                     </div>
                   </div>
-                  \` : ''}
+                  ` : ''}
                 </td>
                 <td style="vertical-align: middle; text-align: right; width: 40%;">
                   <!-- QR Code -->
-                  <div style="background: #0a1929; border: 2px solid \${colors.primary}40; border-radius: 12px; padding: 12px; display: inline-block;">
-                    <img src="\${qrApiUrl}" alt="QR Ticket" style="width: 120px; height: 120px; display: block;">
+                  <div style="background: #0a1929; border: 2px solid ${colors.primary}40; border-radius: 12px; padding: 12px; display: inline-block;">
+                    <img src="${qrApiUrl}" alt="QR Ticket" style="width: 120px; height: 120px; display: block;">
                   </div>
                 </td>
               </tr>
@@ -764,7 +767,7 @@ export async function sendCorporateWelcomeEmail(
             <!-- Ticket ID -->
             <div style="border-top: 1px dashed #1e293b; margin-top: 20px; padding-top: 15px; text-align: center;">
               <span style="color: #475569; font-size: 10px; font-family: 'Courier New', monospace; letter-spacing: 1px;">
-                ID: \${data.ticketId.toUpperCase()}
+                ID: ${data.ticketId.toUpperCase()}
               </span>
             </div>
           </div>
@@ -781,15 +784,15 @@ export async function sendCorporateWelcomeEmail(
               <td style="padding-bottom: 15px;">
                 <span style="color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">📧 Correo electrónico</span>
                 <div style="color: #f1f5f9; font-size: 16px; font-weight: 500; margin-top: 5px;">
-                  \${email}
+                  ${email}
                 </div>
               </td>
             </tr>
             <tr>
               <td style="border-top: 1px solid #1e293b; padding-top: 15px;">
                 <span style="color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">🔑 Contraseña temporal</span>
-                <div style="color: \${colors.primary}; font-size: 22px; font-weight: 700; margin-top: 5px; letter-spacing: 2px; font-family: 'Courier New', monospace;">
-                  \${data.password}
+                <div style="color: ${colors.primary}; font-size: 22px; font-weight: 700; margin-top: 5px; letter-spacing: 2px; font-family: 'Courier New', monospace;">
+                  ${data.password}
                 </div>
               </td>
             </tr>
@@ -805,7 +808,7 @@ export async function sendCorporateWelcomeEmail(
 
         <!-- Botón CTA -->
         <div style="text-align: center; margin: 30px 0;">
-          <a href="\${autoLoginUrl || loginUrl}" style="display: inline-block; background: linear-gradient(135deg, \${colors.primary} 0%, \${colors.accent} 100%); color: #020617; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.5px; text-transform: uppercase;">
+          <a href="${autoLoginUrl || loginUrl}" style="display: inline-block; background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%); color: #020617; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.5px; text-transform: uppercase;">
             Confirmar Asistencia
           </a>
         </div>
@@ -813,7 +816,7 @@ export async function sendCorporateWelcomeEmail(
         <!-- Footer -->
         <div style="text-align: center; padding-top: 30px; border-top: 1px solid #1e293b;">
           <p style="color: #64748b; font-size: 12px; margin: 0;">
-            \${data.organizationName} • Quantum Matter
+            ${data.organizationName} • Quantum Matter
           </p>
           <p style="color: #475569; font-size: 11px; margin: 10px 0 0 0;">
             Si tienes dudas, contacta a tu coordinador.
@@ -823,7 +826,7 @@ export async function sendCorporateWelcomeEmail(
       </div>
     </body>
     </html>
-  \`;
+  `;
 
   return sendEmail(email, subject, html);
 }
