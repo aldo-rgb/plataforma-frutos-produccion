@@ -510,57 +510,39 @@ export default function ConfiguradorAccionIterativo({
 
       {/* PASO 2 (Alternativo): Para ONE_TIME - Fecha límite */}
       {habitType === 'ONE_TIME' && (
-        <div className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-4 sm:p-6 animate-in slide-in-from-top-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar className="text-blue-400" size={20} />
-            <h3 className="text-white font-bold text-sm sm:text-base">Paso 2: ¿Para cuándo debe estar completada?</h3>
+        <div className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-4 animate-in slide-in-from-top-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Calendar className="text-blue-400" size={18} />
+            <h3 className="text-white font-bold text-sm">Paso 2: ¿Para cuándo debe estar completada?</h3>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 p-4 sm:p-6 rounded-xl border border-blue-500/30">
-            <label className="text-blue-300 text-lg sm:text-xl font-bold block mb-4 flex items-center gap-2">
-              <span className="text-2xl sm:text-3xl">📆</span>
-              Fecha límite:
+          <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-500/30">
+            <label className="text-blue-300 text-sm font-bold block mb-3 flex items-center gap-2">
+              📆 Fecha límite:
             </label>
             
-            {/* Input de fecha con calendario */}
-            <div className="relative">
-              <input
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                className="w-full bg-slate-800 text-white text-lg sm:text-xl font-bold px-4 sm:px-6 py-4 sm:py-5 rounded-xl border-2 border-slate-700 hover:border-blue-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all cursor-pointer
-                [&::-webkit-calendar-picker-indicator]:cursor-pointer
-                [&::-webkit-calendar-picker-indicator]:w-8
-                [&::-webkit-calendar-picker-indicator]:h-8
-                [&::-webkit-calendar-picker-indicator]:sm:w-10
-                [&::-webkit-calendar-picker-indicator]:sm:h-10
-                [&::-webkit-calendar-picker-indicator]:opacity-100
-                [&::-webkit-calendar-picker-indicator]:hover:opacity-80
-                [&::-webkit-calendar-picker-indicator]:bg-blue-500
-                [&::-webkit-calendar-picker-indicator]:rounded-lg
-                [&::-webkit-calendar-picker-indicator]:p-1
-                [&::-webkit-calendar-picker-indicator]:sm:p-2
-                [&::-webkit-calendar-picker-indicator]:filter
-                [&::-webkit-calendar-picker-indicator]:invert"
-                min={new Date().toISOString().split('T')[0]}
-                max={maxDate}
-              />
-              {maxDate && (
-                <p className="text-yellow-300 text-xs mt-2 flex items-center gap-1">
-                  <span>⚠️</span>
-                  <span>La fecha límite no puede ser posterior al fin de la visión: {new Date(maxDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                </p>
-              )}
-            </div>
+            <input
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              className="w-full bg-slate-800 text-white text-base font-bold px-4 py-3 rounded-xl border-2 border-slate-700 hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer"
+              min={new Date().toISOString().split('T')[0]}
+              max={maxDate}
+            />
+            {maxDate && (
+              <p className="text-yellow-300 text-xs mt-2 flex items-center gap-1">
+                <span>⚠️</span>
+                <span>Máximo: {new Date(maxDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </p>
+            )}
 
             {/* Vista previa de la fecha seleccionada */}
             {deadline && (
-              <div className="mt-4 sm:mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 sm:p-5 animate-in slide-in-from-bottom-2">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="text-3xl sm:text-4xl">✅</div>
+              <div className="mt-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 animate-in slide-in-from-bottom-2">
+                <div className="flex items-center gap-3">
+                  <div className="text-2xl">✅</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-blue-300 font-bold text-sm sm:text-base mb-1 sm:mb-2">Fecha límite establecida:</p>
-                    <p className="text-white font-bold text-base sm:text-xl truncate">
+                    <p className="text-white font-bold text-sm">
                       {new Date(deadline + 'T00:00:00').toLocaleDateString('es-ES', {
                         weekday: 'long',
                         year: 'numeric',
@@ -568,7 +550,7 @@ export default function ConfiguradorAccionIterativo({
                         day: 'numeric'
                       })}
                     </p>
-                    <p className="text-blue-200 text-xs sm:text-sm mt-1 sm:mt-2">
+                    <p className="text-blue-200 text-xs mt-1">
                       📍 Faltan {Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días
                     </p>
                   </div>
