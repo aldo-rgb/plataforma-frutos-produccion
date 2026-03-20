@@ -1760,10 +1760,10 @@ export default function QuantumBusinessBuilderPage() {
         transition={{ delay: 0.4 }}
         className="text-2xl md:text-3xl font-bold text-white mb-10 text-center relative z-10"
       >
-        {hasExistingWebsite ? '¿QUIERES CREAR ALGO NUEVO?' : '¿DESDE DÓNDE VAS A CREAR HOY?'}
+        {hasExistingProfile ? '¿QUIERES MEJORAR TU PERFIL?' : '¿DESDE DÓNDE VAS A CREAR HOY?'}
       </motion.h2>
 
-      <div className="grid md:grid-cols-2 gap-6 max-w-4xl w-full relative z-10">
+      <div className={`grid gap-6 max-w-4xl w-full relative z-10 ${hasExistingProfile ? 'md:grid-cols-1 max-w-xl' : 'md:grid-cols-2'}`}>
         {/* Opción A: Ya tengo negocio */}
         <motion.button
           initial={{ x: -50, opacity: 0 }}
@@ -1779,11 +1779,14 @@ export default function QuantumBusinessBuilderPage() {
           <Building2 className="w-16 h-16 text-emerald-400 mx-auto mb-4" />
           
           <h3 className="text-2xl font-bold text-white mb-3">
-            TENGO UN NEGOCIO
+            {hasExistingProfile ? 'OPTIMIZAR MI NEGOCIO' : 'TENGO UN NEGOCIO'}
           </h3>
           
           <p className="text-emerald-300/80 text-sm">
-            Ya tengo mi negocio operando y quiero escalarlo con la Tribu.
+            {hasExistingProfile 
+              ? 'Mejora tu perfil existente y atrae más clientes con la Tribu.'
+              : 'Ya tengo mi negocio operando y quiero escalarlo con la Tribu.'
+            }
           </p>
           
           <div className="mt-6 flex items-center justify-center gap-2 text-emerald-400">
@@ -1792,47 +1795,49 @@ export default function QuantumBusinessBuilderPage() {
           </div>
         </motion.button>
 
-        {/* Opción B: Quiero crear desde cero */}
-        <motion.button
-          initial={{ x: 50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.7 }}
-          whileHover={{ scale: 1.03, y: -5 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setStep('adn-talento')}
-          className="group relative overflow-hidden rounded-2xl p-8 bg-gradient-to-br from-purple-900/50 to-orange-900/50 border border-purple-500/30 hover:border-orange-400/60 transition-all"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          
-          {/* Efecto de brillo animado */}
-          <motion.div
-            animate={{ 
-              x: ['-100%', '200%'],
-            }}
-            transition={{ 
-              duration: 3,
-              repeat: Infinity,
-              ease: "linear"
-            }}
-            className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12"
-          />
-          
-          <Lightbulb className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-          
-          <h3 className="text-2xl font-bold text-white mb-3">
-            QUIERO UNA IDEA MILLONARIA
-          </h3>
-          
-          <p className="text-purple-300/80 text-sm">
-            Tengo el talento pero me falta la forma. Ayúdame a crearlo desde cero con IA.
-          </p>
-          
-          <div className="mt-6 flex items-center justify-center gap-2 text-orange-400">
-            <Sparkles className="w-5 h-5" />
-            <span className="text-sm font-medium">Generar con IA</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </div>
-        </motion.button>
+        {/* Opción B: Quiero crear desde cero - Solo si NO tiene perfil */}
+        {!hasExistingProfile && (
+          <motion.button
+            initial={{ x: 50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            whileHover={{ scale: 1.03, y: -5 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setStep('adn-talento')}
+            className="group relative overflow-hidden rounded-2xl p-8 bg-gradient-to-br from-purple-900/50 to-orange-900/50 border border-purple-500/30 hover:border-orange-400/60 transition-all"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            
+            {/* Efecto de brillo animado */}
+            <motion.div
+              animate={{ 
+                x: ['-100%', '200%'],
+              }}
+              transition={{ 
+                duration: 3,
+                repeat: Infinity,
+                ease: "linear"
+              }}
+              className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12"
+            />
+            
+            <Lightbulb className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+            
+            <h3 className="text-2xl font-bold text-white mb-3">
+              QUIERO UNA IDEA MILLONARIA
+            </h3>
+            
+            <p className="text-purple-300/80 text-sm">
+              Tengo el talento pero me falta la forma. Ayúdame a crearlo desde cero con IA.
+            </p>
+            
+            <div className="mt-6 flex items-center justify-center gap-2 text-orange-400">
+              <Sparkles className="w-5 h-5" />
+              <span className="text-sm font-medium">Generar con IA</span>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </motion.button>
+        )}
       </div>
 
       {/* Indicador de perfil existente */}
