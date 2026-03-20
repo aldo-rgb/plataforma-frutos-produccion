@@ -554,12 +554,9 @@ export default function QuantumIdentityModal({
             </div>
           </div>
           <h2 className="text-3xl font-black text-white uppercase tracking-wider">
-            GENERANDO PERFIL EJECUTIVO...
+            GENERANDO PERFIL...
           </h2>
-          <p className="text-xl text-purple-400">
-            {selectedCandidate?.designation}
-          </p>
-          <p className="text-slate-400">Creando tu retrato corporativo del Consejo...</p>
+          <p className="text-slate-400">Creando tu retrato con IA...</p>
         </div>
       )}
 
@@ -585,7 +582,7 @@ export default function QuantumIdentityModal({
           <div className="space-y-1">
             <div className="flex items-center justify-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-400" />
-              <span className="text-green-400 font-bold text-lg">Avatar creado</span>
+              <span className="text-green-400 font-bold text-lg">Perfil creado</span>
             </div>
           </div>
 

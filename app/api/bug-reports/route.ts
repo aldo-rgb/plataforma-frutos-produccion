@@ -2,32 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { sendWhatsAppTextMessage } from '@/lib/whatsapp';
-import fs from 'fs';
-import path from 'path';
-
-const REPORTS_FILE = path.join(process.cwd(), 'data', 'bug-reports.json');
-
-// Asegurar que existe el directorio y archivo
-function ensureReportsFile() {
-  const dir = path.dirname(REPORTS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(REPORTS_FILE)) {
-    fs.writeFileSync(REPORTS_FILE, JSON.stringify([], null, 2));
-  }
-}
-
-function getReports() {
-  ensureReportsFile();
-  const data = fs.readFileSync(REPORTS_FILE, 'utf-8');
-  return JSON.parse(data);
-}
-
-function saveReports(reports: any[]) {
-  ensureReportsFile();
-  fs.writeFileSync(REPORTS_FILE, JSON.stringify(reports, null, 2));
-}
+import prisma from '@/lib/prisma';
 
 // GET - Listar reportes (solo admins)
 export async function GET(request: NextRequest) {
@@ -38,18 +13,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Verificar si es admin
     const userRole = (session.user as any).role;
     if (userRole !== 'ADMIN' && userRole !== 'SCHOOL_ADMIN' && userRole !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    const reports = getReports();
-    
-    // Ordenar por fecha descendente
-    reports.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const reports = await prisma.bugReport.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        Usuario: { select: { id: true, name: true, email: true } },
+        ResolvedByUser: { select: { id: true, name: true } },
+      },
+    });
 
-    return NextResponse.json({ reports });
+    // Map to expected format
+    const mapped = reports.map(r => ({
+      id: `bug-${r.id}`,
+      dbId: r.id,
+      description: r.description,
+      screenshotUrl: r.screenshotUrl,
+      userName: r.Usuario.name || 'Anónimo',
+      userEmail: r.Usuario.email,
+      userId: r.userId,
+      pageUrl: r.pageUrl,
+      userAgent: r.userAgent,
+      status: r.status.toLowerCase(),
+      createdAt: r.createdAt.toISOString(),
+      resolvedAt: r.resolvedAt?.toISOString() || null,
+      notes: r.adminNotes,
+      resolvedBy: r.ResolvedByUser?.name || null,
+    }));
+
+    return NextResponse.json({ reports: mapped });
   } catch (error) {
     console.error('Error fetching bug reports:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
@@ -67,25 +62,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Descripción requerida' }, { status: 400 });
     }
 
-    const reports = getReports();
-    
-    const newReport = {
-      id: `bug-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      description,
-      screenshotUrl: screenshotUrl || null,
-      userName: userName || 'Anónimo',
-      userEmail: userEmail || null,
-      userId: userId || null,
-      pageUrl: pageUrl || null,
-      userAgent: userAgent || null,
-      status: 'pending', // pending, in_progress, resolved, dismissed
-      createdAt: timestamp || new Date().toISOString(),
-      resolvedAt: null,
-      notes: null,
-    };
+    // userId is required for DB relation
+    if (!userId) {
+      return NextResponse.json({ error: 'Usuario requerido' }, { status: 400 });
+    }
 
-    reports.push(newReport);
-    saveReports(reports);
+    const newReport = await prisma.bugReport.create({
+      data: {
+        userId: parseInt(userId),
+        description,
+        screenshotUrl: screenshotUrl || null,
+        pageUrl: pageUrl || null,
+        userAgent: userAgent || null,
+      },
+    });
 
     // Enviar notificación por WhatsApp al equipo de soporte
     const SUPPORT_PHONE = '528119411741';
@@ -100,17 +90,29 @@ ${description}
 ${screenshotUrl ? `📸 *Captura:* ${screenshotUrl}` : ''}
 
 ⏰ ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}
-🆔 ${newReport.id}`;
+🆔 bug-${newReport.id}`;
 
     try {
       await sendWhatsAppTextMessage(SUPPORT_PHONE, whatsappMessage);
       console.log('✅ WhatsApp notification sent for bug report:', newReport.id);
     } catch (whatsappError) {
       console.error('⚠️ Failed to send WhatsApp notification:', whatsappError);
-      // No fallar el request si WhatsApp falla
     }
 
-    return NextResponse.json({ success: true, report: newReport });
+    return NextResponse.json({ 
+      success: true, 
+      report: {
+        id: `bug-${newReport.id}`,
+        description: newReport.description,
+        screenshotUrl: newReport.screenshotUrl,
+        userName: userName || 'Anónimo',
+        userEmail,
+        userId: newReport.userId,
+        pageUrl: newReport.pageUrl,
+        status: 'pending',
+        createdAt: newReport.createdAt.toISOString(),
+      }
+    });
   } catch (error) {
     console.error('Error creating bug report:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
@@ -138,27 +140,43 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
     }
 
-    const reports = getReports();
-    const reportIndex = reports.findIndex((r: any) => r.id === id);
+    // Extract numeric ID from "bug-123" format
+    const dbId = typeof id === 'string' && id.startsWith('bug-') 
+      ? parseInt(id.replace('bug-', ''))
+      : parseInt(id);
 
-    if (reportIndex === -1) {
-      return NextResponse.json({ error: 'Reporte no encontrado' }, { status: 404 });
+    if (isNaN(dbId)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
+    const statusMap: Record<string, string> = {
+      'pending': 'PENDING',
+      'in_progress': 'IN_PROGRESS',
+      'resolved': 'RESOLVED',
+      'dismissed': 'CLOSED',
+      'wont_fix': 'WONT_FIX',
+    };
+
+    const updateData: any = {};
+    
     if (status) {
-      reports[reportIndex].status = status;
+      updateData.status = statusMap[status] || status.toUpperCase();
       if (status === 'resolved') {
-        reports[reportIndex].resolvedAt = new Date().toISOString();
+        updateData.resolvedAt = new Date();
+        updateData.resolvedBy = parseInt((session.user as any).id);
       }
     }
 
     if (notes !== undefined) {
-      reports[reportIndex].notes = notes;
+      updateData.adminNotes = notes;
     }
 
-    saveReports(reports);
+    const updated = await prisma.bugReport.update({
+      where: { id: dbId },
+      data: updateData,
+    });
 
-    return NextResponse.json({ success: true, report: reports[reportIndex] });
+    return NextResponse.json({ success: true, report: updated });
   } catch (error) {
     console.error('Error updating bug report:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
@@ -186,14 +204,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
     }
 
-    const reports = getReports();
-    const filteredReports = reports.filter((r: any) => r.id !== id);
+    const dbId = id.startsWith('bug-') ? parseInt(id.replace('bug-', '')) : parseInt(id);
 
-    if (filteredReports.length === reports.length) {
-      return NextResponse.json({ error: 'Reporte no encontrado' }, { status: 404 });
+    if (isNaN(dbId)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    saveReports(filteredReports);
+    await prisma.bugReport.delete({
+      where: { id: dbId },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

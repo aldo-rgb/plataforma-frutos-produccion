@@ -1449,8 +1449,8 @@ export default function CartaWizardRelacional() {
         
         setErrorModal({
           show: true,
-          title: '✅ ¡Carta Enviada!',
-          message: submitData.message || 'Tu carta ha sido enviada para revisión.'
+          title: '✅ ¡Carta Guardada!',
+          message: submitData.message || 'Tu carta ha sido guardada exitosamente.'
         });
         
         setTimeout(() => {
@@ -2579,7 +2579,7 @@ export default function CartaWizardRelacional() {
                     </h2>
                     <p className="text-sm sm:text-base text-gray-400 max-w-md mx-auto px-2">
                       {hasAvatar 
-                        ? '¡Ya tienes tu foto de perfil! Puedes enviarlo a revisión o generar una nueva.' 
+                        ? '¡Ya tienes tu foto de perfil! Puedes guardarla o generar una nueva.' 
                         : 'Genera tu foto de perfil personalizada con IA para completar tu carta.'
                       }
                     </p>
