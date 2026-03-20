@@ -51,7 +51,7 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
       )}
 
       {/* Badge BETA */}
-      <div className="hidden md:flex items-center gap-2 ml-2">
+      <div className="flex items-center gap-2 ml-2">
         <span className="px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full uppercase tracking-wider animate-pulse">
           BETA
         </span>
@@ -68,7 +68,7 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
           title="Reportar un error"
         >
           <Bug size={14} className="text-amber-400 group-hover:animate-wiggle" />
-          <span className="hidden sm:inline">Reportar Error</span>
+          <span>Reportar un error</span>
         </button>
         
         {/* Role Switcher - Para usuarios con múltiples roles */}
