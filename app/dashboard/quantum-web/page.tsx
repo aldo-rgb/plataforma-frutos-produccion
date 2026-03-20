@@ -3520,11 +3520,39 @@ function WebsitePreview({
 }) {
   const [showImageModal, setShowImageModal] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const colors = template.colors;
   const isDarkTheme = template.style === 'energetic' || template.style === 'tech';
   const heroImage = externalHeroImage || (content as any).heroImage || PREVIEW_HERO_IMAGES[business.category || 'otro'] || PREVIEW_HERO_IMAGES.otro;
+  
+  // Función para subir imagen
+  const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onHeroImageChange) return;
+    
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        onHeroImageChange(data.url);
+        setShowImageModal(false);
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
   
   // Imágenes predefinidas por categoría
   const predefinedImages = [
@@ -3565,9 +3593,44 @@ function WebsitePreview({
             >
               <h3 className="text-xl font-bold text-white mb-4">Cambiar imagen de fondo</h3>
               
+              {/* Subir imagen */}
+              <div className="mb-6">
+                <label className="text-sm text-slate-400 mb-2 block">Sube tu propia imagen</label>
+                <label 
+                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-purple-500 transition bg-slate-800/50 ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleHeroImageUpload} 
+                    className="hidden" 
+                    ref={fileInputRef}
+                  />
+                  {isUploading ? (
+                    <div className="flex flex-col items-center">
+                      <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-2" />
+                      <span className="text-sm text-slate-400">Subiendo imagen...</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                      <span className="text-sm text-slate-400">Haz clic para seleccionar una imagen</span>
+                      <span className="text-xs text-slate-500 mt-1">JPG, PNG, WebP (máx. 5MB)</span>
+                    </div>
+                  )}
+                </label>
+              </div>
+              
+              {/* Separador */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex-1 h-px bg-slate-700" />
+                <span className="text-sm text-slate-500">o</span>
+                <div className="flex-1 h-px bg-slate-700" />
+              </div>
+              
               {/* URL personalizada */}
               <div className="mb-6">
-                <label className="text-sm text-slate-400 mb-2 block">URL de imagen personalizada</label>
+                <label className="text-sm text-slate-400 mb-2 block">Pega una URL de imagen</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
