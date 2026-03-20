@@ -400,6 +400,10 @@ export default function QuantumWebEngine() {
   const [editingService, setEditingService] = useState<AppointmentService | null>(null);
   const [isLoadingEdit, setIsLoadingEdit] = useState(true);
   
+  // Panel lateral de configuración en modo edición
+  const [showConfigPanel, setShowConfigPanel] = useState(true);
+  const [configPanelTab, setConfigPanelTab] = useState<'colors' | 'services'>('colors');
+  
   // Cargar datos del perfil existente o del localStorage (idea millonaria)
   useEffect(() => {
     const initializeData = async () => {
@@ -2688,42 +2692,292 @@ export default function QuantumWebEngine() {
         </div>
       </div>
       
-      {/* Preview Frame */}
-      <div className="pt-24 pb-8 px-4 flex justify-center">
-        <div
-          className={`bg-white rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 ${
-            previewMode === 'mobile' ? 'w-[375px]' : 'w-full max-w-5xl'
-          }`}
-        >
-          {selectedTemplate && webContent && (
-            <WebsitePreview
-              template={selectedTemplate}
-              content={webContent}
-              business={businessInfo}
-              products={products}
-              appointmentServices={appointmentsConfig.services}
-              siteType={siteType}
-              editMode={editMode}
-              onContentChange={(field, value) => {
-                setWebContent(prev => {
-                  if (!prev) return null;
-                  // Si es services, parsear el JSON
-                  if (field === 'services') {
-                    try {
-                      const parsedServices = JSON.parse(value);
-                      return { ...prev, services: parsedServices };
-                    } catch {
-                      return prev;
-                    }
-                  }
-                  return { ...prev, [field]: value };
-                });
-              }}
-              onHeroImageChange={(url) => setHeroImage(url)}
-              heroImage={heroImage}
-              brandColors={brandColors}
-            />
+      {/* Main Content Area with Side Panel */}
+      <div className="pt-24 pb-8 flex">
+        {/* Side Panel - Configuration (when in edit mode) */}
+        <AnimatePresence>
+          {editMode && showConfigPanel && (
+            <motion.div
+              initial={{ x: -320, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -320, opacity: 0 }}
+              className="fixed left-0 top-32 bottom-0 w-80 bg-slate-900 border-r border-slate-700/50 z-30 overflow-y-auto"
+            >
+              {/* Panel Header */}
+              <div className="sticky top-0 bg-slate-900 border-b border-slate-700/50 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-white">Configuración</h3>
+                  <button 
+                    onClick={() => setShowConfigPanel(false)}
+                    className="p-1 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                {/* Tabs */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfigPanelTab('colors')}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 ${
+                      configPanelTab === 'colors' 
+                        ? 'bg-purple-500 text-white' 
+                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Palette className="w-4 h-4" />
+                    Colores
+                  </button>
+                  {siteType === 'appointments' && (
+                    <button
+                      onClick={() => setConfigPanelTab('services')}
+                      className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 ${
+                        configPanelTab === 'services' 
+                          ? 'bg-purple-500 text-white' 
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Servicios
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              {/* Panel Content */}
+              <div className="p-4">
+                {configPanelTab === 'colors' && (
+                  <div className="space-y-6">
+                    {/* Current Colors */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-white mb-3">Tu Paleta de Colores</h4>
+                      <div className="space-y-3">
+                        {(['Color Principal', 'Color Secundario', 'Color Acento'] as const).map((label, i) => (
+                          <div key={i} className="flex items-center gap-3">
+                            <div className="relative">
+                              <input
+                                type="color"
+                                value={brandColors[i]}
+                                onChange={(e) => {
+                                  const newColors = [...brandColors] as [string, string, string];
+                                  newColors[i] = e.target.value;
+                                  setBrandColors(newColors);
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                              <div 
+                                className="w-10 h-10 rounded-lg border-2 border-white/20 cursor-pointer hover:scale-105 transition"
+                                style={{ backgroundColor: brandColors[i] }}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <span className="text-xs text-slate-400 block">{label}</span>
+                              <span className="text-sm text-white font-mono">{brandColors[i]}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Preview */}
+                    <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/30">
+                      <p className="text-xs text-slate-500 mb-2">Vista previa:</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div 
+                          className="px-3 py-1.5 rounded-lg font-medium text-white text-xs"
+                          style={{ backgroundColor: brandColors[0] }}
+                        >
+                          Botón
+                        </div>
+                        <div 
+                          className="px-3 py-1.5 rounded-lg font-medium text-white text-xs"
+                          style={{ backgroundColor: brandColors[1] }}
+                        >
+                          Secundario
+                        </div>
+                        <div 
+                          className="w-6 h-6 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: brandColors[2] }}
+                        >
+                          <Star className="w-3 h-3 text-white" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Predefined Palettes */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-white mb-3">Paletas Sugeridas</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { colors: ['#EC4899', '#8B5CF6', '#F97316'], name: 'Vibrante' },
+                          { colors: ['#10B981', '#3B82F6', '#F59E0B'], name: 'Fresco' },
+                          { colors: ['#EF4444', '#F97316', '#FBBF24'], name: 'Cálido' },
+                          { colors: ['#06B6D4', '#8B5CF6', '#EC4899'], name: 'Tech' },
+                          { colors: ['#1F2937', '#6B7280', '#D1D5DB'], name: 'Neutro' },
+                          { colors: ['#854d0e', '#a16207', '#16a34a'], name: 'Natural' },
+                        ].map((palette, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setBrandColors(palette.colors as [string, string, string])}
+                            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition border border-transparent hover:border-purple-500/50"
+                          >
+                            <div className="flex rounded overflow-hidden mb-1.5">
+                              {palette.colors.map((color, j) => (
+                                <div key={j} className="w-full h-6" style={{ backgroundColor: color }} />
+                              ))}
+                            </div>
+                            <span className="text-xs text-slate-400">{palette.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {configPanelTab === 'services' && siteType === 'appointments' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-white">Servicios de Citas</h4>
+                      <button
+                        onClick={() => {
+                          setEditingService(null);
+                          setShowServiceModal(true);
+                        }}
+                        className="p-1.5 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    {appointmentsConfig.services.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Calendar className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                        <p className="text-slate-400 text-sm mb-3">No hay servicios configurados</p>
+                        <button
+                          onClick={() => {
+                            setEditingService(null);
+                            setShowServiceModal(true);
+                          }}
+                          className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition"
+                        >
+                          Agregar Servicio
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {appointmentsConfig.services.map((service) => (
+                          <div 
+                            key={service.id}
+                            className="p-3 rounded-lg bg-slate-800 border border-slate-700/50"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: service.color }}
+                                />
+                                <span className="text-white font-medium text-sm">{service.name}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => {
+                                    setEditingService(service);
+                                    setShowServiceModal(true);
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-white"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setAppointmentsConfig(prev => ({
+                                      ...prev,
+                                      services: prev.services.filter(s => s.id !== service.id)
+                                    }));
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-red-400"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-slate-400">
+                              <span className="flex items-center gap-1">
+                                <Timer className="w-3 h-3" />
+                                {service.duration} min
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <DollarSign className="w-3 h-3" />
+                                ${service.price}
+                              </span>
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                service.active 
+                                  ? 'bg-green-500/20 text-green-400' 
+                                  : 'bg-slate-600 text-slate-400'
+                              }`}>
+                                {service.active ? 'Activo' : 'Inactivo'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
           )}
+        </AnimatePresence>
+        
+        {/* Toggle Panel Button (when panel is closed) */}
+        {editMode && !showConfigPanel && (
+          <button
+            onClick={() => setShowConfigPanel(true)}
+            className="fixed left-4 top-40 z-30 p-3 rounded-xl bg-slate-800 border border-slate-700 text-white hover:bg-slate-700 transition shadow-lg"
+          >
+            <Palette className="w-5 h-5" />
+          </button>
+        )}
+        
+        {/* Preview Frame */}
+        <div className={`flex-1 flex justify-center px-4 transition-all duration-300 ${
+          editMode && showConfigPanel ? 'ml-80' : ''
+        }`}>
+          <div
+            className={`bg-white rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 ${
+              previewMode === 'mobile' ? 'w-[375px]' : 'w-full max-w-5xl'
+            }`}
+          >
+            {selectedTemplate && webContent && (
+              <WebsitePreview
+                template={selectedTemplate}
+                content={webContent}
+                business={businessInfo}
+                products={products}
+                appointmentServices={appointmentsConfig.services}
+                siteType={siteType}
+                editMode={editMode}
+                onContentChange={(field, value) => {
+                  setWebContent(prev => {
+                    if (!prev) return null;
+                    // Si es services, parsear el JSON
+                    if (field === 'services') {
+                      try {
+                        const parsedServices = JSON.parse(value);
+                        return { ...prev, services: parsedServices };
+                      } catch {
+                        return prev;
+                      }
+                    }
+                    return { ...prev, [field]: value };
+                  });
+                }}
+                onHeroImageChange={(url) => setHeroImage(url)}
+                heroImage={heroImage}
+                brandColors={brandColors}
+              />
+            )}
+          </div>
         </div>
       </div>
       
