@@ -4275,6 +4275,22 @@ function WebsitePreview({
       {content.testimonials && content.testimonials.length > 0 && (
         <section className="py-12 md:py-20 px-4 md:px-6" style={{ backgroundColor: colors.primary + '05' }}>
           <div className="max-w-4xl mx-auto">
+            {/* Banner de preview - solo visible en modo edición */}
+            {editMode && (
+              <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-200 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <Eye className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-blue-800">Vista previa de testimonios</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Estos son testimonios de ejemplo generados por IA para que veas cómo se verán las reseñas de tus clientes. 
+                    Cuando publiques tu sitio, podrás agregar testimonios reales.
+                  </p>
+                </div>
+              </div>
+            )}
+            
             <div className="text-center mb-6 md:mb-12">
               <span 
                 className="inline-block px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold mb-4 md:mb-6"
@@ -4293,7 +4309,13 @@ function WebsitePreview({
             
             <div className="grid grid-cols-1 gap-3">
               {content.testimonials.slice(0, 3).map((testimonial, index) => (
-                <div key={index} className="bg-white p-4 rounded-xl shadow-md">
+                <div key={index} className="bg-white p-4 rounded-xl shadow-md relative">
+                  {/* Indicador de ejemplo en modo edición */}
+                  {editMode && (
+                    <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] font-medium rounded-full">
+                      Ejemplo
+                    </span>
+                  )}
                   <div className="flex items-start gap-3">
                     {(testimonial as any).avatar ? (
                       <img 
