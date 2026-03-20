@@ -2091,7 +2091,7 @@ export default function CartaWizardRelacional() {
                             <Atom className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" style={{ color: brandColor }} />
                             <span style={{ color: brandColor }}>💡 Sugerir logros</span>
                           </>
-                        )}}
+                        )}
                       </div>
                     </button>
                   )}
