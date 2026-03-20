@@ -2623,34 +2623,14 @@ export default function CartaWizardRelacional() {
                       }}
                     >
                       <Sparkles size={20} />
-                      Crear Avatar
+                      Crear
                     </button>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Info adicional */}
-            <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 sm:p-6">
-              <h3 className="text-sm sm:text-base text-blue-300 font-bold mb-2 sm:mb-3 flex items-center gap-2">
-                <Brain size={18} />
-                ¿Qué es el Avatar?
-              </h3>
-              <ul className="space-y-2 text-gray-300 text-xs sm:text-sm">
-                <li className="flex items-start gap-2">
-                  <span style={{ color: brandColor }} className="mt-1">•</span>
-                  <span>Una imagen única generada por IA basada en tus metas y objetivos</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span style={{ color: brandColor }} className="mt-1">•</span>
-                  <span>Representa tu identidad y el camino de transformación que estás tomando</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span style={{ color: brandColor }} className="mt-1">•</span>
-                  <span>Será tu imagen de perfil en toda la plataforma</span>
-                </li>
-              </ul>
-            </div>
+
           </div>
         )}
       </div>
