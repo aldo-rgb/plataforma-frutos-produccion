@@ -2590,10 +2590,10 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-slate-950"
+      className="min-h-screen bg-slate-950 pt-16"
     >
       {/* Toolbar */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 px-4 py-3">
+      <div className="fixed top-16 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 px-4 py-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <button
             onClick={() => setStep(siteType === 'appointments' ? 'appointments-schedule' : siteType === 'store' ? 'products' : 'content')}
@@ -2651,7 +2651,7 @@ export default function QuantumWebEngine() {
       </div>
       
       {/* Preview Frame */}
-      <div className="pt-20 pb-8 px-4 flex justify-center">
+      <div className="pt-24 pb-8 px-4 flex justify-center">
         <div
           className={`bg-white rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 ${
             previewMode === 'mobile' ? 'w-[375px]' : 'w-full max-w-5xl'
