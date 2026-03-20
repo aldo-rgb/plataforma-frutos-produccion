@@ -200,17 +200,17 @@ export default function ConfiguradorAccionIterativo({
   return (
     <div className="space-y-6">
       {/* Header con progreso */}
-      <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-xl p-6">
-        <div className="flex items-start gap-4">
-          <div className="text-4xl">{areaEmoji}</div>
+      <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-blue-500/30 rounded-xl p-4 sm:p-6">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className="text-3xl sm:text-4xl">{areaEmoji}</div>
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-white font-bold text-xl">{areaName}</h2>
-              <span className="bg-purple-600/30 text-purple-300 text-xs font-bold px-3 py-1 rounded-full">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <h2 className="text-white font-bold text-lg sm:text-xl">{areaName}</h2>
+              <span className="bg-blue-600/30 text-blue-300 text-xs font-bold px-3 py-1 rounded-full">
                 Meta {metaIndex} de {totalMetas}
               </span>
             </div>
-            <p className="text-sm text-purple-300">
+            <p className="text-sm text-blue-300">
               💡 Define con qué frecuencia trabajarás esta meta
             </p>
           </div>
@@ -239,26 +239,26 @@ export default function ConfiguradorAccionIterativo({
       )}
 
       {/* PASO 1: Tipo de Hábito */}
-      <div className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-6">
+      <div className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Repeat className="text-purple-400" size={20} />
-          <h3 className="text-white font-bold">Paso 1: ¿Qué tipo de compromiso es este?</h3>
+          <Repeat className="text-blue-400" size={20} />
+          <h3 className="text-white font-bold text-sm sm:text-base">Paso 1: ¿Qué tipo de compromiso es este?</h3>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <button
             onClick={() => {
               setHabitType('RECURRING');
               setFrequencyType(null);
             }}
-            className={`p-6 rounded-xl border-2 text-left transition-all hover:scale-105 ${
+            className={`p-4 sm:p-6 rounded-xl border-2 text-left transition-all ${
               habitType === 'RECURRING'
-                ? 'bg-purple-600/20 border-purple-500 ring-2 ring-purple-500/30'
+                ? 'bg-blue-600/20 border-blue-500 ring-2 ring-blue-500/30'
                 : 'bg-gray-900/50 border-gray-700 hover:border-gray-600'
             }`}
           >
-            <div className="text-3xl mb-2">🔄</div>
-            <div className={`font-bold text-sm mb-1 ${habitType === 'RECURRING' ? 'text-white' : 'text-gray-300'}`}>
+            <div className="text-2xl sm:text-3xl mb-2">🔄</div>
+            <div className={`font-bold text-xs sm:text-sm mb-1 ${habitType === 'RECURRING' ? 'text-white' : 'text-gray-300'}`}>
               Hábito Recurrente
             </div>
             <div className="text-xs text-gray-400">
@@ -271,14 +271,14 @@ export default function ConfiguradorAccionIterativo({
               setHabitType('ONE_TIME');
               setFrequencyType('ONE_TIME');
             }}
-            className={`p-6 rounded-xl border-2 text-left transition-all hover:scale-105 ${
+            className={`p-4 sm:p-6 rounded-xl border-2 text-left transition-all ${
               habitType === 'ONE_TIME'
                 ? 'bg-blue-600/20 border-blue-500 ring-2 ring-blue-500/30'
                 : 'bg-gray-900/50 border-gray-700 hover:border-gray-600'
             }`}
           >
-            <div className="text-3xl mb-2">🎯</div>
-            <div className={`font-bold text-sm mb-1 ${habitType === 'ONE_TIME' ? 'text-white' : 'text-gray-300'}`}>
+            <div className="text-2xl sm:text-3xl mb-2">🎯</div>
+            <div className={`font-bold text-xs sm:text-sm mb-1 ${habitType === 'ONE_TIME' ? 'text-white' : 'text-gray-300'}`}>
               Acción Única
             </div>
             <div className="text-xs text-gray-400">
@@ -290,24 +290,24 @@ export default function ConfiguradorAccionIterativo({
 
       {/* PASO 2: Configuración según tipo */}
       {habitType === 'RECURRING' && (
-        <div className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-6 animate-in slide-in-from-top-4">
+        <div className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-4 sm:p-6 animate-in slide-in-from-top-4">
           <div className="flex items-center gap-2 mb-4">
-            <CalendarDays className="text-purple-400" size={20} />
-            <h3 className="text-white font-bold">Paso 2: Selecciona la frecuencia</h3>
+            <CalendarDays className="text-blue-400" size={20} />
+            <h3 className="text-white font-bold text-sm sm:text-base">Paso 2: Selecciona la frecuencia</h3>
           </div>
 
           {/* Selector de tipo de frecuencia */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 gap-3 mb-6">
             <button
               onClick={() => setFrequencyType('DAILY')}
-              className={`p-4 rounded-xl border-2 text-center transition-all hover:scale-105 ${
+              className={`p-3 sm:p-4 rounded-xl border-2 text-center transition-all ${
                 frequencyType === 'DAILY'
-                  ? 'bg-purple-600/20 border-purple-500 ring-2 ring-purple-500/30'
+                  ? 'bg-blue-600/20 border-blue-500 ring-2 ring-blue-500/30'
                   : 'bg-gray-900/50 border-gray-700 hover:border-gray-600'
               }`}
             >
-              <div className="text-3xl mb-2">🔥</div>
-              <div className={`font-bold text-sm ${frequencyType === 'DAILY' ? 'text-white' : 'text-gray-300'}`}>
+              <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">🔥</div>
+              <div className={`font-bold text-xs sm:text-sm ${frequencyType === 'DAILY' ? 'text-white' : 'text-gray-300'}`}>
                 Diario
               </div>
               <div className="text-xs text-gray-400">Todos los días</div>
@@ -315,14 +315,14 @@ export default function ConfiguradorAccionIterativo({
 
             <button
               onClick={() => setFrequencyType('WEEKLY')}
-              className={`p-4 rounded-xl border-2 text-center transition-all hover:scale-105 ${
+              className={`p-3 sm:p-4 rounded-xl border-2 text-center transition-all ${
                 frequencyType === 'WEEKLY'
-                  ? 'bg-purple-600/20 border-purple-500 ring-2 ring-purple-500/30'
+                  ? 'bg-blue-600/20 border-blue-500 ring-2 ring-blue-500/30'
                   : 'bg-gray-900/50 border-gray-700 hover:border-gray-600'
               }`}
             >
-              <div className="text-3xl mb-2">📅</div>
-              <div className={`font-bold text-sm ${frequencyType === 'WEEKLY' ? 'text-white' : 'text-gray-300'}`}>
+              <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">📅</div>
+              <div className={`font-bold text-xs sm:text-sm ${frequencyType === 'WEEKLY' ? 'text-white' : 'text-gray-300'}`}>
                 Semanal
               </div>
               <div className="text-xs text-gray-400">Días específicos</div>
@@ -330,14 +330,14 @@ export default function ConfiguradorAccionIterativo({
 
             <button
               onClick={() => setFrequencyType('MONTHLY')}
-              className={`p-4 rounded-xl border-2 text-center transition-all hover:scale-105 ${
+              className={`p-3 sm:p-4 rounded-xl border-2 text-center transition-all ${
                 frequencyType === 'MONTHLY'
-                  ? 'bg-purple-600/20 border-purple-500 ring-2 ring-purple-500/30'
+                  ? 'bg-blue-600/20 border-blue-500 ring-2 ring-blue-500/30'
                   : 'bg-gray-900/50 border-gray-700 hover:border-gray-600'
               }`}
             >
-              <div className="text-3xl mb-2">📆</div>
-              <div className={`font-bold text-sm ${frequencyType === 'MONTHLY' ? 'text-white' : 'text-gray-300'}`}>
+              <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">📆</div>
+              <div className={`font-bold text-xs sm:text-sm ${frequencyType === 'MONTHLY' ? 'text-white' : 'text-gray-300'}`}>
                 Mensual
               </div>
               <div className="text-xs text-gray-400">1 vez al mes</div>
@@ -348,14 +348,14 @@ export default function ConfiguradorAccionIterativo({
                 setFrequencyType('ONE_TIME');
                 setHabitType('ONE_TIME');
               }}
-              className={`p-4 rounded-xl border-2 text-center transition-all hover:scale-105 ${
+              className={`p-3 sm:p-4 rounded-xl border-2 text-center transition-all ${
                 frequencyType === 'ONE_TIME'
                   ? 'bg-blue-600/20 border-blue-500 ring-2 ring-blue-500/30'
                   : 'bg-gray-900/50 border-gray-700 hover:border-gray-600'
               }`}
             >
-              <div className="text-3xl mb-2">🎯</div>
-              <div className={`font-bold text-sm ${frequencyType === 'ONE_TIME' ? 'text-white' : 'text-gray-300'}`}>
+              <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">🎯</div>
+              <div className={`font-bold text-xs sm:text-sm ${frequencyType === 'ONE_TIME' ? 'text-white' : 'text-gray-300'}`}>
                 1 sola vez
               </div>
               <div className="text-xs text-gray-400">Acción única</div>
@@ -412,12 +412,12 @@ export default function ConfiguradorAccionIterativo({
 
           {/* Configuración SEMANAL */}
           {frequencyType === 'WEEKLY' && (
-            <div className="bg-[#252836] p-5 rounded-xl border border-gray-700">
+            <div className="bg-[#252836] p-4 sm:p-5 rounded-xl border border-gray-700">
               <label className="text-gray-300 text-sm font-medium block mb-3">
                 📅 Selecciona los días de la semana:
               </label>
               
-              <div className="grid grid-cols-7 gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((dia, idx) => {
                   const isSelected = selectedDays.includes(idx);
                   return (
@@ -431,9 +431,9 @@ export default function ConfiguradorAccionIterativo({
                           setSelectedDays([...selectedDays, idx].sort());
                         }
                       }}
-                      className={`p-3 rounded-lg font-bold text-xs transition-all ${
+                      className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full font-bold text-xs transition-all ${
                         isSelected
-                          ? 'bg-gradient-to-br from-purple-500 to-blue-600 text-white shadow-lg'
+                          ? 'bg-gradient-to-br from-blue-500 to-cyan-600 text-white shadow-lg'
                           : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
                       }`}
                     >
@@ -444,8 +444,8 @@ export default function ConfiguradorAccionIterativo({
               </div>
 
               {selectedDays.length > 0 && (
-                <div className="mt-4 bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
-                  <p className="text-purple-300 text-sm">
+                <div className="mt-4 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                  <p className="text-blue-300 text-sm">
                     ✓ {selectedDays.length} día{selectedDays.length > 1 ? 's' : ''} seleccionado{selectedDays.length > 1 ? 's' : ''}
                   </p>
                 </div>
@@ -455,7 +455,7 @@ export default function ConfiguradorAccionIterativo({
 
           {/* Configuración MENSUAL */}
           {frequencyType === 'MONTHLY' && (
-            <div className="bg-[#252836] p-5 rounded-xl border border-gray-700">
+            <div className="bg-[#252836] p-4 sm:p-5 rounded-xl border border-gray-700">
               <label className="text-gray-300 text-sm font-medium block mb-3">
                 📅 Selecciona uno o varios días del mes:
               </label>
@@ -479,7 +479,7 @@ export default function ConfiguradorAccionIterativo({
                       }}
                       className={`h-10 rounded-lg font-bold text-sm transition-all ${
                         isSelected
-                          ? 'bg-gradient-to-br from-purple-500 to-blue-600 text-white shadow-lg scale-105'
+                          ? 'bg-gradient-to-br from-blue-500 to-cyan-600 text-white shadow-lg'
                           : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
                       }`}
                     >
@@ -490,13 +490,13 @@ export default function ConfiguradorAccionIterativo({
               </div>
 
               {monthDays && monthDays.length > 0 && (
-                <div className="mt-4 bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
-                  <p className="text-purple-300 text-sm font-medium mb-2">
+                <div className="mt-4 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                  <p className="text-blue-300 text-sm font-medium mb-2">
                     ✓ Días seleccionados: {monthDays.length}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {monthDays.map(dia => (
-                      <span key={dia} className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                      <span key={dia} className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">
                         Día {dia}
                       </span>
                     ))}
