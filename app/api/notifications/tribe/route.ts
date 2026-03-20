@@ -22,11 +22,11 @@ export async function GET(request: NextRequest) {
         isRead: false
       },
       include: {
-        assignment: {
+        TribeCaptainAssignment: {
           include: {
-            captaincy: {
+            TribeCaptaincy: {
               include: {
-                vision: {
+                Vision: {
                   select: {
                     id: true,
                     nombre: true
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
           status: 'ACCEPTED'
         },
         include: {
-          captaincy: {
+          TribeCaptaincy: {
             select: { visionId: true }
           }
         }
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     memberSizes.forEach(m => visionIdsSet.add(m.visionId));
     ticketPurchases.forEach(t => visionIdsSet.add(t.visionId));
     staffAssignments.forEach(s => visionIdsSet.add(s.visionId));
-    captainAssignments.forEach(c => visionIdsSet.add(c.captaincy.visionId));
+    captainAssignments.forEach(c => visionIdsSet.add(c.TribeCaptaincy.visionId));
     visionEnrollments.forEach(e => visionIdsSet.add(e.visionId));
 
     const visionIds = Array.from(visionIdsSet);
@@ -111,20 +111,20 @@ export async function GET(request: NextRequest) {
           }
         ],
         // Excluir votaciones donde el usuario ya votó
-        votes: {
+        TribePollVote: {
           none: {
             userId: userId
           }
         }
       },
       include: {
-        vision: {
+        Vision: {
           select: {
             id: true,
             nombre: true
           }
         },
-        options: {
+        TribePollOption: {
           select: {
             id: true,
             title: true
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
         },
         _count: {
           select: {
-            votes: true
+            TribePollVote: true
           }
         }
       },
@@ -147,9 +147,9 @@ export async function GET(request: NextRequest) {
       type: 'CAPTAINCY_NOMINATION' as const,
       title: notif.title,
       message: notif.message,
-      roleType: notif.assignment.captaincy.roleType,
-      visionId: notif.assignment.captaincy.visionId,
-      visionName: notif.assignment.captaincy.vision.nombre,
+      roleType: notif.TribeCaptainAssignment.TribeCaptaincy.roleType,
+      visionId: notif.TribeCaptainAssignment.TribeCaptaincy.visionId,
+      visionName: notif.TribeCaptainAssignment.TribeCaptaincy.Vision?.nombre || 'Visión',
       assignmentId: notif.assignmentId,
       createdAt: notif.createdAt.toISOString()
     }));
@@ -162,9 +162,9 @@ export async function GET(request: NextRequest) {
       message: poll.title,
       category: poll.category,
       visionId: poll.visionId,
-      visionName: poll.vision.nombre,
-      optionsCount: poll.options.length,
-      votesCount: poll._count.votes,
+      visionName: poll.Vision.nombre,
+      optionsCount: poll.TribePollOption.length,
+      votesCount: poll._count.TribePollVote,
       endDate: poll.endDate?.toISOString() || null,
       createdAt: poll.createdAt.toISOString()
     }));
@@ -198,9 +198,9 @@ export async function GET(request: NextRequest) {
           }
         },
         include: {
-          poll: {
+          TribePoll: {
             include: {
-              vision: {
+              Vision: {
                 select: { id: true, nombre: true }
               }
             }
@@ -237,14 +237,14 @@ export async function GET(request: NextRequest) {
             // Buscar al tesorero de esta visión
             const treasurerAssignment = await prisma.tribeCaptainAssignment.findFirst({
               where: {
-                captaincy: {
+                TribeCaptaincy: {
                   visionId: visId,
                   roleType: 'TREASURER'
                 },
                 status: 'ACCEPTED'
               },
               include: {
-                user: {
+                Usuario_TribeCaptainAssignment_userIdToUsuario: {
                   select: {
                     nombre: true,
                     telefono: true
@@ -259,11 +259,11 @@ export async function GET(request: NextRequest) {
               title: '👕 Pago de playera pendiente',
               message: `Tu playera talla ${voteWithSize.shirtSize} está pendiente de pago`,
               visionId: visId,
-              visionName: voteWithSize.poll.vision.nombre,
+              visionName: voteWithSize.TribePoll.Vision?.nombre || 'Visión',
               size: voteWithSize.shirtSize,
               amount: shirtPrice,
-              treasurerName: treasurerAssignment?.user?.nombre || null,
-              treasurerPhone: treasurerAssignment?.user?.telefono || null,
+              treasurerName: treasurerAssignment?.Usuario_TribeCaptainAssignment_userIdToUsuario?.nombre || null,
+              treasurerPhone: treasurerAssignment?.Usuario_TribeCaptainAssignment_userIdToUsuario?.telefono || null,
               createdAt: voteWithSize.votedAt.toISOString()
             });
           }
