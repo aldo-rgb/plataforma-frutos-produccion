@@ -583,12 +583,12 @@ export default function ConfiguradorAccionIterativo({
       {canProceed() && (
         <div className="bg-gray-900/50 border border-gray-800 p-4 rounded-lg animate-in slide-in-from-bottom-4">
           <div className="flex items-start gap-3 mb-4">
-            <Info className="text-purple-400 shrink-0" size={20} />
+            <Info className="text-blue-400 shrink-0" size={20} />
             <div className="flex-1">
               <p className="text-sm font-bold text-white mb-1">Resumen de tu compromiso:</p>
               <ul className="text-xs text-gray-400 space-y-1">
-                <li>• Meta: <span className="text-purple-300">{metaDescription.substring(0, 50)}...</span></li>
-                <li>• Tipo: <span className="text-purple-300">{habitType === 'RECURRING' ? 'Hábito Recurrente' : 'Acción Única'}</span></li>
+                <li>• Meta: <span className="text-blue-300">{metaDescription.substring(0, 50)}...</span></li>
+                <li>• Tipo: <span className="text-blue-300">{habitType === 'RECURRING' ? 'Hábito Recurrente' : 'Acción Única'}</span></li>
               </ul>
             </div>
           </div>
@@ -608,7 +608,7 @@ export default function ConfiguradorAccionIterativo({
               className={`flex-1 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 ${
                 guardado 
                   ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90'
+                  : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:opacity-90'
               } disabled:opacity-70 disabled:cursor-not-allowed`}
             >
               {guardando ? (
