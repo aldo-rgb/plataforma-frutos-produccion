@@ -513,51 +513,33 @@ export default function ConfiguradorAccionIterativo({
         <div className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-4 animate-in slide-in-from-top-4">
           <div className="flex items-center gap-2 mb-3">
             <Calendar className="text-blue-400" size={18} />
-            <h3 className="text-white font-bold text-sm">Paso 2: ¿Para cuándo debe estar completada?</h3>
+            <h3 className="text-white font-bold text-sm">📆 Fecha límite</h3>
           </div>
 
-          <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-500/30">
-            <label className="text-blue-300 text-sm font-bold block mb-3 flex items-center gap-2">
-              📆 Fecha límite:
-            </label>
-            
-            <input
-              type="date"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              className="w-full bg-slate-800 text-white text-base font-bold px-4 py-3 rounded-xl border-2 border-slate-700 hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer"
-              min={new Date().toISOString().split('T')[0]}
-              max={maxDate}
-            />
-            {maxDate && (
-              <p className="text-yellow-300 text-xs mt-2 flex items-center gap-1">
-                <span>⚠️</span>
-                <span>Máximo: {new Date(maxDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          <input
+            type="date"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            className="w-full bg-slate-800 text-white text-sm font-medium px-3 py-2.5 rounded-lg border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all cursor-pointer"
+            min={new Date().toISOString().split('T')[0]}
+            max={maxDate}
+          />
+          {maxDate && (
+            <p className="text-yellow-300 text-xs mt-1.5">
+              ⚠️ Máximo: {new Date(maxDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          )}
+
+          {deadline && (
+            <div className="mt-2 bg-blue-500/10 border border-blue-500/30 rounded-lg p-2.5">
+              <p className="text-white font-medium text-sm">
+                ✅ {new Date(deadline + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                <span className="text-blue-300 text-xs ml-2">
+                  ({Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días)
+                </span>
               </p>
-            )}
-
-            {/* Vista previa de la fecha seleccionada */}
-            {deadline && (
-              <div className="mt-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 animate-in slide-in-from-bottom-2">
-                <div className="flex items-center gap-3">
-                  <div className="text-2xl">✅</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-bold text-sm">
-                      {new Date(deadline + 'T00:00:00').toLocaleDateString('es-ES', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                    <p className="text-blue-200 text-xs mt-1">
-                      📍 Faltan {Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
