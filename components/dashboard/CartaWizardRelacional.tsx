@@ -1035,7 +1035,7 @@ export default function CartaWizardRelacional() {
     }));
     
     // Mostrar notificación
-    showToast('✅ Acción agregada exitosamente');
+    showToast('Acción agregada exitosamente');
     
     // Generar UNA nueva sugerencia para mantener siempre 3
     try {
@@ -1121,7 +1121,7 @@ export default function CartaWizardRelacional() {
     setSelectedActionSuggestions([...selectedActionSuggestions, suggestion]);
     
     // Mostrar notificación
-    showToast('✅ Acción agregada exitosamente');
+    showToast('Acción agregada exitosamente');
   };
 
   const handleCloseActionSuggestionsModal = () => {
