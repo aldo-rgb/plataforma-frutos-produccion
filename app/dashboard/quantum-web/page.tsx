@@ -2211,41 +2211,7 @@ export default function QuantumWebEngine() {
                 placeholder="Calle, Número, Colonia, Ciudad"
                 className="flex-1 p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-purple-500 transition"
               />
-              <button
-                type="button"
-                onClick={() => setShowMapModal(true)}
-                className="px-4 py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/30 transition-colors"
-                title="Buscar en el mapa"
-              >
-                <Globe className="w-5 h-5" />
-              </button>
-              <button
-                type="button"
-                onClick={getCurrentLocation}
-                className="px-4 py-3 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 transition-colors"
-                title="Usar mi ubicación actual"
-              >
-                <MapPin className="w-5 h-5" />
-              </button>
             </div>
-            {/* Mini mapa preview */}
-            {addressLat && addressLon && (
-              <div className="mt-3">
-                <div 
-                  className="relative h-24 rounded-xl overflow-hidden cursor-pointer group"
-                  onClick={() => setShowMapModal(true)}
-                >
-                  <img 
-                    src={`https://staticmap.openstreetmap.de/staticmap.php?center=${addressLat},${addressLon}&zoom=14&size=400x100&markers=${addressLat},${addressLon},red-pushpin`}
-                    alt="Ubicación"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">Editar ubicación</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
           
           {/* Horario */}
