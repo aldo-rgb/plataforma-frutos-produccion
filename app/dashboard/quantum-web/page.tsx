@@ -2683,7 +2683,19 @@ export default function QuantumWebEngine() {
               siteType={siteType}
               editMode={editMode}
               onContentChange={(field, value) => {
-                setWebContent(prev => prev ? { ...prev, [field]: value } : null);
+                setWebContent(prev => {
+                  if (!prev) return null;
+                  // Si es services, parsear el JSON
+                  if (field === 'services') {
+                    try {
+                      const parsedServices = JSON.parse(value);
+                      return { ...prev, services: parsedServices };
+                    } catch {
+                      return prev;
+                    }
+                  }
+                  return { ...prev, [field]: value };
+                });
               }}
               onHeroImageChange={(url) => setHeroImage(url)}
               heroImage={heroImage}
@@ -3999,10 +4011,31 @@ function WebsitePreview({
                       </span>
                       
                       <h3 className="text-lg md:text-xl font-bold mb-3" style={{ color: colors.primary }}>
-                        {service.title}
+                        <EditableText
+                          value={service.title}
+                          onChange={(val) => {
+                            if (onContentChange) {
+                              const newServices = [...content.services];
+                              newServices[index] = { ...newServices[index], title: val };
+                              onContentChange('services', JSON.stringify(newServices));
+                            }
+                          }}
+                          editMode={editMode}
+                        />
                       </h3>
                       <p className="text-sm md:text-base leading-relaxed" style={{ color: colors.secondary }}>
-                        {service.description}
+                        <EditableText
+                          value={service.description}
+                          onChange={(val) => {
+                            if (onContentChange) {
+                              const newServices = [...content.services];
+                              newServices[index] = { ...newServices[index], description: val };
+                              onContentChange('services', JSON.stringify(newServices));
+                            }
+                          }}
+                          editMode={editMode}
+                          multiline
+                        />
                       </p>
                     </div>
                   </div>
