@@ -756,3 +756,117 @@ export async function sendWelcomeWithAutoLoginButton(
   }
 }
 
+/**
+ * ============================================
+ * PLANTILLAS QUANTUM WEB - CITAS Y PRODUCTOS
+ * ============================================
+ */
+
+/**
+ * Plantilla: Confirmación de Cita (Quantum Web)
+ * Nombre en Meta: confirmacion_cita
+ * Variables: {{1}}=negocio, {{2}}=servicio, {{3}}=duracion, {{4}}=precio, {{5}}=fecha, {{6}}=hora
+ * 
+ * Contenido de la plantilla en Meta:
+ * --------------------------------
+ * 📅 *NUEVA SOLICITUD DE CITA*
+ * 
+ * 🏢 *{{1}}*
+ * 
+ * ━━━━━━━━━━━━━━━━━━
+ * 📋 *Servicio:* {{2}}
+ * ⏱️ *Duración:* {{3}} min
+ * 💰 *Precio:* {{4}}
+ * ━━━━━━━━━━━━━━━━━━
+ * 
+ * 📆 *Fecha:* {{5}}
+ * 🕐 *Hora:* {{6}}
+ * 
+ * ━━━━━━━━━━━━━━━━━━
+ * _Responde para confirmar_
+ */
+export async function sendAppointmentConfirmation(
+  phoneNumber: string,
+  businessName: string,
+  serviceName: string,
+  duration: string,
+  price: string,
+  date: string,
+  time: string
+): Promise<SendMessageResult> {
+  return sendWhatsAppMessage(
+    phoneNumber,
+    'confirmacion_cita',
+    [businessName, serviceName, duration, price, date, time]
+  );
+}
+
+/**
+ * Plantilla: Interés en Producto (Quantum Web)
+ * Nombre en Meta: interes_producto
+ * Variables: {{1}}=negocio, {{2}}=producto, {{3}}=precio, {{4}}=cliente_telefono
+ * 
+ * Contenido de la plantilla en Meta:
+ * --------------------------------
+ * 🛍️ *NUEVO INTERÉS EN PRODUCTO*
+ * 
+ * 🏢 *{{1}}*
+ * 
+ * ━━━━━━━━━━━━━━━━━━
+ * 📦 *Producto:* {{2}}
+ * 💰 *Precio:* {{3}}
+ * ━━━━━━━━━━━━━━━━━━
+ * 
+ * 📱 *Cliente:* {{4}}
+ * 
+ * _El cliente está interesado. Contáctalo pronto._
+ */
+export async function sendProductInterest(
+  phoneNumber: string,
+  businessName: string,
+  productName: string,
+  price: string,
+  customerPhone: string
+): Promise<SendMessageResult> {
+  return sendWhatsAppMessage(
+    phoneNumber,
+    'interes_producto',
+    [businessName, productName, price, customerPhone]
+  );
+}
+
+/**
+ * Plantilla: Recordatorio de Cita (Quantum Web)
+ * Nombre en Meta: recordatorio_cita
+ * Variables: {{1}}=cliente, {{2}}=negocio, {{3}}=servicio, {{4}}=fecha, {{5}}=hora
+ * 
+ * Contenido de la plantilla en Meta:
+ * --------------------------------
+ * ⏰ *RECORDATORIO DE CITA*
+ * 
+ * Hola {{1}},
+ * 
+ * Te recordamos tu cita en *{{2}}*:
+ * 
+ * ━━━━━━━━━━━━━━━━━━
+ * 📋 *Servicio:* {{3}}
+ * 📆 *Fecha:* {{4}}
+ * 🕐 *Hora:* {{5}}
+ * ━━━━━━━━━━━━━━━━━━
+ * 
+ * ¡Te esperamos! Si necesitas reagendar, responde a este mensaje.
+ */
+export async function sendAppointmentReminder(
+  phoneNumber: string,
+  customerName: string,
+  businessName: string,
+  serviceName: string,
+  date: string,
+  time: string
+): Promise<SendMessageResult> {
+  return sendWhatsAppMessage(
+    phoneNumber,
+    'recordatorio_cita',
+    [customerName, businessName, serviceName, date, time]
+  );
+}

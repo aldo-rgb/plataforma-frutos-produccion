@@ -45,12 +45,23 @@ export async function GET() {
               id: true,
               nombre: true,
               startDate: true,
+              endDate: true,
+              advancedStartDate: true,
+              advancedEndDate: true,
+              plWeekend1StartDate: true,
+              plWeekend3EndDate: true,
               organizationId: true,
               isActive: true,
             },
           },
         },
       });
+
+      // Fecha actual para filtrar visiones ya finalizadas
+      const now = new Date();
+      const gracePeriodDays = 7; // Días de gracia después de que termina el entrenamiento
+      const cutoffDate = new Date(now);
+      cutoffDate.setDate(cutoffDate.getDate() - gracePeriodDays);
 
       // Agrupar por visión y recopilar los niveles asignados
       const visionMap = new Map<number, {
@@ -59,30 +70,65 @@ export async function GET() {
         startDate: Date | null;
         organizationId: number | null;
         assignedLevels: string[];
+        isCurrentlyActive: boolean;
       }>();
 
       gcAssignments
         .filter(a => a.Vision?.isActive)
         .forEach(a => {
           const visionId = a.Vision!.id;
+          const level = a.level || 'BASIC';
+          const vision = a.Vision!;
+          
+          // Determinar si este nivel del entrenamiento está activo o próximo
+          let levelEndDate: Date | null = null;
+          if (level === 'PL' && vision.plWeekend3EndDate) {
+            levelEndDate = new Date(vision.plWeekend3EndDate);
+          } else if (level === 'ADVANCED' && vision.advancedEndDate) {
+            levelEndDate = new Date(vision.advancedEndDate);
+          } else if (vision.endDate) {
+            levelEndDate = new Date(vision.endDate);
+          }
+          
+          // Solo incluir si el nivel no ha terminado (o está dentro del período de gracia)
+          const isLevelActive = !levelEndDate || levelEndDate >= cutoffDate;
+          
           if (!visionMap.has(visionId)) {
             visionMap.set(visionId, {
-              id: a.Vision!.id,
-              nombre: a.Vision!.nombre,
-              startDate: a.Vision!.startDate,
-              organizationId: a.Vision!.organizationId,
+              id: vision.id,
+              nombre: vision.nombre,
+              startDate: vision.startDate,
+              organizationId: vision.organizationId,
               assignedLevels: [],
+              isCurrentlyActive: false,
             });
           }
-          // Añadir el nivel asignado
-          const level = a.level || 'BASIC';
+          
           const visionData = visionMap.get(visionId)!;
-          if (!visionData.assignedLevels.includes(level)) {
+          
+          // Solo añadir niveles que están activos
+          if (isLevelActive && !visionData.assignedLevels.includes(level)) {
             visionData.assignedLevels.push(level);
+            visionData.isCurrentlyActive = true;
           }
         });
 
-      const visions = Array.from(visionMap.values());
+      // Filtrar visiones que tienen al menos un nivel activo y ordenar por fecha
+      const visions = Array.from(visionMap.values())
+        .filter(v => v.assignedLevels.length > 0)
+        .sort((a, b) => {
+          // Ordenar por fecha de inicio más reciente primero
+          const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
+          const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
+          return dateB - dateA;
+        });
+
+      logger.debug('🔍 vision/available: Filtered visions for GC', {
+        userId: user.id,
+        totalAssignments: gcAssignments.length,
+        visionsWithActiveLevels: visions.length,
+        visions: visions.map(v => ({ id: v.id, nombre: v.nombre, levels: v.assignedLevels })),
+      });
 
       if (visions.length === 0) {
         // Fallback: buscar por organizationId (sin niveles específicos)
@@ -90,6 +136,11 @@ export async function GET() {
           where: {
             isActive: true,
             organizationId: user.organizationId || undefined,
+            // Solo visiones que no han terminado
+            OR: [
+              { endDate: null },
+              { endDate: { gte: cutoffDate } },
+            ],
           },
           select: {
             id: true,

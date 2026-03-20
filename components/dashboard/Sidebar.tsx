@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, Drama, Theater,
   CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket, Plane, Archive, Printer, Phone, Wallet, ChevronDown,
-  Bird
+  Bird, Bug
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -1207,6 +1207,20 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             >
               <DollarSign size={18} className="text-slate-400" />
               <span>Comisiones Mentores</span>
+            </Link>
+
+            {/* Reportes de Errores (Bug Reports) */}
+            <Link 
+              href="/dashboard/admin/bug-reports" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/admin/bug-reports'
+                  ? 'bg-slate-700 text-white font-medium'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Bug size={18} className="text-amber-400" />
+              <span>Reportes de Errores</span>
+              <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-400 rounded-full">BETA</span>
             </Link>
 
             {/* Finanzas */}

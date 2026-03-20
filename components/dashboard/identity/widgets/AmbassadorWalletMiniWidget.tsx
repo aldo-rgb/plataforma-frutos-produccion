@@ -12,6 +12,7 @@ interface WalletData {
     balance: number;
     isGraduated: boolean;
     organizationSlug: string | null;
+    commissionsEnabled: boolean;
   };
   stats: {
     available: number;
@@ -96,7 +97,7 @@ ${link}`
     );
   }
 
-  if (!data || !data.user.isGraduated) {
+  if (!data || !data.user.isGraduated || !data.user.commissionsEnabled) {
     return null;
   }
 

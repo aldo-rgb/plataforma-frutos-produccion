@@ -3268,6 +3268,32 @@ model QuantumProduct {
   @@index([websiteId])
 }
 
+// Citas agendadas desde Quantum Web
+model QuantumAppointment {
+  id               Int       @id @default(autoincrement())
+  websiteId        Int?
+  businessName     String    @db.VarChar(200)
+  businessPhone    String    @db.VarChar(30)
+  serviceName      String    @db.VarChar(200)
+  servicePrice     Decimal   @db.Decimal(10, 2)
+  serviceDuration  Int       @default(60)
+  appointmentDate  DateTime
+  appointmentTime  String    @db.VarChar(10)
+  customerName     String?   @db.VarChar(200)
+  customerPhone    String    @db.VarChar(30)
+  status           String    @default("pending") @db.VarChar(20) // pending, confirmed, cancelled, completed
+  reminderSent     Boolean   @default(false)
+  confirmationSent Boolean   @default(false)
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([appointmentDate])
+  @@index([status])
+  @@index([reminderSent])
+  @@index([businessPhone])
+}
+
 model QuantumWebsite {
   id                  Int               @id @default(autoincrement())
   userId              Int               @unique
@@ -5163,6 +5189,8 @@ model Usuario {
   weekly_payout_summary_weekly_payout_summary_approvedByToUsuario           weekly_payout_summary[]          @relation("weekly_payout_summary_approvedByToUsuario")
   weekly_payout_summary_weekly_payout_summary_generatedByToUsuario          weekly_payout_summary[]          @relation("weekly_payout_summary_generatedByToUsuario")
   RegistrationInvoiceRequest                                                RegistrationInvoiceRequest[]
+  BugReport                                                                 BugReport[]
+  BugReportResolved                                                         BugReport[]                      @relation("BugReportResolver")
 
   @@index([communityOrganizationId])
 }
@@ -6778,4 +6806,35 @@ model RegistrationInvoiceRequest {
   @@index([userId])
   @@index([organizationId])
   @@index([invoiceStatus])
+}
+
+// Sistema de reportes de bugs BETA
+model BugReport {
+  id             Int       @id @default(autoincrement())
+  userId         Int
+  description    String
+  screenshotUrl  String?
+  pageUrl        String?
+  userAgent      String?
+  status         BugReportStatus @default(PENDING)
+  adminNotes     String?
+  resolvedAt     DateTime?
+  resolvedBy     Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  Usuario        Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ResolvedByUser Usuario?  @relation("BugReportResolver", fields: [resolvedBy], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum BugReportStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  WONT_FIX
 }

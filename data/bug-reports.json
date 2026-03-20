@@ -1,0 +1,30 @@
+[
+  {
+    "id": "bug-1774021919372-fegl4e4lq",
+    "description": "prueba de reporte",
+    "screenshotUrl": "https://fteqhmntkmmppxufjrwt.supabase.co/storage/v1/object/public/mentor-assets/bug-reports/1774021917116-t0whn8m48m8.png",
+    "userName": "Prueba 2 Ñru",
+    "userEmail": "prueba2@zero.com",
+    "userId": "1257",
+    "pageUrl": "http://localhost:3000/dashboard/mi-negocio",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+    "status": "pending",
+    "createdAt": "2026-03-20T15:51:59.280Z",
+    "resolvedAt": null,
+    "notes": null
+  },
+  {
+    "id": "bug-1774027870617-upxgvqklj",
+    "description": "prueba de error",
+    "screenshotUrl": "https://fteqhmntkmmppxufjrwt.supabase.co/storage/v1/object/public/mentor-assets/bug-reports/1774027868699-qn4a6z6381m.png",
+    "userName": "Prueba 2 Ñru",
+    "userEmail": "prueba2@zero.com",
+    "userId": "1257",
+    "pageUrl": "http://localhost:3000/dashboard/quantum-web",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+    "status": "pending",
+    "createdAt": "2026-03-20T17:31:10.328Z",
+    "resolvedAt": null,
+    "notes": null
+  }
+]

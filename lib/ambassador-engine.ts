@@ -296,7 +296,8 @@ export async function getAmbassadorWalletSummary(ambassadorId: number) {
         organizationId: true,
         Organization_Usuario_organizationIdToOrganization: {
           select: {
-            slug: true
+            slug: true,
+            referralCommissionsEnabled: true
           }
         }
       }
@@ -358,7 +359,8 @@ export async function getAmbassadorWalletSummary(ambassadorId: number) {
       balance: Number(user.ambassadorBalance),
       isGraduated: user.isGraduated,
       hasBankInfo: !!(user.bankClabe && user.bankAccountHolder),
-      organizationSlug: user.Organization_Usuario_organizationIdToOrganization?.slug || null
+      organizationSlug: user.Organization_Usuario_organizationIdToOrganization?.slug || null,
+      commissionsEnabled: user.Organization_Usuario_organizationIdToOrganization?.referralCommissionsEnabled ?? true
     },
     stats: statsMap,
     transactions: transactions.map(t => ({

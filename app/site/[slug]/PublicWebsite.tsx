@@ -927,25 +927,41 @@ export default function PublicWebsite({ website }: { website: WebsiteData }) {
                   )}
                 </div>
                 
-                {website.whatsapp && selectedProduct.inStock ? (
-                  <motion.a
+                {selectedProduct.inStock ? (
+                  <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    href={`https://wa.me/${website.whatsapp.replace(/\D/g, '')}?text=Hola, me interesa el producto: *${selectedProduct.name}* ($${selectedProduct.price.toLocaleString()})`}
-                    onClick={handleWhatsAppClick}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={async () => {
+                      // Enviar notificación al vendedor
+                      try {
+                        await fetch('/api/quantum-web/send-product-interest', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            websiteId: website.id,
+                            productName: selectedProduct.name,
+                            productPrice: selectedProduct.price,
+                            businessWhatsapp: website.whatsapp
+                          })
+                        });
+                      } catch (e) {
+                        console.error('Error sending notification:', e);
+                      }
+                      handleWhatsAppClick();
+                      alert('¡Gracias por tu interés! Serás contactado por WhatsApp pronto.');
+                      setSelectedProduct(null);
+                    }}
                     className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition"
-                    style={{ backgroundColor: '#25D366', color: '#fff' }}
+                    style={{ backgroundColor: '#22c55e', color: '#fff' }}
                   >
-                    <MessageSquare className="w-5 h-5" />
-                    Comprar por WhatsApp
-                  </motion.a>
-                ) : !selectedProduct.inStock ? (
+                    <Package className="w-5 h-5" />
+                    Comprar
+                  </motion.button>
+                ) : (
                   <div className="w-full py-4 rounded-2xl font-bold text-lg text-center bg-gray-200 text-gray-500">
                     Producto Agotado
                   </div>
-                ) : null}
+                )}
               </div>
             </motion.div>
           </motion.div>

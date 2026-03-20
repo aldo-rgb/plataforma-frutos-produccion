@@ -1,11 +1,10 @@
 'use client';
 
-import { Zap, Globe, Menu } from 'lucide-react';
-import { PhoenixButton } from '../phoenix/PhoenixButton';
-import LanguageSwitcher from '../ui/LanguageSwitcher';
+import { Zap, Globe, Menu, Bug } from 'lucide-react';
 import { RoleSwitcher } from './RoleSwitcher';
 import { useState } from 'react';
 import Image from 'next/image';
+import BugReportModal from './BugReportModal';
 
 interface TopbarProps {
   usuario: {
@@ -35,7 +34,10 @@ interface TopbarProps {
 }
 
 export function Topbar({ usuario, onMenuClick }: TopbarProps) {
+  const [showBugReportModal, setShowBugReportModal] = useState(false);
+  
   return (
+    <>
     <header className="sticky top-0 z-[9999] h-16 border-b border-slate-800 flex items-center justify-between px-4 md:px-8 bg-slate-900/95 backdrop-blur-sm">
       {/* Botón de menú móvil (solo visible cuando el sidebar está oculto) */}
       {onMenuClick && (
@@ -48,19 +50,29 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
         </button>
       )}
 
+      {/* Badge BETA */}
+      <div className="hidden md:flex items-center gap-2 ml-2">
+        <span className="px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full uppercase tracking-wider animate-pulse">
+          BETA
+        </span>
+        <span className="text-xs text-slate-500 hidden lg:inline">v1.0.0</span>
+      </div>
+
       <div className="flex-1 lg:flex-initial" />
       
       <div className="flex items-center gap-2 sm:gap-3 md:gap-6">
+        {/* Botón Reportar Error */}
+        <button
+          onClick={() => setShowBugReportModal(true)}
+          className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 hover:border-amber-500/50 transition-all duration-200 group"
+          title="Reportar un error"
+        >
+          <Bug size={14} className="text-amber-400 group-hover:animate-wiggle" />
+          <span className="hidden sm:inline">Reportar Error</span>
+        </button>
+        
         {/* Role Switcher - Para usuarios con múltiples roles */}
         <RoleSwitcher usuario={usuario} />
-        
-        {/* Language Switcher - oculto en móviles */}
-        <div className="hidden sm:block">
-          <LanguageSwitcher />
-        </div>
-        
-        {/* Phoenix SOS Button */}
-        <PhoenixButton />
         
         {/* Zona Horaria - solo en pantallas grandes */}
         <div className="hidden lg:block text-right">
@@ -100,5 +112,15 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
         </div>
       </div>
     </header>
+    
+    {/* Modal de Reporte de Error */}
+    <BugReportModal 
+      isOpen={showBugReportModal}
+      onClose={() => setShowBugReportModal(false)}
+      userName={usuario.nombre}
+      userEmail={usuario.email}
+      userId={usuario.id.toString()}
+    />
+    </>
   );
 }

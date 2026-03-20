@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
@@ -16,11 +16,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#050B14",
+};
+
 export const metadata: Metadata = {
   title: "Quantum Platform - Transforma tu Vida",
   description: "Plataforma de transformación cuántica con mentoría y seguimiento",
   manifest: "/manifest.json",
-  themeColor: "#050B14",
   verification: {
     other: {
       "facebook-domain-verification": "9t2zu84xjteixtik41d6v3plb7rbmo",
@@ -30,12 +37,6 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Quantum",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
   },
   icons: {
     icon: [

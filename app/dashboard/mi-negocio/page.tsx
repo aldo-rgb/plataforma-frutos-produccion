@@ -46,7 +46,8 @@ import {
   ThumbsUp,
   TrendingUp,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Edit3
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
@@ -389,7 +390,7 @@ Espero verte ahí!`;
               onClick={copyLink}
               className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-1 ${
                 copied 
-                  ? 'bg-emerald-600 text-white' 
+                  ? 'bg-blue-600 text-white' 
                   : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
               }`}
             >
@@ -401,7 +402,7 @@ Espero verte ahí!`;
           <div className="flex flex-wrap gap-2">
             <button
               onClick={shareLink}
-              className="flex-1 py-2 px-4 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium text-sm hover:shadow-lg hover:shadow-green-500/25 transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-2 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium text-sm hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
@@ -410,7 +411,7 @@ Espero verte ahí!`;
             </button>
             <button
               onClick={printQR}
-              className="py-2 px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm flex items-center gap-2 transition-colors font-medium"
+              className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-cyan-500 text-white text-sm flex items-center gap-2 transition-colors font-medium"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -525,7 +526,7 @@ function ExpoReviewsSection({ userId }: { userId?: number }) {
   }
 
   const hiringIntentLabels = {
-    YES: { label: '¡Sí, contrataría!', color: 'text-emerald-400', bg: 'bg-emerald-500/20', icon: '🔥' },
+    YES: { label: '¡Sí, contrataría!', color: 'text-cyan-400', bg: 'bg-cyan-500/20', icon: '🔥' },
     MAYBE: { label: 'Tal vez', color: 'text-yellow-400', bg: 'bg-yellow-500/20', icon: '🤔' },
     NO: { label: 'No por ahora', color: 'text-slate-400', bg: 'bg-slate-500/20', icon: '❄️' }
   };
@@ -558,9 +559,9 @@ function ExpoReviewsSection({ userId }: { userId?: number }) {
           </div>
           <div className="text-xs text-slate-400">Promedio</div>
         </div>
-        <div className="bg-emerald-500/20 rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold text-emerald-400">{stats.hotLeadsCount} 🔥</div>
-          <div className="text-xs text-emerald-300">Hot Leads</div>
+        <div className="bg-cyan-500/20 rounded-xl p-3 text-center">
+          <div className="text-2xl font-bold text-cyan-400">{stats.hotLeadsCount} 🔥</div>
+          <div className="text-xs text-cyan-300">Hot Leads</div>
         </div>
         <div className="bg-yellow-500/20 rounded-xl p-3 text-center">
           <div className="text-2xl font-bold text-yellow-400">{stats.warmLeadsCount} 🤔</div>
@@ -598,7 +599,7 @@ function ExpoReviewsSection({ userId }: { userId?: number }) {
             {(stats.hotLeadsCount > 0 || stats.warmLeadsCount > 0) && (
               <button
                 onClick={() => setShowLeads(!showLeads)}
-                className="w-full mb-3 py-2 px-4 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 text-white font-medium text-sm hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                className="w-full mb-3 py-2 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium text-sm hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
                 <ThumbsUp className="w-4 h-4" />
                 {showLeads ? 'Ocultar contactos interesados' : `Ver ${stats.hotLeadsCount + stats.warmLeadsCount} contactos interesados`}
@@ -619,7 +620,7 @@ function ExpoReviewsSection({ userId }: { userId?: number }) {
                             {review.visitorName}
                             <span className={`text-xs px-2 py-0.5 rounded-full ${
                               review.hiringIntent === 'YES' 
-                                ? 'bg-emerald-500/20 text-emerald-400' 
+                                ? 'bg-cyan-500/20 text-cyan-400' 
                                 : 'bg-yellow-500/20 text-yellow-400'
                             }`}>
                               {review.hiringIntent === 'YES' ? '🔥 Hot Lead' : '🤔 Interesado'}
@@ -670,7 +671,7 @@ function ExpoReviewsSection({ userId }: { userId?: number }) {
                         {review.visitorName}
                         {(review.hiringIntent === 'YES' || review.hiringIntent === 'MAYBE') && (
                           <span className={`text-xs px-1.5 py-0.5 rounded ${
-                            review.hiringIntent === 'YES' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'
+                            review.hiringIntent === 'YES' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-yellow-500/20 text-yellow-400'
                           }`}>
                             {review.hiringIntent === 'YES' ? '🔥' : '🤔'}
                           </span>
@@ -730,6 +731,9 @@ export default function QuantumBusinessBuilderPage() {
   
   // Verificación de acceso PL
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  
+  // Colores de la organización
+  const [orgBrandColor, setOrgBrandColor] = useState<string>('#0EA5E9'); // Default emerald
   
   // Estado del wizard
   const [step, setStep] = useState<WizardStep>('selector');
@@ -944,7 +948,7 @@ export default function QuantumBusinessBuilderPage() {
     }
   }, [existingWebsite, existingProfile, step]);
 
-  // Verificar acceso (Avanzado completado o PL)
+  // Verificar acceso (Avanzado completado o PL) y cargar colores de la organización
   useEffect(() => {
     const checkLideratoAccess = async () => {
       try {
@@ -952,6 +956,26 @@ export default function QuantumBusinessBuilderPage() {
         if (response.ok) {
           const data = await response.json();
           setHasAccess(data.hasAccess === true);
+          
+          // Cargar colores de la organización
+          if (data.organizationId) {
+            try {
+              const orgRes = await fetch(`/api/public/organization/${data.organizationId}`);
+              if (orgRes.ok) {
+                const orgData = await orgRes.json();
+                // Buscar la organización en childOrganizations
+                if (orgData.childOrganizations && orgData.childOrganizations.length > 0) {
+                  const currentOrg = orgData.childOrganizations.find((org: any) => org.id === data.organizationId) 
+                    || orgData.childOrganizations[0];
+                  if (currentOrg?.brandColor) {
+                    setOrgBrandColor(currentOrg.brandColor);
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('Error loading org colors:', err);
+            }
+          }
         } else {
           setHasAccess(false);
         }
@@ -1587,7 +1611,7 @@ export default function QuantumBusinessBuilderPage() {
           }}
           className="w-24 h-24 mx-auto mb-8"
         >
-          <div className="w-full h-full rounded-full bg-gradient-to-r from-purple-500 via-orange-500 to-yellow-500 p-1">
+          <div className="w-full h-full rounded-full bg-gradient-to-r from-blue-500 via-blue-500 to-yellow-500 p-1">
             <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
               <Sparkles className="w-12 h-12 text-yellow-400" />
             </div>
@@ -1599,7 +1623,7 @@ export default function QuantumBusinessBuilderPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="text-xl text-purple-300 font-medium"
+          className="text-xl text-cyan-300 font-medium"
         >
           {loadingPhrase}
         </motion.p>
@@ -1617,7 +1641,7 @@ export default function QuantumBusinessBuilderPage() {
                 repeat: Infinity,
                 delay: i * 0.2
               }}
-              className="w-2 h-2 rounded-full bg-purple-500"
+              className="w-2 h-2 rounded-full bg-cyan-500"
             />
           ))}
         </div>
@@ -1634,8 +1658,8 @@ export default function QuantumBusinessBuilderPage() {
       animate={{ opacity: 1 }}
       className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center p-6"
     >
-      {/* Fondo con efecto matrix/grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1a1a2e_1px,transparent_1px),linear-gradient(to_bottom,#1a1a2e_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20" />
+      {/* Fondo con efecto grid sutil */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1a1a2e_1px,transparent_1px),linear-gradient(to_bottom,#1a1a2e_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-10" />
       
       <motion.div
         initial={{ y: -30, opacity: 0 }}
@@ -1644,14 +1668,12 @@ export default function QuantumBusinessBuilderPage() {
         className="text-center mb-12 relative z-10"
       >
         <div className="flex items-center justify-center gap-3 mb-4">
-          <Zap className="w-10 h-10 text-yellow-400" />
-          <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-purple-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">
-            Crea tu Negocio
+          <h1 className="text-4xl md:text-5xl font-black text-white">
+            Mi Futuro Imposible
           </h1>
-          <Zap className="w-10 h-10 text-yellow-400" />
         </div>
         <p className="text-slate-400 text-lg">
-          Laboratorio de Materialización de Negocios
+          Laboratorio de Posibilidades de Negocios
         </p>
       </motion.div>
 
@@ -1671,15 +1693,21 @@ export default function QuantumBusinessBuilderPage() {
           <ExpoReviewsSection userId={existingProfile.userId} />
           
           {/* Botón Ver Mi Sitio Web */}
-          <div className="bg-gradient-to-r from-blue-900/40 to-cyan-900/40 border border-blue-500/30 rounded-2xl p-5">
+          <div 
+            className="rounded-2xl p-5 border border-slate-600/30"
+            style={{ backgroundColor: `${orgBrandColor}15` }}
+          >
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: orgBrandColor }}
+                >
                   <Globe className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">Mi Sitio Web</h3>
-                  <p className="text-blue-300/80 text-sm">
+                  <p className="text-slate-400 text-sm">
                     {hasExistingWebsite ? 'Tu página está publicada' : 'Crea tu página web profesional'}
                   </p>
                 </div>
@@ -1689,7 +1717,8 @@ export default function QuantumBusinessBuilderPage() {
                   <>
                     <button
                       onClick={() => window.open(`/site/${existingWebsite.site.slug}`, '_blank')}
-                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium hover:opacity-90 transition flex items-center gap-2"
+                      className="px-5 py-2.5 rounded-xl text-white font-medium hover:opacity-90 transition flex items-center gap-2"
+                      style={{ backgroundColor: orgBrandColor }}
                     >
                       <Eye className="w-4 h-4" />
                       Ver mi Sitio Web
@@ -1699,20 +1728,18 @@ export default function QuantumBusinessBuilderPage() {
                         const siteUrl = `${window.location.origin}/site/${existingWebsite.site.slug}`;
                         try {
                           await navigator.clipboard.writeText(siteUrl);
-                          // Mostrar notificación de copiado
                           const toast = document.createElement('div');
-                          toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse';
-                          toast.textContent = '¡URL copiada al portapapeles!';
+                          toast.className = 'fixed bottom-4 right-4 bg-slate-700 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                          toast.textContent = '¡URL copiada!';
                           document.body.appendChild(toast);
                           setTimeout(() => toast.remove(), 2000);
                         } catch (err) {
                           console.error('Error al copiar:', err);
                         }
                       }}
-                      className="px-4 py-2.5 rounded-xl bg-green-600/80 text-white hover:bg-green-600 transition flex items-center gap-2"
+                      className="px-4 py-2.5 rounded-xl bg-slate-700 text-white hover:bg-slate-600 transition flex items-center gap-2"
                     >
                       <Share2 className="w-4 h-4" />
-                      Compartir
                     </button>
                     <button
                       onClick={() => {
@@ -1733,16 +1760,16 @@ export default function QuantumBusinessBuilderPage() {
                         localStorage.setItem('quantum_web_prefill', JSON.stringify(prefillData));
                         router.push('/dashboard/quantum-web');
                       }}
-                      className="px-4 py-2.5 rounded-xl bg-white/10 text-white hover:bg-white/20 transition flex items-center gap-2"
+                      className="px-4 py-2.5 rounded-xl bg-slate-700 text-white hover:bg-slate-600 transition flex items-center gap-2"
                     >
-                      <Sparkles className="w-4 h-4" />
-                      Editar
+                      <Edit3 className="w-4 h-4" />
                     </button>
                   </>
                 ) : (
                   <button
                     onClick={() => router.push('/dashboard/quantum-web')}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium hover:opacity-90 transition flex items-center gap-2"
+                    className="px-5 py-2.5 rounded-xl text-white font-medium hover:opacity-90 transition flex items-center gap-2"
+                    style={{ backgroundColor: orgBrandColor }}
                   >
                     <Rocket className="w-4 h-4" />
                     Crear mi Sitio Web
@@ -1754,110 +1781,228 @@ export default function QuantumBusinessBuilderPage() {
         </motion.div>
       )}
 
-      <motion.h2
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="text-2xl md:text-3xl font-bold text-white mb-10 text-center relative z-10"
-      >
-        {hasExistingProfile ? '¿QUIERES MEJORAR TU PERFIL?' : '¿DESDE DÓNDE VAS A CREAR HOY?'}
-      </motion.h2>
-
-      <div className={`grid gap-6 max-w-4xl w-full relative z-10 ${hasExistingProfile ? 'md:grid-cols-1 max-w-xl' : 'md:grid-cols-2'}`}>
-        {/* Opción A: Ya tengo negocio */}
-        <motion.button
-          initial={{ x: -50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          whileHover={{ scale: 1.03, y: -5 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setStep('optimizador')}
-          className="group relative overflow-hidden rounded-2xl p-8 bg-gradient-to-br from-emerald-900/50 to-teal-900/50 border border-emerald-500/30 hover:border-emerald-400/60 transition-all"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          
-          <Building2 className="w-16 h-16 text-emerald-400 mx-auto mb-4" />
-          
-          <h3 className="text-2xl font-bold text-white mb-3">
-            {hasExistingProfile ? 'OPTIMIZAR MI NEGOCIO' : 'TENGO UN NEGOCIO'}
-          </h3>
-          
-          <p className="text-emerald-300/80 text-sm">
-            {hasExistingProfile 
-              ? 'Mejora tu perfil existente y atrae más clientes con la Tribu.'
-              : 'Ya tengo mi negocio operando y quiero escalarlo con la Tribu.'
-            }
-          </p>
-          
-          <div className="mt-6 flex items-center justify-center gap-2 text-emerald-400">
-            <span className="text-sm font-medium">Optimizar Perfil</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </div>
-        </motion.button>
-
-        {/* Opción B: Quiero crear desde cero - Solo si NO tiene perfil */}
-        {!hasExistingProfile && (
-          <motion.button
-            initial={{ x: 50, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            whileHover={{ scale: 1.03, y: -5 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setStep('adn-talento')}
-            className="group relative overflow-hidden rounded-2xl p-8 bg-gradient-to-br from-purple-900/50 to-orange-900/50 border border-purple-500/30 hover:border-orange-400/60 transition-all"
+      {/* Si tiene perfil existente, mostrar la tarjeta del negocio */}
+      {hasExistingProfile && existingProfile ? (
+        <>
+          <motion.h2
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-2xl md:text-3xl font-bold text-white mb-6 text-center relative z-10"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-            
-            {/* Efecto de brillo animado */}
-            <motion.div
-              animate={{ 
-                x: ['-100%', '200%'],
-              }}
-              transition={{ 
-                duration: 3,
-                repeat: Infinity,
-                ease: "linear"
-              }}
-              className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12"
-            />
-            
-            <Lightbulb className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-            
-            <h3 className="text-2xl font-bold text-white mb-3">
-              QUIERO UNA IDEA MILLONARIA
-            </h3>
-            
-            <p className="text-purple-300/80 text-sm">
-              Tengo el talento pero me falta la forma. Ayúdame a crearlo desde cero con IA.
-            </p>
-            
-            <div className="mt-6 flex items-center justify-center gap-2 text-orange-400">
-              <Sparkles className="w-5 h-5" />
-              <span className="text-sm font-medium">Generar con IA</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </motion.button>
-        )}
-      </div>
+            TU NEGOCIO
+          </motion.h2>
 
-      {/* Indicador de perfil existente */}
-      {hasExistingProfile && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          className="mt-8 text-center relative z-10"
-        >
-          <p className="text-slate-400 text-sm">
-            ✨ Ya tienes un perfil creado.{' '}
-            <button 
-              onClick={() => router.push('/dashboard/mi-negocio')}
-              className="text-purple-400 hover:text-purple-300 underline"
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="w-full max-w-md relative z-10"
+          >
+            {/* Tarjeta del Negocio */}
+            <div className="bg-slate-800/80 rounded-2xl p-6 border border-slate-600/30 shadow-xl">
+              {/* Header con logo/inicial y nombre */}
+              <div className="flex items-center gap-4 mb-4">
+                <div 
+                  className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
+                  style={{ backgroundColor: orgBrandColor }}
+                >
+                  {existingProfile.logoUrl ? (
+                    <img src={existingProfile.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                  ) : existingProfile.galleryImages?.[0] ? (
+                    <img src={existingProfile.galleryImages[0]} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-bold text-white">
+                      {(existingProfile.headline || 'N')[0]}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold text-white">
+                    {existingProfile.headline || 'Tu Negocio'}
+                  </h4>
+                  <div className="flex items-center gap-1 text-yellow-400">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Star key={i} className="w-4 h-4 fill-current" />
+                    ))}
+                    <span className="text-slate-400 text-sm ml-2">5.0</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Categoría */}
+              {existingProfile.category && (
+                <div className="mb-3">
+                  <span 
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs text-white"
+                    style={{ backgroundColor: `${orgBrandColor}40` }}
+                  >
+                    ✨{existingProfile.category.name || 'Otro'}
+                  </span>
+                </div>
+              )}
+
+              {/* Descripción */}
+              <p className="text-slate-300 text-sm mb-4 line-clamp-3">
+                {existingProfile.description || 'Sin descripción...'}
+              </p>
+
+              {/* Contacto */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {existingProfile.whatsappPhone && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-700/50 text-slate-300 text-xs">
+                    <Phone className="w-3 h-3" />
+                    {existingProfile.whatsappPhone}
+                  </span>
+                )}
+                {existingProfile.whatsappPhone && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 text-green-400 text-xs">
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/>
+                    </svg>
+                    WhatsApp
+                  </span>
+                )}
+                {existingProfile.website && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/20 text-blue-400 text-xs">
+                    <Globe className="w-3 h-3" />
+                    Web
+                  </span>
+                )}
+              </div>
+
+              {/* Ubicación */}
+              {(existingProfile.coverageZone || existingProfile.city) && (
+                <div className="flex items-start gap-2 mb-4 p-2 rounded-lg bg-slate-700/30">
+                  <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-xs text-slate-400 line-clamp-2">
+                    {existingProfile.coverageZone || [existingProfile.city, existingProfile.state].filter(Boolean).join(', ')}
+                  </span>
+                </div>
+              )}
+
+              {/* Oferta */}
+              {existingProfile.discountOffer && (
+                <div 
+                  className="rounded-lg p-3 mb-4 border"
+                  style={{ 
+                    backgroundColor: `${orgBrandColor}15`,
+                    borderColor: `${orgBrandColor}40`
+                  }}
+                >
+                  <div className="flex items-center gap-2" style={{ color: orgBrandColor }}>
+                    <Gift className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {existingProfile.discountOffer}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Indicador de visibilidad */}
+              <div className="p-3 rounded-lg text-center text-sm bg-slate-700/30 border border-slate-600/30 text-slate-400 mb-4">
+                🔒 Solo para Expo de Futuros Imposibles
+              </div>
+
+              {/* Botón de Editar */}
+              <button
+                onClick={() => setStep('optimizador')}
+                className="w-full py-3 rounded-xl text-white font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                style={{ backgroundColor: orgBrandColor }}
+              >
+                <Edit3 className="w-5 h-5" />
+                Editar Mi Perfil
+              </button>
+            </div>
+          </motion.div>
+        </>
+      ) : (
+        <>
+          {/* Vista original para cuando NO tiene perfil */}
+          <motion.h2
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-2xl md:text-3xl font-bold text-white mb-10 text-center relative z-10"
+          >
+            ¿DESDE DÓNDE VAS A CREAR HOY?
+          </motion.h2>
+
+          <div className="grid gap-6 max-w-4xl w-full relative z-10 md:grid-cols-2">
+            {/* Opción A: Ya tengo negocio */}
+            <motion.button
+              initial={{ x: -50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              whileHover={{ scale: 1.02, y: -3 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setStep('optimizador')}
+              className="group relative overflow-hidden rounded-2xl p-8 bg-slate-800/80 border border-slate-600/30 hover:border-slate-500/50 transition-all"
             >
-              Ver mi perfil actual
-            </button>
-          </p>
-        </motion.div>
+              <div 
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ backgroundColor: `${orgBrandColor}08` }}
+              />
+              
+              <div 
+                className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: `${orgBrandColor}20` }}
+              >
+                <Building2 className="w-8 h-8" style={{ color: orgBrandColor }} />
+              </div>
+              
+              <h3 className="text-2xl font-bold text-white mb-3">
+                TENGO UN NEGOCIO
+              </h3>
+              
+              <p className="text-slate-400 text-sm">
+                Ya tengo mi negocio operando y quiero abrir posibilidades con IA.
+              </p>
+              
+              <div className="mt-6 flex items-center justify-center gap-2" style={{ color: orgBrandColor }}>
+                <span className="text-sm font-medium">Crear Perfil</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </motion.button>
+
+            {/* Opción B: Quiero crear desde cero */}
+            <motion.button
+              initial={{ x: 50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              whileHover={{ scale: 1.02, y: -3 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setStep('adn-talento')}
+              className="group relative overflow-hidden rounded-2xl p-8 bg-slate-800/80 border border-slate-600/30 hover:border-slate-500/50 transition-all"
+            >
+              <div 
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ backgroundColor: `${orgBrandColor}08` }}
+              />
+              
+              <div 
+                className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: `${orgBrandColor}20` }}
+              >
+                <Lightbulb className="w-8 h-8" style={{ color: orgBrandColor }} />
+              </div>
+            
+              <h3 className="text-2xl font-bold text-white mb-3">
+                APÓYAME A GENERAR UNA IDEA
+              </h3>
+            
+              <p className="text-slate-400 text-sm">
+                Tengo el talento pero me falta la forma. Ayúdame a crearlo desde cero con IA.
+              </p>
+              
+              <div className="mt-6 flex items-center justify-center gap-2" style={{ color: orgBrandColor }}>
+                <Sparkles className="w-5 h-5" />
+                <span className="text-sm font-medium">Generar con IA</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </motion.button>
+          </div>
+        </>
       )}
     </motion.div>
   );
@@ -1882,8 +2027,8 @@ export default function QuantumBusinessBuilderPage() {
         </motion.button>
 
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-500/30 mb-4">
-            <span className="text-purple-400 text-sm font-medium">PASO 1 DE 3</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 border border-cyan-500/30 mb-4">
+            <span className="text-cyan-400 text-sm font-medium">PASO 1 DE 3</span>
           </div>
           
           <h2 className="text-3xl font-bold text-white mb-2">
@@ -1907,7 +2052,7 @@ export default function QuantumBusinessBuilderPage() {
               autoCorrect="off"
               spellCheck="false"
               placeholder="Ej: Me gusta cocinar postres, sé programar, soy bueno escuchando a la gente, me encanta diseñar..."
-              className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none h-28"
+              className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all resize-none h-28"
             />
           </div>
 
@@ -1923,7 +2068,7 @@ export default function QuantumBusinessBuilderPage() {
               autoCorrect="off"
               spellCheck="false"
               placeholder="Ej: Mamás ocupadas, empresas pequeñas, jóvenes emprendedores, personas que quieren bajar de peso..."
-              className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none h-28"
+              className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all resize-none h-28"
             />
           </div>
 
@@ -1933,7 +2078,7 @@ export default function QuantumBusinessBuilderPage() {
             whileTap={{ scale: 0.98 }}
             onClick={generateBusinessIdeas}
             disabled={loading}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-orange-600 text-white font-bold text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-purple-500/25 transition-all"
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-blue-500/25 transition-all"
           >
             <Wand2 className="w-6 h-6" />
             <span>Materializar Ideas de Negocio</span>
@@ -1996,12 +2141,12 @@ export default function QuantumBusinessBuilderPage() {
               }}
               className={`w-full text-left p-6 rounded-2xl border transition-all ${
                 selectedIdea?.nombre === idea.nombre
-                  ? 'bg-purple-900/50 border-purple-500'
-                  : 'bg-slate-900/50 border-slate-700/50 hover:border-purple-500/50'
+                  ? 'bg-blue-900/50 border-cyan-500'
+                  : 'bg-slate-900/50 border-slate-700/50 hover:border-cyan-500/50'
               }`}
             >
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
                   <span className="text-2xl font-bold text-white">{index + 1}</span>
                 </div>
                 
@@ -2009,7 +2154,7 @@ export default function QuantumBusinessBuilderPage() {
                   <h3 className="text-xl font-bold text-white mb-1">
                     {idea.nombre}
                   </h3>
-                  <p className="text-purple-400 text-sm mb-3 italic">
+                  <p className="text-cyan-400 text-sm mb-3 italic">
                     "{idea.slogan}"
                   </p>
                   <p className="text-slate-300 text-sm mb-2">
@@ -2021,7 +2166,7 @@ export default function QuantumBusinessBuilderPage() {
                   </div>
                 </div>
 
-                <ArrowRight className="w-6 h-6 text-purple-400 flex-shrink-0" />
+                <ArrowRight className="w-6 h-6 text-cyan-400 flex-shrink-0" />
               </div>
             </motion.button>
           ))}
@@ -2033,7 +2178,7 @@ export default function QuantumBusinessBuilderPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
           onClick={generateBusinessIdeas}
-          className="mt-6 mx-auto flex items-center gap-2 text-slate-400 hover:text-purple-400 transition-colors"
+          className="mt-6 mx-auto flex items-center gap-2 text-slate-400 hover:text-cyan-400 transition-colors"
         >
           <RefreshCw className="w-4 h-4" />
           <span className="text-sm">Generar nuevas ideas</span>
@@ -2063,15 +2208,15 @@ export default function QuantumBusinessBuilderPage() {
         </motion.button>
 
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-500/30 mb-4">
-            <span className="text-purple-400 text-sm font-medium">PASO 2 DE 3</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 border border-cyan-500/30 mb-4">
+            <span className="text-cyan-400 text-sm font-medium">PASO 2 DE 3</span>
           </div>
           
           <h2 className="text-3xl font-bold text-white mb-2">
             🎨 Materializando tu Marca
           </h2>
           <p className="text-slate-400">
-            Concepto seleccionado: <span className="text-purple-400 font-medium">{selectedIdea?.nombre}</span>
+            Concepto seleccionado: <span className="text-cyan-400 font-medium">{selectedIdea?.nombre}</span>
           </p>
         </div>
 
@@ -2080,7 +2225,7 @@ export default function QuantumBusinessBuilderPage() {
           <div className="space-y-6">
             <div className="bg-slate-900/50 rounded-2xl p-6 border border-slate-700/50">
               <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Type className="w-5 h-5 text-purple-400" />
+                <Type className="w-5 h-5 text-cyan-400" />
                 Nombre de tu Negocio
               </h3>
               
@@ -2097,14 +2242,14 @@ export default function QuantumBusinessBuilderPage() {
                     }}
                     className={`w-full text-left p-4 rounded-xl border transition-all ${
                       selectedName === name.nombre
-                        ? 'bg-purple-600/30 border-purple-500'
-                        : 'bg-slate-800/50 border-slate-600/50 hover:border-purple-500/50'
+                        ? 'bg-blue-600/30 border-cyan-500'
+                        : 'bg-slate-800/50 border-slate-600/50 hover:border-cyan-500/50'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-white">{name.nombre}</span>
                       {selectedName === name.nombre && (
-                        <Check className="w-5 h-5 text-purple-400" />
+                        <Check className="w-5 h-5 text-cyan-400" />
                       )}
                     </div>
                   </motion.button>
@@ -2123,7 +2268,7 @@ export default function QuantumBusinessBuilderPage() {
                     }
                   }}
                   placeholder="O escribe tu propio nombre..."
-                  className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                  className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                 />
               </div>
             </div>
@@ -2180,7 +2325,7 @@ export default function QuantumBusinessBuilderPage() {
 
               <button
                 onClick={() => {/* Regenerar logos */}}
-                className="mt-4 w-full py-2 text-sm text-slate-400 hover:text-purple-400 flex items-center justify-center gap-2 transition-colors"
+                className="mt-4 w-full py-2 text-sm text-slate-400 hover:text-cyan-400 flex items-center justify-center gap-2 transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>Generar más opciones</span>
@@ -2198,7 +2343,7 @@ export default function QuantumBusinessBuilderPage() {
           whileTap={{ scale: 0.98 }}
           onClick={generatePitch}
           disabled={!selectedName && !customName}
-          className="mt-10 w-full max-w-md mx-auto py-4 rounded-xl bg-gradient-to-r from-purple-600 to-orange-600 text-white font-bold text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-purple-500/25 transition-all"
+          className="mt-10 w-full max-w-md mx-auto py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-blue-500/25 transition-all"
         >
           <span>Continuar al Pitch</span>
           <ArrowRight className="w-5 h-5" />
@@ -2228,8 +2373,8 @@ export default function QuantumBusinessBuilderPage() {
         </motion.button>
 
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-500/30 mb-4">
-            <span className="text-purple-400 text-sm font-medium">PASO 3 DE 3</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 border border-cyan-500/30 mb-4">
+            <span className="text-cyan-400 text-sm font-medium">PASO 3 DE 3</span>
           </div>
           
           <h2 className="text-3xl font-bold text-white mb-2">
@@ -2250,7 +2395,7 @@ export default function QuantumBusinessBuilderPage() {
                 <button
                   onClick={improveDescription}
                   disabled={loading}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-600/30 text-purple-400 hover:bg-purple-600/50 transition-colors text-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600/30 text-cyan-400 hover:bg-blue-600/50 transition-colors text-sm"
                 >
                   <Wand2 className="w-4 h-4" />
                   <span>Mejorar con AI</span>
@@ -2261,7 +2406,7 @@ export default function QuantumBusinessBuilderPage() {
                 defaultValue={descripcion}
                 onBlur={(e) => setDescripcion(e.target.value)}
                 placeholder="Describe tu servicio o producto..."
-                className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none h-40"
+                className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all resize-none h-40"
               />
             </div>
 
@@ -2277,7 +2422,7 @@ export default function QuantumBusinessBuilderPage() {
                 defaultValue={ofertaTribu}
                 onBlur={(e) => setOfertaTribu(e.target.value)}
                 placeholder="Ej: 15% de descuento, consulta gratis..."
-                className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
               />
             </div>
           </div>
@@ -2285,7 +2430,7 @@ export default function QuantumBusinessBuilderPage() {
           {/* Preview */}
           <div className="bg-slate-900/50 rounded-2xl p-6 border border-slate-700/50">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Eye className="w-5 h-5 text-emerald-400" />
+              <Eye className="w-5 h-5 text-cyan-400" />
               Vista Previa
             </h3>
             
@@ -2299,7 +2444,7 @@ export default function QuantumBusinessBuilderPage() {
                     className="w-16 h-16 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                     <span className="text-2xl font-bold text-white">
                       {(customName || selectedName || 'N')[0]}
                     </span>
@@ -2309,7 +2454,7 @@ export default function QuantumBusinessBuilderPage() {
                   <h4 className="text-xl font-bold text-white">
                     {customName || selectedName || 'Tu Negocio'}
                   </h4>
-                  <p className="text-purple-400 text-sm italic">
+                  <p className="text-cyan-400 text-sm italic">
                     {selectedIdea?.slogan}
                   </p>
                 </div>
@@ -2396,7 +2541,7 @@ export default function QuantumBusinessBuilderPage() {
             }
           }}
           disabled={!descripcion.trim() || loading}
-          className="mt-10 w-full max-w-md mx-auto py-4 rounded-xl bg-gradient-to-r from-purple-600 to-orange-600 text-white font-bold text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-purple-500/25 transition-all"
+          className="mt-10 w-full max-w-md mx-auto py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-blue-500/25 transition-all"
         >
           {loading ? (
             <>
@@ -2436,7 +2581,7 @@ export default function QuantumBusinessBuilderPage() {
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1, delay: 0.3 }}
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-b from-purple-500/20 via-purple-500/5 to-transparent rounded-full blur-3xl"
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-b from-blue-500/20 via-purple-500/5 to-transparent rounded-full blur-3xl"
       />
 
       <div className="relative z-10 max-w-2xl w-full text-center">
@@ -2467,7 +2612,7 @@ export default function QuantumBusinessBuilderPage() {
             whileTap={{ scale: 0.95 }}
             onClick={() => saveProfile(true)}
             disabled={loading}
-            className="w-full py-6 rounded-2xl bg-gradient-to-r from-yellow-500 via-orange-500 to-purple-600 text-white font-bold text-xl shadow-2xl shadow-orange-500/30 relative overflow-hidden group"
+            className="w-full py-6 rounded-2xl bg-gradient-to-r from-yellow-500 via-blue-500 to-purple-600 text-white font-bold text-xl shadow-2xl shadow-orange-500/30 relative overflow-hidden group"
           >
             {/* Efecto de pulso */}
             <motion.div
@@ -2479,7 +2624,7 @@ export default function QuantumBusinessBuilderPage() {
                 duration: 2,
                 repeat: Infinity
               }}
-              className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-orange-500 to-purple-600 rounded-2xl"
+              className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-blue-500 to-purple-600 rounded-2xl"
             />
             
             <div className="relative flex items-center justify-center gap-3">
@@ -2554,9 +2699,9 @@ export default function QuantumBusinessBuilderPage() {
         </motion.button>
 
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-500/30 mb-4">
-            <Building2 className="w-4 h-4 text-emerald-400" />
-            <span className="text-emerald-400 text-sm font-medium">OPTIMIZADOR DE PERFIL</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 border border-cyan-500/30 mb-4">
+            <Building2 className="w-4 h-4 text-cyan-400" />
+            <span className="text-cyan-400 text-sm font-medium">OPTIMIZADOR DE PERFIL</span>
           </div>
           
           <h2 className="text-3xl font-bold text-white mb-2">
@@ -2618,7 +2763,7 @@ export default function QuantumBusinessBuilderPage() {
                     />
                     <button
                       onClick={improveDescription}
-                      className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-600/30 text-purple-400 text-xs hover:bg-purple-600/50 transition-colors"
+                      className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600/30 text-cyan-400 text-xs hover:bg-blue-600/50 transition-colors"
                     >
                       <Wand2 className="w-3 h-3" />
                       <span>Mejorar con IA</span>
@@ -2658,7 +2803,7 @@ export default function QuantumBusinessBuilderPage() {
                     <img 
                       src={previewLogo} 
                       alt="Logo" 
-                      className="w-full h-full rounded-xl object-cover border-2 border-emerald-500/50"
+                      className="w-full h-full rounded-xl object-cover border-2 border-cyan-500/50"
                     />
                     <button
                       onClick={removeLogo}
@@ -2690,7 +2835,7 @@ export default function QuantumBusinessBuilderPage() {
                     <div className={`w-full py-3 px-4 rounded-xl border border-slate-600/50 text-center transition-all ${
                       uploadingLogo 
                         ? 'bg-slate-700/50 cursor-wait' 
-                        : 'bg-slate-800/50 hover:bg-slate-700/50 hover:border-emerald-500/50'
+                        : 'bg-slate-800/50 hover:bg-slate-700/50 hover:border-cyan-500/50'
                     }`}>
                       {uploadingLogo ? (
                         <div className="flex items-center justify-center gap-2 text-slate-400">
@@ -2712,19 +2857,19 @@ export default function QuantumBusinessBuilderPage() {
                     disabled={generatingLogo || !previewNombre.trim()}
                     className={`flex-1 py-3 px-4 rounded-xl border transition-all ${
                       generatingLogo 
-                        ? 'bg-purple-900/30 border-purple-500/30 cursor-wait' 
+                        ? 'bg-blue-900/30 border-cyan-500/30 cursor-wait' 
                         : previewNombre.trim()
-                          ? 'bg-purple-900/20 border-purple-500/30 hover:bg-purple-900/40 hover:border-purple-500/50'
+                          ? 'bg-blue-900/20 border-cyan-500/30 hover:bg-blue-900/40 hover:border-cyan-500/50'
                           : 'bg-slate-800/30 border-slate-600/30 cursor-not-allowed opacity-50'
                     }`}
                   >
                     {generatingLogo ? (
-                      <div className="flex items-center justify-center gap-2 text-purple-400">
+                      <div className="flex items-center justify-center gap-2 text-cyan-400">
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <span className="text-sm">Creando...</span>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center gap-2 text-purple-400">
+                      <div className="flex items-center justify-center gap-2 text-cyan-400">
                         <Wand2 className="w-4 h-4" />
                         <span className="text-sm">Crear con IA</span>
                       </div>
@@ -2792,16 +2937,16 @@ export default function QuantumBusinessBuilderPage() {
                     
                     {/* Oferta para crear web con IA si no tiene */}
                     {!previewWebsite && (
-                      <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-xl p-4 border border-purple-500/30">
+                      <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-xl p-4 border border-cyan-500/30">
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-pink-500 flex items-center justify-center flex-shrink-0">
                             <Sparkles className="w-5 h-5 text-white" />
                           </div>
                           <div className="flex-1">
                             <h4 className="text-white font-semibold text-sm mb-1">
                               ¿No tienes página web? 🚀
                             </h4>
-                            <p className="text-purple-300/80 text-xs mb-3">
+                            <p className="text-cyan-300/80 text-xs mb-3">
                               Crea tu sitio web profesional con tienda en línea en menos de 5 minutos usando IA
                             </p>
                             <button
@@ -2822,7 +2967,7 @@ export default function QuantumBusinessBuilderPage() {
                                 console.log('Datos guardados para Quantum Web:', quantumData);
                                 router.push('/dashboard/quantum-web');
                               }}
-                              className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium text-sm hover:shadow-lg hover:shadow-purple-500/25 transition-all flex items-center justify-center gap-2"
+                              className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-pink-600 text-white font-medium text-sm hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
                             >
                               <Wand2 className="w-4 h-4" />
                               <span>Crear mi Web con IA</span>
@@ -2858,7 +3003,7 @@ export default function QuantumBusinessBuilderPage() {
                     />
                     <button
                       onClick={() => setShowMapModal(true)}
-                      className="px-4 py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/30 transition-colors"
+                      className="px-4 py-3 rounded-xl bg-blue-600/20 border border-cyan-500/30 text-cyan-400 hover:bg-blue-600/30 transition-colors"
                       title="Seleccionar en el mapa"
                     >
                       <Globe className="w-5 h-5" />
@@ -2917,7 +3062,7 @@ export default function QuantumBusinessBuilderPage() {
                     />
                     <button
                       onClick={() => setShowHorarioModal(true)}
-                      className="px-4 py-3 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30 transition-colors"
+                      className="px-4 py-3 rounded-xl bg-blue-600/20 border border-cyan-500/30 text-cyan-400 hover:bg-blue-600/30 transition-colors"
                       title="Configurar horario"
                     >
                       <Clock className="w-5 h-5" />
@@ -2929,9 +3074,9 @@ export default function QuantumBusinessBuilderPage() {
                     <div className="mt-3 p-3 bg-slate-800/30 rounded-xl border border-slate-700/50">
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {Object.entries(horarioConfig).map(([dia, config]) => (
-                          <div key={dia} className={`flex items-center justify-between p-2 rounded-lg ${config.abierto ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+                          <div key={dia} className={`flex items-center justify-between p-2 rounded-lg ${config.abierto ? 'bg-cyan-500/10' : 'bg-red-500/10'}`}>
                             <span className="capitalize text-slate-300">{dia}</span>
-                            <span className={config.abierto ? 'text-emerald-400' : 'text-red-400'}>
+                            <span className={config.abierto ? 'text-cyan-400' : 'text-red-400'}>
                               {config.abierto ? `${config.desde} - ${config.hasta}` : 'Cerrado'}
                             </span>
                           </div>
@@ -2970,7 +3115,7 @@ export default function QuantumBusinessBuilderPage() {
                   
                   {/* Botón agregar foto */}
                   {previewFotos.length < 5 && (
-                    <label className="aspect-square rounded-xl border-2 border-dashed border-slate-600 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500/50 hover:bg-slate-800/30 transition-all">
+                    <label className="aspect-square rounded-xl border-2 border-dashed border-slate-600 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-500/50 hover:bg-slate-800/30 transition-all">
                       <input
                         type="file"
                         accept="image/*"
@@ -3009,7 +3154,7 @@ export default function QuantumBusinessBuilderPage() {
           {/* Columna derecha: Preview en vivo */}
           <div className="bg-slate-900/50 rounded-2xl p-6 border border-slate-700/50 sticky top-6 h-fit">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Eye className="w-5 h-5 text-emerald-400" />
+              <Eye className="w-5 h-5 text-cyan-400" />
               Vista Previa en Vivo
             </h3>
             
@@ -3043,7 +3188,7 @@ export default function QuantumBusinessBuilderPage() {
               {/* Categoría */}
               {previewCategoria && (
                 <div className="mb-3">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-purple-500/20 text-purple-400 text-xs">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-400 text-xs">
                     {BUSINESS_CATEGORIES.find(c => c.value === previewCategoria)?.icon}
                     {BUSINESS_CATEGORIES.find(c => c.value === previewCategoria)?.label.replace(/^[^\s]+ /, '')}
                   </span>
@@ -3100,8 +3245,8 @@ export default function QuantumBusinessBuilderPage() {
 
               {/* Oferta */}
               {(previewOferta || existingProfile?.discountOffer) && (
-                <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-emerald-400">
+                <div className="bg-cyan-500/20 border border-cyan-500/30 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-cyan-400">
                     <Gift className="w-4 h-4" />
                     <span className="text-sm font-medium">
                       {previewOferta || existingProfile?.discountOffer}
@@ -3113,7 +3258,7 @@ export default function QuantumBusinessBuilderPage() {
               {/* Indicador de visibilidad */}
               <div className={`mt-4 p-3 rounded-lg text-center text-sm ${
                 esIrrazonable 
-                  ? 'bg-purple-500/20 border border-purple-500/30 text-purple-300' 
+                  ? 'bg-cyan-500/20 border border-cyan-500/30 text-cyan-300' 
                   : 'bg-slate-700/30 border border-slate-600/30 text-slate-400'
               }`}>
                 {esIrrazonable ? (
@@ -3127,7 +3272,7 @@ export default function QuantumBusinessBuilderPage() {
         </div>
 
         {/* Switch Razonable / Irrazonable */}
-        <div className="mt-10 bg-gradient-to-r from-slate-900/80 to-purple-900/30 rounded-2xl p-6 border border-purple-500/20">
+        <div className="mt-10 bg-gradient-to-r from-slate-900/80 to-purple-900/30 rounded-2xl p-6 border border-cyan-500/20">
           <div className="flex items-start gap-6">
             {/* Switch */}
             <div className="flex-shrink-0">
@@ -3135,7 +3280,7 @@ export default function QuantumBusinessBuilderPage() {
                 onClick={() => setEsIrrazonable(!esIrrazonable)}
                 className={`relative w-20 h-10 rounded-full transition-all duration-300 ${
                   esIrrazonable 
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600' 
+                    ? 'bg-gradient-to-r from-blue-600 to-pink-600' 
                     : 'bg-slate-700'
                 }`}
               >
@@ -3154,11 +3299,11 @@ export default function QuantumBusinessBuilderPage() {
             {/* Descripción */}
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h4 className={`font-bold text-lg ${esIrrazonable ? 'text-purple-300' : 'text-slate-300'}`}>
+                <h4 className={`font-bold text-lg ${esIrrazonable ? 'text-cyan-300' : 'text-slate-300'}`}>
                   {esIrrazonable ? '🔥 IRRAZONABLE' : '😌 Razonable'}
                 </h4>
                 {esIrrazonable && (
-                  <span className="px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-300 text-xs font-medium animate-pulse">
+                  <span className="px-2 py-0.5 rounded-full bg-cyan-500/30 text-cyan-300 text-xs font-medium animate-pulse">
                     Recomendado
                   </span>
                 )}
@@ -3169,21 +3314,21 @@ export default function QuantumBusinessBuilderPage() {
                   <p className="text-purple-200 text-sm">
                     <strong>¡Dar el salto!</strong> Tu negocio será <span className="text-white font-semibold">público en el Directorio de Negocios</span> de la organización.
                   </p>
-                  <ul className="text-purple-300/80 text-xs space-y-1">
+                  <ul className="text-cyan-300/80 text-xs space-y-1">
                     <li className="flex items-center gap-2">
-                      <Check className="w-3 h-3 text-emerald-400" />
+                      <Check className="w-3 h-3 text-cyan-400" />
                       Los usuarios podrán encontrarte y ver tu perfil
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-3 h-3 text-emerald-400" />
+                      <Check className="w-3 h-3 text-cyan-400" />
                       Podrán obtener tus datos de contacto
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-3 h-3 text-emerald-400" />
+                      <Check className="w-3 h-3 text-cyan-400" />
                       Recibirás solicitudes de contratación
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-3 h-3 text-emerald-400" />
+                      <Check className="w-3 h-3 text-cyan-400" />
                       Acceso a reseñas y calificaciones
                     </li>
                   </ul>
@@ -3218,7 +3363,7 @@ export default function QuantumBusinessBuilderPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => saveProfile(true)}
-              className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold hover:shadow-lg hover:shadow-purple-500/25 transition-all flex items-center gap-2"
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-pink-600 text-white font-bold hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center gap-2"
             >
               <Rocket className="w-5 h-5" />
               <span>🚀 Publicar en Directorio</span>
@@ -3238,7 +3383,7 @@ export default function QuantumBusinessBuilderPage() {
     return (
       <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500 mx-auto mb-4"></div>
           <p className="text-slate-400">Cargando tu negocio...</p>
         </div>
       </div>
@@ -3251,7 +3396,7 @@ export default function QuantumBusinessBuilderPage() {
       <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
         <div className="max-w-md w-full">
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 border border-slate-700/50 text-center">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-500/20 to-cyan-500/20 flex items-center justify-center">
               <Lock className="w-10 h-10 text-amber-400" />
             </div>
             
@@ -3267,13 +3412,13 @@ export default function QuantumBusinessBuilderPage() {
             <p className="text-slate-400 mb-6">
               Esta sección está disponible para participantes 
               <span className="text-amber-300 font-medium"> inscritos en Programa de Liderato</span> o que han 
-              <span className="text-emerald-300 font-medium"> completado el nivel Avanzado</span>.
+              <span className="text-cyan-300 font-medium"> completado el nivel Avanzado</span>.
             </p>
             
             <div className="space-y-3">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold hover:shadow-lg hover:shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-cyan-500 text-white font-semibold hover:shadow-lg hover:shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Volver al Dashboard
@@ -3322,12 +3467,12 @@ export default function QuantumBusinessBuilderPage() {
               <div className="p-5 border-b border-slate-700/50 bg-gradient-to-r from-purple-900/30 to-pink-900/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-pink-500 flex items-center justify-center">
                       <Wand2 className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-white">Logos Generados con IA</h3>
-                      <p className="text-sm text-purple-300/80">Selecciona el que más te guste</p>
+                      <p className="text-sm text-cyan-300/80">Selecciona el que más te guste</p>
                     </div>
                   </div>
                   <button
@@ -3349,7 +3494,7 @@ export default function QuantumBusinessBuilderPage() {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.1 }}
                       onClick={() => selectLogoFromModal(logo.url)}
-                      className="group relative aspect-square bg-slate-800/50 rounded-xl border-2 border-slate-600/50 hover:border-purple-500 transition-all overflow-hidden"
+                      className="group relative aspect-square bg-slate-800/50 rounded-xl border-2 border-slate-600/50 hover:border-cyan-500 transition-all overflow-hidden"
                     >
                       <img
                         src={logo.url}
@@ -3357,7 +3502,7 @@ export default function QuantumBusinessBuilderPage() {
                         className="w-full h-full object-contain p-3"
                       />
                       {/* Overlay de selección */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-purple-600/80 to-transparent opacity-0 group-hover:opacity-100 transition-all flex items-end justify-center pb-4">
+                      <div className="absolute inset-0 bg-gradient-to-t from-blue-600/80 to-transparent opacity-0 group-hover:opacity-100 transition-all flex items-end justify-center pb-4">
                         <span className="text-white font-medium text-sm flex items-center gap-1">
                           <Check className="w-4 h-4" />
                           Seleccionar
@@ -3378,7 +3523,7 @@ export default function QuantumBusinessBuilderPage() {
                 {generatingLogo && (
                   <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center">
                     <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-3" />
-                    <p className="text-purple-300 font-medium">Generando nuevos diseños...</p>
+                    <p className="text-cyan-300 font-medium">Generando nuevos diseños...</p>
                   </div>
                 )}
               </div>
@@ -3389,7 +3534,7 @@ export default function QuantumBusinessBuilderPage() {
                   <button
                     onClick={regenerateLogosInModal}
                     disabled={generatingLogo}
-                    className="flex-1 py-3 px-4 rounded-xl border border-purple-500/50 text-purple-400 font-medium hover:bg-purple-500/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+                    className="flex-1 py-3 px-4 rounded-xl border border-cyan-500/50 text-cyan-400 font-medium hover:bg-cyan-500/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait"
                   >
                     {generatingLogo ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -3440,7 +3585,7 @@ export default function QuantumBusinessBuilderPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-white">Seleccionar Ubicación</h3>
-                      <p className="text-sm text-emerald-300/80">Busca tu dirección o usa el mapa</p>
+                      <p className="text-sm text-cyan-300/80">Busca tu dirección o usa el mapa</p>
                     </div>
                   </div>
                   <button
@@ -3460,7 +3605,7 @@ export default function QuantumBusinessBuilderPage() {
                     value={mapSearchQuery}
                     onChange={(e) => setMapSearchQuery(e.target.value)}
                     placeholder="Buscar dirección, ciudad, código postal..."
-                    className="w-full p-4 pl-12 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition"
+                    className="w-full p-4 pl-12 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-emerald-500/20 transition"
                   />
                   <div className="absolute left-4 top-1/2 -translate-y-1/2">
                     {searchingAddress ? (
@@ -3478,7 +3623,7 @@ export default function QuantumBusinessBuilderPage() {
                       <button
                         key={index}
                         onClick={() => selectAddress(suggestion)}
-                        className="w-full p-3 rounded-xl bg-slate-800/30 border border-slate-700/50 text-left hover:bg-slate-700/50 hover:border-emerald-500/50 transition-all group"
+                        className="w-full p-3 rounded-xl bg-slate-800/30 border border-slate-700/50 text-left hover:bg-slate-700/50 hover:border-cyan-500/50 transition-all group"
                       >
                         <div className="flex items-start gap-3">
                           <MapPin className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
@@ -3536,7 +3681,7 @@ export default function QuantumBusinessBuilderPage() {
                   <button
                     onClick={() => setShowMapModal(false)}
                     disabled={!previewLatitud || !previewLongitud}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-blue-600 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Check className="w-4 h-4" />
                     Confirmar Ubicación
@@ -3569,7 +3714,7 @@ export default function QuantumBusinessBuilderPage() {
               <div className="p-5 border-b border-slate-700/50 bg-gradient-to-r from-purple-900/30 to-pink-900/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-pink-500 flex items-center justify-center">
                       <Clock className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -3594,7 +3739,7 @@ export default function QuantumBusinessBuilderPage() {
                       key={dia} 
                       className={`p-4 rounded-xl border transition-all ${
                         config.abierto 
-                          ? 'bg-emerald-500/10 border-emerald-500/30' 
+                          ? 'bg-cyan-500/10 border-cyan-500/30' 
                           : 'bg-slate-800/50 border-slate-700/50'
                       }`}
                     >
@@ -3606,7 +3751,7 @@ export default function QuantumBusinessBuilderPage() {
                             [dia]: { ...prev[dia], abierto: !prev[dia].abierto }
                           }))}
                           className={`relative w-14 h-7 rounded-full transition-all ${
-                            config.abierto ? 'bg-emerald-500' : 'bg-slate-600'
+                            config.abierto ? 'bg-cyan-500' : 'bg-slate-600'
                           }`}
                         >
                           <motion.div
@@ -3686,7 +3831,7 @@ export default function QuantumBusinessBuilderPage() {
                           return updated;
                         });
                       }}
-                      className="px-4 py-2 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30 transition text-sm font-medium"
+                      className="px-4 py-2 rounded-lg bg-blue-600/20 border border-cyan-500/30 text-cyan-400 hover:bg-blue-600/30 transition text-sm font-medium"
                     >
                       Aplicar
                     </button>
@@ -3736,7 +3881,7 @@ export default function QuantumBusinessBuilderPage() {
                       setPreviewHorario(horarioStr || 'Sin horario definido');
                       setShowHorarioModal(false);
                     }}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-pink-600 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
                   >
                     <Check className="w-4 h-4" />
                     Guardar Horario
@@ -3760,7 +3905,7 @@ export default function QuantumBusinessBuilderPage() {
             <div className={`
               rounded-2xl p-4 shadow-2xl backdrop-blur-xl border
               ${notification.type === 'success' 
-                ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30' 
+                ? 'bg-gradient-to-r from-green-500/20 to-cyan-500/20 border-green-500/30' 
                 : notification.type === 'error'
                 ? 'bg-gradient-to-r from-red-500/20 to-pink-500/20 border-red-500/30'
                 : 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-500/30'}

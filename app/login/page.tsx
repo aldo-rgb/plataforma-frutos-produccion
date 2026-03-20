@@ -152,7 +152,7 @@ function LoginForm() {
               />
             ) : (
               <img 
-                src="/quantum-logo.svg" 
+                src="/quantum-logo.png" 
                 alt="Quantum Matter Logo" 
                 className="w-32 h-32 object-contain"
               />

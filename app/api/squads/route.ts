@@ -225,31 +225,58 @@ export async function GET(request: Request) {
     if (user.rol === 'GAMECHANGER' || user.rol === 'TRAINER') {
       where.leaderId = user.id;
       
-      // Para GC: obtener visiones donde tiene asignación y el entrenamiento está activo
-      // O el entrenamiento terminó hace menos de 15 días (para completar llamadas de seguimiento)
-      const fifteenDaysAgo = new Date();
-      fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+      // Para GC: obtener visiones donde tiene asignación activa
+      const now = new Date();
+      const gracePeriodDays = 7;
+      const cutoffDate = new Date(now);
+      cutoffDate.setDate(cutoffDate.getDate() - gracePeriodDays);
       
-      // Buscar productos activos o terminados hace menos de 15 días
-      const validProducts = await prisma.schoolProduct.findMany({
-        where: {
-          OR: [
-            // Productos activos (no completados)
-            { trainingStatus: { not: 'COMPLETED' } },
-            // Productos completados en los últimos 15 días
-            {
-              trainingStatus: 'COMPLETED',
-              updatedAt: { gte: fifteenDaysAgo }
-            }
-          ]
+      // Buscar asignaciones de VisionGameChanger con visiones activas
+      const gcAssignments = await prisma.visionGameChanger.findMany({
+        where: { gameChangerId: user.id },
+        include: {
+          Vision: {
+            select: {
+              id: true,
+              isActive: true,
+              endDate: true,
+              advancedEndDate: true,
+              plWeekend3EndDate: true,
+            },
+          },
         },
-        select: { visionId: true }
       });
       
-      const validVisionIds = [...new Set(validProducts.filter(p => p.visionId).map(p => p.visionId!))];
+      // Filtrar visiones que tienen al menos un nivel activo
+      const validVisionIds = gcAssignments
+        .filter(a => {
+          const vision = a.Vision;
+          if (!vision?.isActive) return false;
+          
+          let levelEndDate: Date | null = null;
+          if (a.level === 'PL' && vision.plWeekend3EndDate) {
+            levelEndDate = new Date(vision.plWeekend3EndDate);
+          } else if (a.level === 'ADVANCED' && vision.advancedEndDate) {
+            levelEndDate = new Date(vision.advancedEndDate);
+          } else if (vision.endDate) {
+            levelEndDate = new Date(vision.endDate);
+          }
+          
+          return !levelEndDate || levelEndDate >= cutoffDate;
+        })
+        .map(a => a.visionId);
       
-      if (validVisionIds.length > 0) {
-        where.visionId = { in: validVisionIds };
+      // Obtener IDs únicos
+      const uniqueVisionIds = [...new Set(validVisionIds)];
+      
+      logger.debug('📦 squads GET: Valid visions for GC', {
+        userId: user.id,
+        totalAssignments: gcAssignments.length,
+        validVisionIds: uniqueVisionIds,
+      });
+      
+      if (uniqueVisionIds.length > 0) {
+        where.visionId = { in: uniqueVisionIds };
       } else {
         // Si no hay visiones válidas, retornar vacío
         return NextResponse.json({

@@ -278,66 +278,106 @@ export async function GET() {
       let targetVisionIdForEmpty: number | null = null;
       
       if (gcAssignments.length > 0) {
-        const levelPriority = ['PL', 'ADVANCED', 'BASIC'];
-        const sortedAssignments = [...gcAssignments].sort((a, b) => {
-          return levelPriority.indexOf(a.level) - levelPriority.indexOf(b.level);
-        });
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const gracePeriodDays = 7;
+        const cutoffDate = new Date(now);
+        cutoffDate.setDate(cutoffDate.getDate() - gracePeriodDays);
         
-        const highestLevelAssignment = sortedAssignments[0];
-        const level = highestLevelAssignment.level;
-        const vision = highestLevelAssignment.Vision;
-        
-        console.log('🔍 DEBUG my-stats (empty squads): Using gcAssignment fallback', {
-          level,
-          visionId: highestLevelAssignment.visionId,
-        });
-        
-        // Determinar fechas según el nivel
-        let totalDays = 3;
-        let staffCallDays = [2, 3];
-        let startDate: Date | null = null;
-        
-        if (level === 'PL' && vision?.plWeekend1StartDate) {
-          startDate = new Date(vision.plWeekend1StartDate);
-          totalDays = 6;
-          staffCallDays = [1, 2, 3, 4, 5, 6];
-        } else if (level === 'ADVANCED' && vision?.advancedStartDate) {
-          startDate = new Date(vision.advancedStartDate);
-          totalDays = 4;
-          staffCallDays = [2, 3, 4];
-        } else if (vision?.startDate) {
-          startDate = new Date(vision.startDate);
-          totalDays = 3;
-          staffCallDays = [2, 3];
-        }
-        
-        let currentDay: number | null = null;
-        let isStaffCallDay = false;
-        
-        if (startDate) {
-          const now = new Date();
-          now.setHours(0, 0, 0, 0);
-          startDate.setHours(0, 0, 0, 0);
+        // Filtrar solo asignaciones con visiones activas (entrenamiento en curso o próximo)
+        const activeAssignments = gcAssignments.filter(a => {
+          const vision = a.Vision;
+          if (!vision?.isActive) return false;
           
-          const diffTime = now.getTime() - startDate.getTime();
-          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-          currentDay = diffDays + 1;
-          
-          if (currentDay >= 1 && currentDay <= totalDays) {
-            isStaffCallDay = staffCallDays.includes(currentDay);
+          let levelEndDate: Date | null = null;
+          if (a.level === 'PL' && vision.plWeekend1EndDate) {
+            // Para PL, considerar todo el período
+            levelEndDate = new Date(vision.plWeekend1EndDate);
+          } else if (a.level === 'ADVANCED' && vision.advancedEndDate) {
+            levelEndDate = new Date(vision.advancedEndDate);
+          } else if (vision.endDate) {
+            levelEndDate = new Date(vision.endDate);
           }
+          
+          // Considerar activa si no ha terminado o está dentro del período de gracia
+          return !levelEndDate || levelEndDate >= cutoffDate;
+        });
+        
+        console.log('🔍 DEBUG my-stats: Active assignments filtered', {
+          totalAssignments: gcAssignments.length,
+          activeAssignments: activeAssignments.length,
+          active: activeAssignments.map(a => ({ visionId: a.visionId, level: a.level })),
+        });
+        
+        if (activeAssignments.length > 0) {
+          // Ordenar por: 1) Nivel (PL > ADVANCED > BASIC), 2) Fecha de inicio más reciente
+          const levelPriority = ['PL', 'ADVANCED', 'BASIC'];
+          const sortedAssignments = [...activeAssignments].sort((a, b) => {
+            const levelDiff = levelPriority.indexOf(a.level) - levelPriority.indexOf(b.level);
+            if (levelDiff !== 0) return levelDiff;
+            // Si mismo nivel, priorizar visión más reciente
+            const dateA = a.Vision?.startDate ? new Date(a.Vision.startDate).getTime() : 0;
+            const dateB = b.Vision?.startDate ? new Date(b.Vision.startDate).getTime() : 0;
+            return dateB - dateA;
+          });
+          
+          const highestLevelAssignment = sortedAssignments[0];
+          const level = highestLevelAssignment.level;
+          const vision = highestLevelAssignment.Vision;
+          
+          console.log('🔍 DEBUG my-stats (empty squads): Using active gcAssignment', {
+            level,
+            visionId: highestLevelAssignment.visionId,
+            visionName: vision?.nombre,
+          });
+        
+          // Determinar fechas según el nivel
+          let totalDays = 3;
+          let staffCallDays = [2, 3];
+          let startDate: Date | null = null;
+          
+          if (level === 'PL' && vision?.plWeekend1StartDate) {
+            startDate = new Date(vision.plWeekend1StartDate);
+            totalDays = 6;
+            staffCallDays = [1, 2, 3, 4, 5, 6];
+          } else if (level === 'ADVANCED' && vision?.advancedStartDate) {
+            startDate = new Date(vision.advancedStartDate);
+            totalDays = 4;
+            staffCallDays = [2, 3, 4];
+          } else if (vision?.startDate) {
+            startDate = new Date(vision.startDate);
+            totalDays = 3;
+            staffCallDays = [2, 3];
+          }
+          
+          let currentDay: number | null = null;
+          let isStaffCallDay = false;
+          
+          if (startDate) {
+            const now2 = new Date();
+            now2.setHours(0, 0, 0, 0);
+            startDate.setHours(0, 0, 0, 0);
+            
+            const diffTime = now2.getTime() - startDate.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            currentDay = diffDays + 1;
+            
+            if (currentDay >= 1 && currentDay <= totalDays) {
+              isStaffCallDay = staffCallDays.includes(currentDay);
+            }
+          }
+          
+          trainingInfoForEmpty = {
+            currentDay,
+            totalDays,
+            isStaffCallDay,
+            staffCallDays,
+            level,
+            showInDashboard: true,
+          };
+          
+          targetVisionIdForEmpty = highestLevelAssignment.visionId;
         }
-        
-        trainingInfoForEmpty = {
-          currentDay,
-          totalDays,
-          isStaffCallDay,
-          staffCallDays,
-          level,
-          showInDashboard: true,
-        };
-        
-        targetVisionIdForEmpty = highestLevelAssignment.visionId;
       }
       
       return NextResponse.json({
@@ -569,7 +609,7 @@ export async function GET() {
     }
 
     // Si no hay activeTrainingInfo pero hay asignaciones de VisionGameChanger,
-    // usar el nivel más alto asignado para indicar al frontend qué nivel usar
+    // usar el nivel más alto asignado ACTIVO para indicar al frontend qué nivel usar
     console.log('🔍 DEBUG my-stats: Checking fallback condition', {
       hasActiveTrainingInfo: !!activeTrainingInfo,
       gcAssignmentsLength: gcAssignments.length,
@@ -577,79 +617,106 @@ export async function GET() {
     });
     
     if (!activeTrainingInfo && gcAssignments.length > 0) {
-      // Prioridad: PL > ADVANCED > BASIC
-      const levelPriority = ['PL', 'ADVANCED', 'BASIC'];
-      const sortedAssignments = [...gcAssignments].sort((a, b) => {
-        return levelPriority.indexOf(a.level) - levelPriority.indexOf(b.level);
+      const nowFallback = new Date();
+      nowFallback.setHours(0, 0, 0, 0);
+      const gracePeriodDays = 7;
+      const cutoffDateFallback = new Date(nowFallback);
+      cutoffDateFallback.setDate(cutoffDateFallback.getDate() - gracePeriodDays);
+      
+      // Filtrar solo asignaciones con visiones activas
+      const activeAssignmentsFallback = gcAssignments.filter(a => {
+        const vision = a.Vision;
+        if (!vision?.isActive) return false;
+        
+        let levelEndDate: Date | null = null;
+        if (a.level === 'PL' && vision.plWeekend1EndDate) {
+          levelEndDate = new Date(vision.plWeekend1EndDate);
+        } else if (a.level === 'ADVANCED' && vision.advancedEndDate) {
+          levelEndDate = new Date(vision.advancedEndDate);
+        } else if (vision.endDate) {
+          levelEndDate = new Date(vision.endDate);
+        }
+        
+        return !levelEndDate || levelEndDate >= cutoffDateFallback;
       });
       
-      console.log('🔍 DEBUG my-stats: Using gcAssignment fallback', {
-        sortedAssignments: sortedAssignments.map(a => ({ visionId: a.visionId, level: a.level })),
-      });
-      
-      const highestLevelAssignment = sortedAssignments[0];
-      const level = highestLevelAssignment.level;
-      const vision = highestLevelAssignment.Vision;
-      
-      logger.debug('🔍 my-stats: Using gcAssignment fallback', {
-        userId: user.id,
-        assignmentLevel: level,
-        visionId: highestLevelAssignment.visionId,
-        advancedStartDate: vision?.advancedStartDate,
-      });
-      
-      // Si es ADVANCED y no tiene squad, indicar que necesita crearlo
-      if (level === 'ADVANCED') {
-        needsAdvancedSquad = true;
+      if (activeAssignmentsFallback.length > 0) {
+        // Prioridad: PL > ADVANCED > BASIC, luego por fecha más reciente
+        const levelPriority = ['PL', 'ADVANCED', 'BASIC'];
+        const sortedAssignments = [...activeAssignmentsFallback].sort((a, b) => {
+          const levelDiff = levelPriority.indexOf(a.level) - levelPriority.indexOf(b.level);
+          if (levelDiff !== 0) return levelDiff;
+          const dateA = a.Vision?.startDate ? new Date(a.Vision.startDate).getTime() : 0;
+          const dateB = b.Vision?.startDate ? new Date(b.Vision.startDate).getTime() : 0;
+          return dateB - dateA;
+        });
+        
+        console.log('🔍 DEBUG my-stats: Using active gcAssignment fallback', {
+          sortedAssignments: sortedAssignments.map(a => ({ visionId: a.visionId, level: a.level, visionName: a.Vision?.nombre })),
+        });
+        
+        const highestLevelAssignment = sortedAssignments[0];
+        const level = highestLevelAssignment.level;
+        const vision = highestLevelAssignment.Vision;
+        
+        logger.debug('🔍 my-stats: Using gcAssignment fallback', {
+          userId: user.id,
+          assignmentLevel: level,
+          visionId: highestLevelAssignment.visionId,
+          advancedStartDate: vision?.advancedStartDate,
+        });
+        
+        // Si es ADVANCED y no tiene squad, indicar que necesita crearlo
+        if (level === 'ADVANCED') {
+          needsAdvancedSquad = true;
+          targetVisionId = highestLevelAssignment.visionId;
+        }
+        
+        // Determinar fechas según el nivel
+        let totalDays = 3;
+        let staffCallDays = [2, 3];
+        let startDate: Date | null = null;
+        
+        if (level === 'PL' && vision?.plWeekend1StartDate) {
+          startDate = new Date(vision.plWeekend1StartDate);
+          totalDays = 3; // PL tiene 3 fines de semana, pero simplificamos
+          staffCallDays = [2, 3];
+        } else if (level === 'ADVANCED' && vision?.advancedStartDate) {
+          startDate = new Date(vision.advancedStartDate);
+          totalDays = 4;
+          staffCallDays = [2, 3, 4];
+        } else if (vision?.startDate) {
+          startDate = new Date(vision.startDate);
+          totalDays = 3;
+          staffCallDays = [2, 3];
+        }
+        
+        let currentDay: number | null = null;
+        let isStaffCallDay = false;
+        
+        if (startDate) {
+          startDate.setHours(0, 0, 0, 0);
+          
+          const diffTime = nowFallback.getTime() - startDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          currentDay = diffDays + 1;
+          
+          if (currentDay >= 1 && currentDay <= totalDays) {
+            isStaffCallDay = staffCallDays.includes(currentDay);
+          }
+        }
+        
+        activeTrainingInfo = {
+          currentDay,
+          totalDays,
+          isStaffCallDay,
+          staffCallDays,
+          level,
+          showInDashboard: true,
+        };
+        
         targetVisionId = highestLevelAssignment.visionId;
       }
-      
-      // Determinar fechas según el nivel
-      let totalDays = 3;
-      let staffCallDays = [2, 3];
-      let startDate: Date | null = null;
-      
-      if (level === 'PL' && vision?.plWeekend1StartDate) {
-        startDate = new Date(vision.plWeekend1StartDate);
-        totalDays = 3; // PL tiene 3 fines de semana, pero simplificamos
-        staffCallDays = [2, 3];
-      } else if (level === 'ADVANCED' && vision?.advancedStartDate) {
-        startDate = new Date(vision.advancedStartDate);
-        totalDays = 4;
-        staffCallDays = [2, 3, 4];
-      } else if (vision?.startDate) {
-        startDate = new Date(vision.startDate);
-        totalDays = 3;
-        staffCallDays = [2, 3];
-      }
-      
-      let currentDay: number | null = null;
-      let isStaffCallDay = false;
-      
-      if (startDate) {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        startDate.setHours(0, 0, 0, 0);
-        
-        const diffTime = now.getTime() - startDate.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        currentDay = diffDays + 1;
-        
-        if (currentDay >= 1 && currentDay <= totalDays) {
-          isStaffCallDay = staffCallDays.includes(currentDay);
-        }
-      }
-      
-      activeTrainingInfo = {
-        currentDay,
-        totalDays,
-        isStaffCallDay,
-        staffCallDays,
-        level,
-        showInDashboard: true,
-      };
-      
-      targetVisionId = highestLevelAssignment.visionId;
     }
     
     logger.debug('🔍 my-stats: Final response', {

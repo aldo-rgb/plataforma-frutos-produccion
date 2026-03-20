@@ -28,6 +28,7 @@ interface WalletData {
     isGraduated: boolean;
     hasBankInfo: boolean;
     organizationSlug: string | null;
+    commissionsEnabled: boolean;
   };
   stats: {
     available: number;
@@ -118,8 +119,8 @@ ${link}`
     );
   }
 
-  if (!data || !data.user.isGraduated) {
-    return null; // No mostrar si no es graduado
+  if (!data || !data.user.isGraduated || !data.user.commissionsEnabled) {
+    return null; // No mostrar si no es graduado o si las comisiones están deshabilitadas en la organización
   }
 
   return (

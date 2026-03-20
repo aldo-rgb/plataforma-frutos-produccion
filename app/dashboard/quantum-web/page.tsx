@@ -66,7 +66,8 @@ import {
   User,
   Layers,
   Lightbulb,
-  Shield
+  Shield,
+  ShoppingCart
 } from 'lucide-react';
 
 // Tipos
@@ -130,6 +131,7 @@ interface AppointmentService {
   id: string;
   name: string;
   description: string;
+  image?: string; // imagen del servicio
   duration: number; // en minutos
   price: number;
   priceType: 'fijo' | 'cotizar';
@@ -401,8 +403,65 @@ export default function QuantumWebEngine() {
   const [isLoadingEdit, setIsLoadingEdit] = useState(true);
   
   // Panel lateral de configuración en modo edición
-  const [showConfigPanel, setShowConfigPanel] = useState(true);
+  const [showConfigPanel, setShowConfigPanel] = useState(false);
   const [configPanelTab, setConfigPanelTab] = useState<'colors' | 'services'>('colors');
+  
+  // Generar string de horario inicial basado en horarioConfig
+  const generateHorarioString = (config: typeof horarioConfig): string => {
+    const diasCortos: { [key: string]: string } = {
+      lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue',
+      viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom'
+    };
+    
+    const horarioGroups: { [horario: string]: string[] } = {};
+    Object.entries(config).forEach(([dia, cfg]) => {
+      if (cfg.abierto) {
+        const key = `${cfg.desde}-${cfg.hasta}`;
+        if (!horarioGroups[key]) horarioGroups[key] = [];
+        horarioGroups[key].push(dia);
+      }
+    });
+    
+    return Object.entries(horarioGroups)
+      .map(([horario, dias]) => {
+        const diasStr = dias.map(d => diasCortos[d] || d).join('-');
+        return `${diasStr} ${horario}`;
+      })
+      .join(', ') || 'Sin horario definido';
+  };
+
+  // Sincronizar horarioConfig con businessInfo.schedule
+  useEffect(() => {
+    const horarioStr = generateHorarioString(horarioConfig);
+    setBusinessInfo(prev => ({ ...prev, schedule: horarioStr }));
+  }, [horarioConfig]);
+
+  // Sincronizar appointmentsConfig.availability.weeklySchedule con horarioConfig cuando es tipo appointments
+  useEffect(() => {
+    if (siteType === 'appointments') {
+      const newHorarioConfig: typeof horarioConfig = {};
+      appointmentsConfig.availability.weeklySchedule.forEach(day => {
+        const dayKey = day.day.toLowerCase();
+        if (day.enabled && day.slots.length > 0) {
+          // Tomar el primer y último slot para simplificar
+          const firstSlot = day.slots[0];
+          const lastSlot = day.slots[day.slots.length - 1];
+          newHorarioConfig[dayKey] = {
+            abierto: true,
+            desde: firstSlot.start,
+            hasta: lastSlot.end
+          };
+        } else {
+          newHorarioConfig[dayKey] = {
+            abierto: false,
+            desde: '09:00',
+            hasta: '18:00'
+          };
+        }
+      });
+      setHorarioConfig(newHorarioConfig);
+    }
+  }, [appointmentsConfig.availability.weeklySchedule, siteType]);
   
   // Cargar datos del perfil existente o del localStorage (idea millonaria)
   useEffect(() => {
@@ -562,6 +621,9 @@ export default function QuantumWebEngine() {
           
           // Ir directo a la preview para editar
           setStep('preview');
+          // Abrir el panel de configuración automáticamente
+          setShowConfigPanel(true);
+          setEditMode(true);
           
           // Cargar colores personalizados si existen
           if (site.templateColors) {
@@ -811,7 +873,7 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950/20 to-slate-950 flex items-center justify-center p-4 pt-20"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950/20 to-slate-950 flex items-center justify-center p-4 pt-20"
     >
       <div className="max-w-2xl w-full text-center">
         {/* Logo animado */}
@@ -821,7 +883,7 @@ export default function QuantumWebEngine() {
             rotate: [0, 5, -5, 0]
           }}
           transition={{ duration: 3, repeat: Infinity }}
-          className="w-32 h-32 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 flex items-center justify-center shadow-2xl shadow-purple-500/30"
+          className="w-32 h-32 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-2xl shadow-blue-500/30"
         >
           <Globe className="w-16 h-16 text-white" />
         </motion.div>
@@ -830,7 +892,7 @@ export default function QuantumWebEngine() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 mb-4"
+          className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 mb-4"
         >
           QUANTUM AI WEB ENGINE
         </motion.h1>
@@ -839,11 +901,11 @@ export default function QuantumWebEngine() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="text-xl text-purple-200 mb-8"
+          className="text-xl text-blue-200 mb-8"
         >
           Crea tu página web profesional con tienda en línea
           <br />
-          <span className="text-purple-400 font-semibold">en menos de 5 minutos</span>
+          <span className="text-cyan-400 font-semibold">en menos de 5 minutos</span>
         </motion.p>
         
         {/* Features */}
@@ -854,13 +916,13 @@ export default function QuantumWebEngine() {
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12"
         >
           {[
-            { icon: Wand2, label: 'IA Genera Todo', color: 'from-purple-500 to-pink-500' },
-            { icon: Layout, label: '5 Templates Pro', color: 'from-blue-500 to-cyan-500' },
-            { icon: ShoppingBag, label: 'Tienda Online', color: 'from-green-500 to-emerald-500' },
-            { icon: Smartphone, label: '100% Responsivo', color: 'from-orange-500 to-red-500' }
+            { icon: Wand2, label: 'IA Genera Todo' },
+            { icon: Layout, label: '5 Templates Pro' },
+            { icon: ShoppingBag, label: 'Tienda Online' },
+            { icon: Smartphone, label: '100% Responsivo' }
           ].map((feature, i) => (
-            <div key={i} className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50">
-              <div className={`w-12 h-12 mx-auto mb-2 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center`}>
+            <div key={i} className="bg-slate-800/50 rounded-2xl p-4 border border-blue-500/20 hover:border-cyan-500/40 transition">
+              <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center">
                 <feature.icon className="w-6 h-6 text-white" />
               </div>
               <p className="text-sm text-slate-300 font-medium">{feature.label}</p>
@@ -875,7 +937,7 @@ export default function QuantumWebEngine() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setStep('site-type')}
-          className="px-8 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg shadow-2xl shadow-purple-500/30 flex items-center gap-3 mx-auto hover:shadow-purple-500/50 transition-all"
+          className="px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg shadow-2xl shadow-blue-500/30 flex items-center gap-3 mx-auto hover:shadow-cyan-500/50 transition-all"
         >
           <Rocket className="w-6 h-6" />
           Comenzar Ahora
@@ -940,12 +1002,12 @@ export default function QuantumWebEngine() {
             }}
             className={`relative w-full p-6 rounded-3xl border-2 text-left transition-all ${
               siteType === 'store' 
-                ? 'border-green-500 bg-green-500/10' 
-                : 'border-slate-700 bg-slate-800/50 hover:border-green-500/50'
+                ? 'border-cyan-500 bg-cyan-500/10' 
+                : 'border-slate-700 bg-slate-800/50 hover:border-cyan-500/50'
             }`}
           >
             <div className="flex flex-col md:flex-row items-start gap-6">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-2xl shadow-green-500/30 flex-shrink-0 mx-auto md:mx-0">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-2xl shadow-blue-500/30 flex-shrink-0 mx-auto md:mx-0">
                 <ShoppingBag className="w-10 h-10 text-white" />
               </div>
               
@@ -964,8 +1026,8 @@ export default function QuantumWebEngine() {
                     'Ideal para: artesanos, chefs, diseñadores, creadores'
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
-                      <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                        <Check className="w-3 h-3 text-green-400" />
+                      <div className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-3 h-3 text-cyan-400" />
                       </div>
                       {item}
                     </div>
@@ -1051,17 +1113,17 @@ export default function QuantumWebEngine() {
             }}
             className={`relative w-full p-6 rounded-3xl border-2 text-left transition-all ${
               siteType === 'appointments' 
-                ? 'border-purple-500 bg-purple-500/10' 
-                : 'border-slate-700 bg-slate-800/50 hover:border-purple-500/50'
+                ? 'border-cyan-500 bg-cyan-500/10' 
+                : 'border-slate-700 bg-slate-800/50 hover:border-cyan-500/50'
             }`}
           >
             {/* Badge NUEVO */}
-            <div className="absolute -top-3 left-6 md:left-1/2 md:-translate-x-1/2 px-4 py-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-white text-xs font-bold shadow-lg">
+            <div className="absolute -top-3 left-6 md:left-1/2 md:-translate-x-1/2 px-4 py-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full text-white text-xs font-bold shadow-lg">
               ✨ NUEVO
             </div>
             
             <div className="flex flex-col md:flex-row items-start gap-6">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center shadow-2xl shadow-purple-500/30 flex-shrink-0 mx-auto md:mx-0">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-blue-500/30 flex-shrink-0 mx-auto md:mx-0">
                 <CalendarClock className="w-12 h-12 text-white" />
               </div>
               
@@ -1078,7 +1140,7 @@ export default function QuantumWebEngine() {
                     { icon: Users, label: 'Gestión de Clientes' },
                     { icon: Video, label: 'Citas Virtuales' },
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-purple-300">
+                    <div key={i} className="flex items-center gap-2 text-sm text-cyan-300">
                       <item.icon className="w-4 h-4" />
                       {item.label}
                     </div>
@@ -1087,10 +1149,10 @@ export default function QuantumWebEngine() {
                 
                 <div className="flex flex-wrap gap-2 mb-4">
                   {[
-                    { icon: Stethoscope, label: 'Salud', color: 'bg-red-500/20 text-red-400' },
-                    { icon: Dumbbell, label: 'Deporte', color: 'bg-green-500/20 text-green-400' },
-                    { icon: Sparkle, label: 'Bienestar', color: 'bg-purple-500/20 text-purple-400' },
-                    { icon: Brain, label: 'Coaching', color: 'bg-blue-500/20 text-blue-400' },
+                    { icon: Stethoscope, label: 'Salud', color: 'bg-blue-500/20 text-blue-400' },
+                    { icon: Dumbbell, label: 'Deporte', color: 'bg-cyan-500/20 text-cyan-400' },
+                    { icon: Sparkle, label: 'Bienestar', color: 'bg-blue-600/20 text-blue-300' },
+                    { icon: Brain, label: 'Coaching', color: 'bg-cyan-600/20 text-cyan-300' },
                   ].map((cat, i) => (
                     <span key={i} className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${cat.color}`}>
                       <cat.icon className="w-3 h-3" />
@@ -1099,7 +1161,7 @@ export default function QuantumWebEngine() {
                   ))}
                 </div>
                 
-                <div className="py-3 px-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 font-semibold text-center border border-purple-500/30">
+                <div className="py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-cyan-500/20 text-cyan-300 font-semibold text-center border border-cyan-500/30">
                   📅 Reservas + 👥 CRM + 🔔 Recordatorios
                 </div>
               </div>
@@ -1151,6 +1213,7 @@ export default function QuantumWebEngine() {
     const [formData, setFormData] = useState<Omit<AppointmentService, 'id'>>({
       name: editingService?.name || '',
       description: editingService?.description || '',
+      image: editingService?.image || '',
       duration: editingService?.duration || 60,
       price: editingService?.price || 0,
       priceType: editingService?.priceType || 'fijo',
@@ -1162,9 +1225,34 @@ export default function QuantumWebEngine() {
       active: editingService?.active ?? true,
       requireDeposit: editingService?.requireDeposit ?? false,
     });
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
+    const serviceImageInputRef = useRef<HTMLInputElement>(null);
 
     const durations = [15, 30, 45, 60, 90, 120, 180];
     const colors = ['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1'];
+
+    const handleServiceImageUpload = async (file: File) => {
+      setIsUploadingImage(true);
+      try {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', file);
+        formDataUpload.append('folder', 'services');
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formDataUpload,
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setFormData(prev => ({ ...prev, image: data.url }));
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error);
+      } finally {
+        setIsUploadingImage(false);
+      }
+    };
 
     return (
       <motion.div
@@ -1204,7 +1292,7 @@ export default function QuantumWebEngine() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ej: Consulta General, Clase de Yoga, Sesión de Coaching..."
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               />
             </div>
 
@@ -1218,8 +1306,70 @@ export default function QuantumWebEngine() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Describe brevemente tu servicio..."
                 rows={3}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
               />
+            </div>
+
+            {/* Imagen del servicio */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Imagen del Servicio (opcional)
+                <span className="text-xs text-slate-500 ml-2">• Tamaño ideal: 800x400px</span>
+              </label>
+              <input
+                ref={serviceImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleServiceImageUpload(file);
+                }}
+              />
+              {formData.image ? (
+                <div className="relative group">
+                  <img
+                    src={formData.image}
+                    alt="Imagen del servicio"
+                    className="w-full h-32 object-cover rounded-xl border border-slate-700"
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => serviceImageInputRef.current?.click()}
+                      className="p-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
+                      className="p-2 bg-red-600 rounded-lg text-white hover:bg-red-700 transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => serviceImageInputRef.current?.click()}
+                  disabled={isUploadingImage}
+                  className="w-full h-32 border-2 border-dashed border-slate-600 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-cyan-500/50 hover:bg-slate-800/50 transition-all disabled:opacity-50"
+                >
+                  {isUploadingImage ? (
+                    <>
+                      <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
+                      <span className="text-sm text-slate-400">Subiendo...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-6 h-6 text-slate-400" />
+                      <span className="text-sm text-slate-400">Agregar imagen</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Duración y Precio */}
@@ -1231,7 +1381,7 @@ export default function QuantumWebEngine() {
                 <select
                   value={formData.duration}
                   onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 >
                   {durations.map(d => (
                     <option key={d} value={d}>
@@ -1250,7 +1400,7 @@ export default function QuantumWebEngine() {
                   value={formData.price === 0 ? '' : formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
                   placeholder="0"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -1272,7 +1422,7 @@ export default function QuantumWebEngine() {
                     onClick={() => setFormData({ ...formData, modality: opt.value })}
                     className={`p-3 rounded-xl border text-center transition-all ${
                       formData.modality === opt.value
-                        ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                        ? 'border-cyan-500 bg-cyan-500/20 text-cyan-300'
                         : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
                     }`}
                   >
@@ -1299,7 +1449,7 @@ export default function QuantumWebEngine() {
                     onClick={() => setFormData({ ...formData, capacity: opt.value, maxParticipants: opt.value === 'individual' ? 1 : 10 })}
                     className={`p-3 rounded-xl border text-center transition-all ${
                       formData.capacity === opt.value
-                        ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                        ? 'border-cyan-500 bg-cyan-500/20 text-cyan-300'
                         : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
                     }`}
                   >
@@ -1333,7 +1483,7 @@ export default function QuantumWebEngine() {
               <select
                 value={formData.bufferTime}
                 onChange={(e) => setFormData({ ...formData, bufferTime: parseInt(e.target.value) })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               >
                 {[0, 5, 10, 15, 30, 45, 60].map(t => (
                   <option key={t} value={t}>{t === 0 ? 'Sin tiempo buffer' : `${t} minutos`}</option>
@@ -1380,7 +1530,7 @@ export default function QuantumWebEngine() {
                 }
               }}
               disabled={!formData.name.trim()}
-              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold hover:from-blue-700 hover:to-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {editingService ? 'Guardar Cambios' : 'Agregar Servicio'}
             </button>
@@ -1402,7 +1552,7 @@ export default function QuantumWebEngine() {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="w-20 h-20 rounded-3xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-purple-500/30"
+            className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-500/30"
           >
             <CalendarClock className="w-10 h-10 text-white" />
           </motion.div>
@@ -1419,11 +1569,11 @@ export default function QuantumWebEngine() {
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              { value: 'salud' as const, label: 'Salud', icon: Stethoscope, color: 'from-red-500 to-rose-600' },
-              { value: 'deporte' as const, label: 'Deporte', icon: Dumbbell, color: 'from-green-500 to-emerald-600' },
-              { value: 'esoterico' as const, label: 'Bienestar', icon: Sparkle, color: 'from-purple-500 to-violet-600' },
-              { value: 'coaching' as const, label: 'Coaching', icon: Brain, color: 'from-blue-500 to-cyan-600' },
-              { value: 'belleza' as const, label: 'Belleza', icon: Sparkles, color: 'from-pink-500 to-fuchsia-600' },
+              { value: 'salud' as const, label: 'Salud', icon: Stethoscope, color: 'from-blue-500 to-blue-600' },
+              { value: 'deporte' as const, label: 'Deporte', icon: Dumbbell, color: 'from-cyan-500 to-cyan-600' },
+              { value: 'esoterico' as const, label: 'Bienestar', icon: Sparkle, color: 'from-blue-600 to-cyan-600' },
+              { value: 'coaching' as const, label: 'Coaching', icon: Brain, color: 'from-blue-500 to-cyan-500' },
+              { value: 'belleza' as const, label: 'Belleza', icon: Sparkles, color: 'from-cyan-600 to-blue-500' },
               { value: 'otro' as const, label: 'Otro', icon: Layers, color: 'from-slate-500 to-slate-600' },
             ].map((cat) => (
               <button
@@ -1431,7 +1581,7 @@ export default function QuantumWebEngine() {
                 onClick={() => setAppointmentsConfig(prev => ({ ...prev, category: cat.value }))}
                 className={`p-4 rounded-2xl border-2 transition-all ${
                   appointmentsConfig.category === cat.value
-                    ? 'border-purple-500 bg-purple-500/10'
+                    ? 'border-cyan-500 bg-cyan-500/10'
                     : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
                 }`}
               >
@@ -1463,7 +1613,7 @@ export default function QuantumWebEngine() {
                   onClick={() => setAppointmentsConfig(prev => ({ ...prev, virtualPlatform: platform.key }))}
                   className={`py-2 px-4 rounded-xl text-sm transition-all ${
                     appointmentsConfig.virtualPlatform === platform.key
-                      ? 'bg-purple-500 text-white'
+                      ? 'bg-cyan-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
@@ -1482,7 +1632,7 @@ export default function QuantumWebEngine() {
             </h2>
             <button
               onClick={() => { setEditingService(null); setShowServiceModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Agregar Servicio
@@ -1504,7 +1654,7 @@ export default function QuantumWebEngine() {
               </p>
               <button
                 onClick={() => setShowServiceModal(true)}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/25"
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold hover:from-blue-700 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/25"
               >
                 <Plus className="w-5 h-5 inline mr-2" />
                 Agregar Mi Primer Servicio
@@ -1545,11 +1695,11 @@ export default function QuantumWebEngine() {
                           </span>
                           <span className="flex items-center gap-1 text-xs text-green-400">
                             <CreditCard className="w-3 h-3" />
-                            ${service.price.toLocaleString()} MXN
+                            {service.price === 0 ? 'Solicitar Cotización' : `$${service.price.toLocaleString()} MXN`}
                           </span>
                           <span className={`px-2 py-0.5 rounded-full text-xs ${
                             service.modality === 'presencial' ? 'bg-blue-500/20 text-blue-400' :
-                            service.modality === 'virtual' ? 'bg-purple-500/20 text-purple-400' :
+                            service.modality === 'virtual' ? 'bg-cyan-500/20 text-cyan-400' :
                             'bg-cyan-500/20 text-cyan-400'
                           }`}>
                             {service.modality === 'presencial' ? '📍 Presencial' :
@@ -1604,7 +1754,7 @@ export default function QuantumWebEngine() {
             )}
             <button
               onClick={() => setStep('appointments-schedule')}
-              className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/25"
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold hover:from-blue-700 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/25"
             >
               {appointmentsConfig.services.length === 0 ? 'Continuar sin servicios →' : 'Configurar Horarios →'}
             </button>
@@ -1662,7 +1812,7 @@ export default function QuantumWebEngine() {
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-purple-500/30"
+              className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-500/30"
             >
               <CalendarDays className="w-10 h-10 text-white" />
             </motion.div>
@@ -1675,7 +1825,7 @@ export default function QuantumWebEngine() {
           {/* Weekly Schedule */}
           <div className="mb-8">
             <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-purple-400" />
+              <Clock className="w-5 h-5 text-cyan-400" />
               Horario Semanal
             </h2>
             
@@ -1694,7 +1844,7 @@ export default function QuantumWebEngine() {
                       <button
                         onClick={() => toggleDayEnabled(index)}
                         className={`w-12 h-6 rounded-full relative transition-colors ${
-                          day.enabled ? 'bg-purple-500' : 'bg-slate-700'
+                          day.enabled ? 'bg-cyan-500' : 'bg-slate-700'
                         }`}
                       >
                         <motion.div 
@@ -1719,7 +1869,7 @@ export default function QuantumWebEngine() {
                                 newSlots[slotIndex] = { ...slot, start: e.target.value };
                                 updateDaySlots(index, newSlots);
                               }}
-                              className="bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:ring-2 focus:ring-purple-500"
+                              className="bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:ring-2 focus:ring-cyan-500"
                             />
                             <span className="text-slate-500">a</span>
                             <input
@@ -1730,7 +1880,7 @@ export default function QuantumWebEngine() {
                                 newSlots[slotIndex] = { ...slot, end: e.target.value };
                                 updateDaySlots(index, newSlots);
                               }}
-                              className="bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:ring-2 focus:ring-purple-500"
+                              className="bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:ring-2 focus:ring-cyan-500"
                             />
                             {day.slots.length > 1 && (
                               <button
@@ -1780,7 +1930,7 @@ export default function QuantumWebEngine() {
                     minAdvanceHours: parseInt(e.target.value)
                   }
                 }))}
-                className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500"
+                className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500"
               >
                 <option value={1}>1 hora antes</option>
                 <option value={2}>2 horas antes</option>
@@ -1794,7 +1944,7 @@ export default function QuantumWebEngine() {
             {/* Max Advance Days */}
             <div className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700">
               <label className="block text-sm font-medium text-slate-300 mb-3">
-                <CalendarDays className="w-4 h-4 inline mr-2 text-purple-400" />
+                <CalendarDays className="w-4 h-4 inline mr-2 text-cyan-400" />
                 ¿Con cuánta anticipación pueden reservar?
               </label>
               <select
@@ -1806,7 +1956,7 @@ export default function QuantumWebEngine() {
                     maxAdvanceDays: parseInt(e.target.value)
                   }
                 }))}
-                className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500"
+                className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500"
               >
                 <option value={7}>1 semana</option>
                 <option value={14}>2 semanas</option>
@@ -1828,7 +1978,7 @@ export default function QuantumWebEngine() {
                   ...prev,
                   cancellationHours: parseInt(e.target.value)
                 }))}
-                className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500"
+                className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500"
               >
                 <option value={0}>Sin restricción</option>
                 <option value={2}>2 horas de anticipación</option>
@@ -1870,11 +2020,11 @@ export default function QuantumWebEngine() {
           </div>
 
           {/* Summary */}
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-900/30 to-pink-900/30 border border-purple-500/30 mb-8">
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-900/30 to-cyan-900/30 border border-cyan-500/30 mb-8">
             <h3 className="text-lg font-semibold text-white mb-4">📋 Resumen de tu Configuración</h3>
             <div className="grid md:grid-cols-3 gap-4">
               <div className="text-center p-3 rounded-xl bg-slate-900/50">
-                <p className="text-2xl font-bold text-purple-400">{appointmentsConfig.services.length}</p>
+                <p className="text-2xl font-bold text-cyan-400">{appointmentsConfig.services.length}</p>
                 <p className="text-sm text-slate-400">Servicios</p>
               </div>
               <div className="text-center p-3 rounded-xl bg-slate-900/50">
@@ -1904,7 +2054,7 @@ export default function QuantumWebEngine() {
             </button>
             <button
               onClick={() => setStep('info')}
-              className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/25"
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold hover:from-blue-700 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/25"
             >
               Continuar →
             </button>
@@ -1948,7 +2098,7 @@ export default function QuantumWebEngine() {
           className="mb-10 p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50"
         >
           <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-            <Palette className="w-5 h-5 text-purple-400" />
+            <Palette className="w-5 h-5 text-cyan-400" />
             Colores de tu Marca
           </h3>
           <p className="text-slate-400 text-sm mb-6">
@@ -2043,7 +2193,7 @@ export default function QuantumWebEngine() {
               onClick={() => setSelectedTemplate(template)}
               className={`cursor-pointer rounded-2xl overflow-hidden border-2 transition-all ${
                 selectedTemplate?.id === template.id
-                  ? 'border-purple-500 shadow-xl shadow-purple-500/20'
+                  ? 'border-cyan-500 shadow-xl shadow-blue-500/20'
                   : 'border-slate-700/50 hover:border-slate-600'
               }`}
             >
@@ -2074,7 +2224,7 @@ export default function QuantumWebEngine() {
                 
                 {/* Selection indicator */}
                 {selectedTemplate?.id === template.id && (
-                  <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
+                  <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center">
                     <Check className="w-5 h-5 text-white" />
                   </div>
                 )}
@@ -2117,7 +2267,7 @@ export default function QuantumWebEngine() {
                     setStep('info');
                   }
                 }}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg shadow-2xl shadow-purple-500/30 flex items-center justify-center gap-3"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg shadow-2xl shadow-blue-500/30 flex items-center justify-center gap-3"
               >
                 Continuar con {selectedTemplate.name}
                 <ArrowRight className="w-5 h-5" />
@@ -2167,7 +2317,7 @@ export default function QuantumWebEngine() {
               value={businessInfo.name}
               onChange={(e) => setBusinessInfo(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Ej: Café El Buen Sabor"
-              className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition"
+              className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition"
             />
           </div>
           
@@ -2181,7 +2331,7 @@ export default function QuantumWebEngine() {
               onChange={(e) => setBusinessInfo(prev => ({ ...prev, description: e.target.value }))}
               placeholder="¿Qué hace tu negocio especial?"
               rows={3}
-              className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition resize-none"
+              className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition resize-none"
             />
           </div>
           
@@ -2193,7 +2343,7 @@ export default function QuantumWebEngine() {
             <select
               value={businessInfo.category}
               onChange={(e) => setBusinessInfo(prev => ({ ...prev, category: e.target.value }))}
-              className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white focus:border-purple-500 transition"
+              className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white focus:border-cyan-500 transition"
             >
               <option value="">Selecciona una categoría</option>
               <option value="restaurante">Restaurante / Café</option>
@@ -2221,7 +2371,7 @@ export default function QuantumWebEngine() {
                 value={businessInfo.phone}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="55 1234 5678"
-                className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-purple-500 transition"
+                className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-cyan-500 transition"
               />
             </div>
             <div>
@@ -2234,7 +2384,7 @@ export default function QuantumWebEngine() {
                 value={businessInfo.whatsapp}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, whatsapp: e.target.value }))}
                 placeholder="55 1234 5678"
-                className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-purple-500 transition"
+                className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-cyan-500 transition"
               />
             </div>
           </div>
@@ -2251,7 +2401,7 @@ export default function QuantumWebEngine() {
                 value={businessInfo.address}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, address: e.target.value }))}
                 placeholder="Calle, Número, Colonia, Ciudad"
-                className="flex-1 p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-purple-500 transition"
+                className="flex-1 p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-cyan-500 transition"
               />
             </div>
           </div>
@@ -2269,12 +2419,12 @@ export default function QuantumWebEngine() {
                 readOnly
                 onClick={() => setShowHorarioModal(true)}
                 placeholder="Configura tu horario de atención"
-                className="flex-1 p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 cursor-pointer hover:border-purple-500/50 transition"
+                className="flex-1 p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 cursor-pointer hover:border-cyan-500/50 transition"
               />
               <button
                 type="button"
                 onClick={() => setShowHorarioModal(true)}
-                className="px-4 py-3 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30 transition-colors"
+                className="px-4 py-3 rounded-xl bg-blue-600/20 border border-cyan-500/30 text-cyan-400 hover:bg-blue-600/30 transition-colors"
                 title="Configurar horario"
               >
                 <Clock className="w-5 h-5" />
@@ -2294,7 +2444,7 @@ export default function QuantumWebEngine() {
                 value={businessInfo.instagram || ''}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, instagram: e.target.value }))}
                 placeholder="@tunegocio"
-                className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-purple-500 transition"
+                className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-cyan-500 transition"
               />
             </div>
             <div>
@@ -2307,7 +2457,7 @@ export default function QuantumWebEngine() {
                 value={businessInfo.facebook || ''}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, facebook: e.target.value }))}
                 placeholder="facebook.com/tunegocio"
-                className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-purple-500 transition"
+                className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-cyan-500 transition"
               />
             </div>
           </div>
@@ -2321,7 +2471,7 @@ export default function QuantumWebEngine() {
               setStep('content');
             }}
             disabled={!businessInfo.name || !businessInfo.description}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Wand2 className="w-5 h-5" />
             Generar Contenido con IA
@@ -2360,12 +2510,18 @@ export default function QuantumWebEngine() {
         
         {isGenerating ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-16 h-16 rounded-full border-4 border-purple-500/30 border-t-purple-500 mb-4"
-            />
-            <p className="text-purple-300 font-medium">Generando contenido con IA...</p>
+            <div className="w-20 h-20 mb-4 rounded-2xl overflow-hidden bg-black">
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              >
+                <source src="/quantum-logo.mp4" type="video/mp4" />
+              </video>
+            </div>
+            <p className="text-cyan-300 font-medium">Generando contenido con IA...</p>
             <p className="text-slate-500 text-sm mt-2">Esto tomará unos segundos</p>
           </div>
         ) : webContent ? (
@@ -2373,7 +2529,7 @@ export default function QuantumWebEngine() {
             {/* Hero Section */}
             <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
               <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Rocket className="w-5 h-5 text-purple-400" />
+                <Rocket className="w-5 h-5 text-cyan-400" />
                 Sección Principal (Hero)
               </h3>
               
@@ -2449,7 +2605,7 @@ export default function QuantumWebEngine() {
             {/* Regenerate Button */}
             <button
               onClick={generateContent}
-              className="w-full py-3 rounded-xl border border-purple-500/50 text-purple-400 font-medium hover:bg-purple-500/10 transition flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl border border-cyan-500/50 text-cyan-400 font-medium hover:bg-cyan-500/10 transition flex items-center justify-center gap-2"
             >
               <Wand2 className="w-4 h-4" />
               Regenerar Todo con IA
@@ -2464,7 +2620,7 @@ export default function QuantumWebEngine() {
               <>
                 <button
                   onClick={() => setStep('products')}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg shadow-xl flex items-center justify-center gap-3"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg shadow-xl flex items-center justify-center gap-3"
                 >
                   <ShoppingBag className="w-5 h-5" />
                   Agregar Productos
@@ -2481,7 +2637,7 @@ export default function QuantumWebEngine() {
             ) : (
               <button
                 onClick={() => setStep('preview')}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg shadow-xl flex items-center justify-center gap-3"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg shadow-xl flex items-center justify-center gap-3"
               >
                 <Eye className="w-5 h-5" />
                 Ver Preview
@@ -2585,12 +2741,12 @@ export default function QuantumWebEngine() {
               setEditingProduct(null);
               setShowProductModal(true);
             }}
-            className="aspect-square bg-slate-800/30 rounded-xl border-2 border-dashed border-slate-600 flex flex-col items-center justify-center gap-3 hover:border-purple-500/50 hover:bg-purple-500/5 transition"
+            className="aspect-square bg-slate-800/30 rounded-xl border-2 border-dashed border-slate-600 flex flex-col items-center justify-center gap-3 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition"
           >
-            <div className="w-14 h-14 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <Plus className="w-7 h-7 text-purple-400" />
+            <div className="w-14 h-14 rounded-full bg-cyan-500/20 flex items-center justify-center">
+              <Plus className="w-7 h-7 text-cyan-400" />
             </div>
-            <span className="text-purple-300 font-medium text-sm">Agregar Producto</span>
+            <span className="text-cyan-300 font-medium text-sm">Agregar Producto</span>
           </motion.button>
         </div>
         
@@ -2605,7 +2761,7 @@ export default function QuantumWebEngine() {
         <div>
           <button
             onClick={() => setStep('preview')}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg shadow-xl flex items-center justify-center gap-3"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg shadow-xl flex items-center justify-center gap-3"
           >
             <Eye className="w-5 h-5" />
             Ver Preview
@@ -2632,79 +2788,30 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-slate-950 pt-16"
+      className="min-h-screen bg-slate-950 pt-16 overflow-hidden"
     >
-      {/* Toolbar */}
-      <div className="fixed top-16 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 px-4 py-3">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <button
-            onClick={() => setStep(siteType === 'appointments' ? 'appointments-schedule' : siteType === 'store' ? 'products' : 'content')}
-            className="text-slate-400 hover:text-white transition flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Volver
-          </button>
-          
-          {/* Device Toggle + Edit Mode */}
-          <div className="flex items-center gap-3">
-            {/* Edit Mode Toggle */}
-            <button
-              onClick={() => setEditMode(!editMode)}
-              className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition ${
-                editMode 
-                  ? 'bg-orange-500 text-white' 
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              <Edit3 className="w-4 h-4" />
-              {editMode ? 'Editando' : 'Editar'}
-            </button>
-            
-            {/* Device Toggle */}
-            <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-1">
-              <button
-                onClick={() => setPreviewMode('desktop')}
-                className={`p-2 rounded-md transition ${previewMode === 'desktop' ? 'bg-purple-500 text-white' : 'text-slate-400 hover:text-white'}`}
-              >
-                <Monitor className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setPreviewMode('mobile')}
-                className={`p-2 rounded-md transition ${previewMode === 'mobile' ? 'bg-purple-500 text-white' : 'text-slate-400 hover:text-white'}`}
-              >
-                <Smartphone className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-          
-          <button
-            onClick={publishSite}
-            disabled={isLoading}
-            className="px-6 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold flex items-center gap-2 disabled:opacity-50"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Rocket className="w-4 h-4" />
-            )}
-            Publicar
-          </button>
-        </div>
-      </div>
-      
       {/* Main Content Area with Side Panel */}
-      <div className="pt-24 pb-8 flex">
-        {/* Side Panel - Configuration (when in edit mode) */}
+      <div className="h-[calc(100vh-4rem)] flex">
+        {/* Side Panel - Configuration */}
         <AnimatePresence>
-          {editMode && showConfigPanel && (
+          {showConfigPanel && (
             <motion.div
-              initial={{ x: -320, opacity: 0 }}
+              initial={{ x: -288, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -320, opacity: 0 }}
-              className="fixed left-0 top-32 bottom-0 w-80 bg-slate-900 border-r border-slate-700/50 z-30 overflow-y-auto"
+              exit={{ x: -288, opacity: 0 }}
+              className="fixed left-0 top-16 bottom-0 w-72 bg-slate-900/95 backdrop-blur-sm border-r border-slate-700/50 z-30 overflow-y-auto shadow-xl"
             >
               {/* Panel Header */}
-              <div className="sticky top-0 bg-slate-900 border-b border-slate-700/50 p-4">
+              <div className="sticky top-0 bg-slate-900 border-b border-slate-700/50 p-4 pb-5 z-10">
+                {/* Botón Volver */}
+                <button
+                  onClick={() => setStep(siteType === 'appointments' ? 'appointments-schedule' : siteType === 'store' ? 'products' : 'content')}
+                  className="flex items-center gap-2 text-slate-400 hover:text-white transition mb-4 text-sm"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Volver al editor
+                </button>
+                
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-white">Configuración</h3>
                   <button 
@@ -2715,37 +2822,69 @@ export default function QuantumWebEngine() {
                   </button>
                 </div>
                 
+                {/* Edit Mode + Device Toggle + Publish */}
+                <div className="space-y-3 mb-4">
+                  {/* Edit Mode Toggle */}
+                  <button
+                    onClick={() => setEditMode(!editMode)}
+                    className={`w-full px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition ${
+                      editMode 
+                        ? 'bg-cyan-500 text-white' 
+                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    {editMode ? 'Editando' : 'Editar'}
+                  </button>
+                  
+                  {/* Device Toggle */}
+                  <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-1">
+                    <button
+                      onClick={() => setPreviewMode('desktop')}
+                      className={`flex-1 p-2 rounded-md transition flex items-center justify-center gap-2 ${previewMode === 'desktop' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      <Monitor className="w-4 h-4" />
+                      <span className="text-sm">Desktop</span>
+                    </button>
+                    <button
+                      onClick={() => setPreviewMode('mobile')}
+                      className={`flex-1 p-2 rounded-md transition flex items-center justify-center gap-2 ${previewMode === 'mobile' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      <Smartphone className="w-4 h-4" />
+                      <span className="text-sm">Móvil</span>
+                    </button>
+                  </div>
+                </div>
+                
                 {/* Tabs */}
                 <div className="flex gap-2">
                   <button
                     onClick={() => setConfigPanelTab('colors')}
                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 ${
                       configPanelTab === 'colors' 
-                        ? 'bg-purple-500 text-white' 
+                        ? 'bg-blue-600 text-white' 
                         : 'bg-slate-800 text-slate-400 hover:text-white'
                     }`}
                   >
                     <Palette className="w-4 h-4" />
                     Colores
                   </button>
-                  {siteType === 'appointments' && (
-                    <button
-                      onClick={() => setConfigPanelTab('services')}
-                      className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 ${
-                        configPanelTab === 'services' 
-                          ? 'bg-purple-500 text-white' 
-                          : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      <Calendar className="w-4 h-4" />
-                      Servicios
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setConfigPanelTab('services')}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 ${
+                      configPanelTab === 'services' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Servicios
+                  </button>
                 </div>
               </div>
               
               {/* Panel Content */}
-              <div className="p-4">
+              <div className="p-4 pt-6">
                 {configPanelTab === 'colors' && (
                   <div className="space-y-6">
                     {/* Current Colors */}
@@ -2819,7 +2958,7 @@ export default function QuantumWebEngine() {
                           <button
                             key={i}
                             onClick={() => setBrandColors(palette.colors as [string, string, string])}
-                            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition border border-transparent hover:border-purple-500/50"
+                            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition border border-transparent hover:border-cyan-500/50"
                           >
                             <div className="flex rounded overflow-hidden mb-1.5">
                               {palette.colors.map((color, j) => (
@@ -2834,7 +2973,7 @@ export default function QuantumWebEngine() {
                   </div>
                 )}
                 
-                {configPanelTab === 'services' && siteType === 'appointments' && (
+                {configPanelTab === 'services' && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-semibold text-white">Servicios de Citas</h4>
@@ -2843,7 +2982,7 @@ export default function QuantumWebEngine() {
                           setEditingService(null);
                           setShowServiceModal(true);
                         }}
-                        className="p-1.5 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition"
+                        className="p-1.5 rounded-lg bg-cyan-500 text-white hover:bg-purple-600 transition"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -2858,7 +2997,7 @@ export default function QuantumWebEngine() {
                             setEditingService(null);
                             setShowServiceModal(true);
                           }}
-                          className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition"
+                          className="px-4 py-2 rounded-lg bg-cyan-500 text-white text-sm font-medium hover:bg-purple-600 transition"
                         >
                           Agregar Servicio
                         </button>
@@ -2908,7 +3047,7 @@ export default function QuantumWebEngine() {
                               </span>
                               <span className="flex items-center gap-1">
                                 <DollarSign className="w-3 h-3" />
-                                ${service.price}
+                                {service.price === 0 ? 'Cotizar' : `$${service.price}`}
                               </span>
                               <span className={`px-1.5 py-0.5 rounded text-[10px] ${
                                 service.active 
@@ -2929,24 +3068,50 @@ export default function QuantumWebEngine() {
           )}
         </AnimatePresence>
         
-        {/* Toggle Panel Button (when panel is closed) */}
-        {editMode && !showConfigPanel && (
-          <button
-            onClick={() => setShowConfigPanel(true)}
-            className="fixed left-4 top-40 z-30 p-3 rounded-xl bg-slate-800 border border-slate-700 text-white hover:bg-slate-700 transition shadow-lg"
+        {/* Toggle Panel Button - Flotante grande cuando el panel está cerrado */}
+        {!showConfigPanel && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            onClick={() => {
+              setShowConfigPanel(true);
+              setEditMode(true);
+            }}
+            className="fixed bottom-8 right-8 z-50 p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600 transition-all shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-110 group"
+            title="Abrir configuración"
           >
-            <Palette className="w-5 h-5" />
-          </button>
+            <Palette className="w-7 h-7 group-hover:rotate-12 transition-transform" />
+            <span className="absolute -top-2 -right-2 w-5 h-5 bg-cyan-400 rounded-full animate-ping" />
+            <span className="absolute -top-2 -right-2 w-5 h-5 bg-cyan-400 rounded-full" />
+          </motion.button>
         )}
         
         {/* Preview Frame */}
-        <div className={`flex-1 flex justify-center px-4 transition-all duration-300 ${
-          editMode && showConfigPanel ? 'ml-80' : ''
+        <div className={`flex-1 flex justify-center px-4 pt-4 pb-8 transition-all duration-300 overflow-y-auto overflow-x-hidden ${
+          showConfigPanel ? 'ml-72' : ''
         }`}>
+          {/* Botón Publicar flotante */}
+          <button
+            onClick={publishSite}
+            disabled={isLoading}
+            className="fixed top-20 right-6 z-50 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 hover:from-blue-700 hover:to-cyan-600 transition disabled:opacity-50 shadow-lg shadow-blue-500/30"
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Rocket className="w-4 h-4" />
+            )}
+            Publicar
+          </button>
+          
           <div
-            className={`bg-white rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 ${
-              previewMode === 'mobile' ? 'w-[375px]' : 'w-full max-w-5xl'
+            className={`bg-white rounded-2xl shadow-2xl transition-all duration-300 flex-shrink-0 overflow-y-auto ${
+              previewMode === 'mobile' 
+                ? 'w-[375px] h-[calc(100vh-8rem)]' 
+                : 'w-full max-w-5xl h-[calc(100vh-8rem)]'
             }`}
+            style={previewMode === 'mobile' ? { minHeight: '667px' } : undefined}
           >
             {selectedTemplate && webContent && (
               <WebsitePreview
@@ -2988,7 +3153,7 @@ export default function QuantumWebEngine() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3"
           >
             <Edit3 className="w-5 h-5" />
             <span className="font-medium">Haz clic en cualquier texto o imagen para editarlo</span>
@@ -3003,7 +3168,7 @@ export default function QuantumWebEngine() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950/20 to-slate-950 flex items-center justify-center p-4 pt-20"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950/20 to-slate-950 flex items-center justify-center p-4 pt-20"
     >
       <div className="max-w-lg w-full text-center">
         {/* Success Animation */}
@@ -3011,7 +3176,7 @@ export default function QuantumWebEngine() {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', delay: 0.2 }}
-          className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center"
+          className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center"
         >
           <Check className="w-12 h-12 text-white" />
         </motion.div>
@@ -3043,11 +3208,11 @@ export default function QuantumWebEngine() {
         >
           <p className="text-slate-400 text-sm mb-3">Tu URL:</p>
           <div className="flex items-center gap-3 bg-slate-900 rounded-xl p-4">
-            <Globe className="w-5 h-5 text-purple-400 flex-shrink-0" />
+            <Globe className="w-5 h-5 text-cyan-400 flex-shrink-0" />
             <span className="text-white font-medium text-lg truncate">{publishedUrl}</span>
             <button
               onClick={() => navigator.clipboard.writeText(`https://${publishedUrl}`)}
-              className="p-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition flex-shrink-0"
+              className="p-2 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition flex-shrink-0"
             >
               <Copy className="w-4 h-4" />
             </button>
@@ -3067,7 +3232,7 @@ export default function QuantumWebEngine() {
               const slug = localStorage.getItem('quantum_published_slug') || publishedUrl.split('/').pop();
               window.open(`/site/${slug}`, '_blank');
             }}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg flex items-center justify-center gap-3"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg flex items-center justify-center gap-3"
           >
             <ExternalLink className="w-5 h-5" />
             Ver mi Sitio
@@ -3090,7 +3255,7 @@ export default function QuantumWebEngine() {
           
           <button
             onClick={() => router.push('/dashboard/mi-negocio?view=optimizador')}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-lg flex items-center justify-center gap-3 hover:shadow-lg hover:shadow-orange-500/25 transition-all"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg flex items-center justify-center gap-3 hover:shadow-lg hover:shadow-blue-500/25 transition-all"
           >
             <Briefcase className="w-5 h-5" />
             Ir a Mi Negocio
@@ -3110,12 +3275,20 @@ export default function QuantumWebEngine() {
   // Main Render
   if (isLoadingEdit && step === 'intro') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950/20 to-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950/20 to-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 flex items-center justify-center animate-pulse">
-            <Globe className="w-8 h-8 text-white" />
+          <div className="w-24 h-24 mx-auto mb-4 rounded-2xl overflow-hidden bg-black">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+            >
+              <source src="/quantum-logo.mp4" type="video/mp4" />
+            </video>
           </div>
-          <p className="text-purple-300">Cargando tu sitio web...</p>
+          <p className="text-cyan-300">Cargando tu sitio web...</p>
         </div>
       </div>
     );
@@ -3152,10 +3325,10 @@ export default function QuantumWebEngine() {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="p-5 border-b border-slate-700/50 bg-gradient-to-r from-emerald-900/30 to-blue-900/30">
+              <div className="p-5 border-b border-slate-700/50 bg-gradient-to-r from-blue-900/30 to-cyan-900/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                       <Globe className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -3187,7 +3360,7 @@ export default function QuantumWebEngine() {
                   />
                   <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   {searchingAddress && (
-                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-400 animate-spin" />
+                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400 animate-spin" />
                   )}
                 </div>
                 
@@ -3254,7 +3427,7 @@ export default function QuantumWebEngine() {
                   <button
                     onClick={() => setShowMapModal(false)}
                     disabled={!addressLat || !addressLon}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     <Check className="w-4 h-4" />
                     Confirmar
@@ -3284,10 +3457,10 @@ export default function QuantumWebEngine() {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="p-5 border-b border-slate-700/50 bg-gradient-to-r from-purple-900/30 to-pink-900/30">
+              <div className="p-5 border-b border-slate-700/50 bg-gradient-to-r from-blue-900/30 to-cyan-900/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                       <Clock className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -3403,7 +3576,7 @@ export default function QuantumWebEngine() {
                           return updated;
                         });
                       }}
-                      className="px-4 py-2 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30 transition text-sm font-medium"
+                      className="px-4 py-2 rounded-lg bg-blue-600/20 border border-cyan-500/30 text-cyan-400 hover:bg-blue-600/30 transition text-sm font-medium"
                     >
                       Aplicar
                     </button>
@@ -3422,32 +3595,10 @@ export default function QuantumWebEngine() {
                   </button>
                   <button
                     onClick={() => {
-                      // Generar string de horario compacto
-                      const diasCortos: { [key: string]: string } = {
-                        lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue',
-                        viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom'
-                      };
-                      
-                      const horarioGroups: { [horario: string]: string[] } = {};
-                      Object.entries(horarioConfig).forEach(([dia, cfg]) => {
-                        if (cfg.abierto) {
-                          const key = `${cfg.desde}-${cfg.hasta}`;
-                          if (!horarioGroups[key]) horarioGroups[key] = [];
-                          horarioGroups[key].push(dia);
-                        }
-                      });
-                      
-                      const horarioStr = Object.entries(horarioGroups)
-                        .map(([horario, dias]) => {
-                          const diasStr = dias.map(d => diasCortos[d] || d).join('-');
-                          return `${diasStr} ${horario}`;
-                        })
-                        .join(', ');
-                      
-                      setBusinessInfo(prev => ({ ...prev, schedule: horarioStr || 'Sin horario definido' }));
+                      // El useEffect ya sincroniza automáticamente horarioConfig con businessInfo.schedule
                       setShowHorarioModal(false);
                     }}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
                   >
                     <Check className="w-4 h-4" />
                     Guardar Horario
@@ -3473,13 +3624,13 @@ export default function QuantumWebEngine() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="w-full max-w-md bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-red-500/30 overflow-hidden shadow-2xl"
+              className="w-full max-w-md bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-blue-500/30 overflow-hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header con ícono */}
               <div className="p-6 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center">
-                  <AlertCircle className="w-8 h-8 text-red-400" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+                  <AlertCircle className="w-8 h-8 text-blue-400" />
                 </div>
                 
                 <h3 className="text-xl font-bold text-white mb-2">
@@ -3495,7 +3646,7 @@ export default function QuantumWebEngine() {
               <div className="p-4 border-t border-slate-700/50 bg-slate-800/30">
                 <button
                   onClick={() => setShowError(false)}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 text-white font-semibold hover:shadow-lg hover:shadow-red-500/25 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
                 >
                   <Check className="w-4 h-4" />
                   Entendido
@@ -3611,7 +3762,7 @@ function ProductModal({
                   <Package className="w-8 h-8 text-slate-500" />
                 )}
               </div>
-              <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-purple-500/50 transition">
+              <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-cyan-500/50 transition">
                 <Upload className="w-5 h-5 text-slate-400 mb-1" />
                 <span className="text-xs text-slate-400">Subir imagen</span>
                 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
@@ -3674,7 +3825,7 @@ function ProductModal({
                 type="checkbox"
                 checked={formData.inStock}
                 onChange={(e) => setFormData(prev => ({ ...prev, inStock: e.target.checked }))}
-                className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-purple-500 focus:ring-purple-500"
+                className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-cyan-500 focus:ring-cyan-500"
               />
               <span className="text-sm text-slate-300">En stock</span>
             </label>
@@ -3684,7 +3835,7 @@ function ProductModal({
                 type="checkbox"
                 checked={formData.featured}
                 onChange={(e) => setFormData(prev => ({ ...prev, featured: e.target.checked }))}
-                className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-purple-500 focus:ring-purple-500"
+                className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-cyan-500 focus:ring-cyan-500"
               />
               <span className="text-sm text-slate-300">Destacado</span>
             </label>
@@ -3706,7 +3857,7 @@ function ProductModal({
               }
             }}
             disabled={!formData.name || !formData.price}
-            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium disabled:opacity-50"
+            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium disabled:opacity-50"
           >
             Guardar
           </button>
@@ -3842,6 +3993,19 @@ function WebsitePreview({
   const [customImageUrl, setCustomImageUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Estado para modal de agendamiento
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedService, setSelectedService] = useState<AppointmentService | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [bookingStep, setBookingStep] = useState<'select' | 'contact'>('select');
+  
+  // Estado para modal de detalle de producto
+  const [showProductDetailModal, setShowProductDetailModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
   // Usar brandColors personalizados si existen, sino los del template
   const colors = brandColors ? {
@@ -3989,7 +4153,7 @@ function WebsitePreview({
               <div className="mb-6">
                 <label className="text-sm text-slate-400 mb-2 block">Sube tu propia imagen</label>
                 <label 
-                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-purple-500 transition bg-slate-800/50 ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-cyan-500 transition bg-slate-800/50 ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
                 >
                   <input 
                     type="file" 
@@ -4000,7 +4164,7 @@ function WebsitePreview({
                   />
                   {isUploading ? (
                     <div className="flex flex-col items-center">
-                      <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-2" />
+                      <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-2" />
                       <span className="text-sm text-slate-400">Subiendo imagen...</span>
                     </div>
                   ) : (
@@ -4058,7 +4222,7 @@ function WebsitePreview({
                       }
                     }}
                     className={`relative aspect-video rounded-lg overflow-hidden border-2 transition ${
-                      heroImage === img.url ? 'border-purple-500' : 'border-transparent hover:border-slate-600'
+                      heroImage === img.url ? 'border-cyan-500' : 'border-transparent hover:border-slate-600'
                     }`}
                   >
                     <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
@@ -4321,9 +4485,9 @@ function WebsitePreview({
                   />
                 </div>
               </div>
-              <div className="flex justify-center gap-16 pt-8 border-t" style={{ borderColor: colors.primary + '20' }}>
+              <div className="flex flex-col sm:flex-row justify-center gap-8 sm:gap-16 pt-8 border-t" style={{ borderColor: colors.primary + '20' }}>
                 <div className="text-center">
-                  <div className="text-4xl font-light" style={{ color: colors.primary }}>
+                  <div className="text-3xl sm:text-4xl font-light" style={{ color: colors.primary }}>
                     <EditableText value={content.stat1Value || '5+'} onChange={(val) => handleContentChange('stat1Value', val)} editMode={editMode} />
                   </div>
                   <div className="text-sm uppercase tracking-widest mt-2" style={{ color: colors.secondary }}>
@@ -4331,7 +4495,7 @@ function WebsitePreview({
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl font-light" style={{ color: colors.primary }}>
+                  <div className="text-3xl sm:text-4xl font-light" style={{ color: colors.primary }}>
                     <EditableText value={content.stat2Value || '100%'} onChange={(val) => handleContentChange('stat2Value', val)} editMode={editMode} />
                   </div>
                   <div className="text-sm uppercase tracking-widest mt-2" style={{ color: colors.secondary }}>
@@ -4343,8 +4507,8 @@ function WebsitePreview({
           ) : template.style === 'energetic' ? (
             /* ENERGETIC: Diseño diagonal, colores vibrantes, animado */
             <div className="relative">
-              <div className="absolute -top-4 -left-4 text-8xl font-black opacity-10" style={{ color: colors.primary }}>ABOUT</div>
-              <div className="grid md:grid-cols-12 gap-6 items-center">
+              <div className="absolute -top-4 -left-4 text-6xl md:text-8xl font-black opacity-10" style={{ color: colors.primary }}>ABOUT</div>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <div className="md:col-span-5">
                   <div className="relative p-1 rounded-2xl" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>
                     <div className="bg-white rounded-xl p-6">
@@ -4387,28 +4551,47 @@ function WebsitePreview({
             </div>
           ) : template.style === 'artisan' ? (
             /* ARTISAN: Diseño orgánico, formas naturales, tipografía clásica */
-            <div className="grid md:grid-cols-5 gap-12 items-center">
-              <div className="md:col-span-2 relative">
-                <div className="absolute -inset-6 rounded-full opacity-10" style={{ backgroundColor: colors.accent }} />
-                <div className="relative bg-white rounded-[40px] p-8 shadow-xl border-2" style={{ borderColor: colors.primary + '20' }}>
-                  <div className="text-center">
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${colors.primary}20, ${colors.accent}20)`, border: `2px solid ${colors.primary}` }}>
-                      <Award className="w-10 h-10" style={{ color: colors.primary }} />
+            <div className="space-y-6 md:space-y-0 md:grid md:grid-cols-5 md:gap-12 md:items-center">
+              {/* Texto - siempre primero en móvil */}
+              <div className="md:col-span-3 md:order-2">
+                <div className="flex items-center gap-3 mb-3 md:mb-6">
+                  <div className="w-8 md:w-12 h-[1px]" style={{ backgroundColor: colors.primary }} />
+                  <span className="text-xs md:text-sm italic" style={{ color: colors.accent }}>Nuestra Historia</span>
+                </div>
+                <div className="text-2xl md:text-4xl font-serif mb-3 md:mb-6" style={{ color: colors.primary }}>
+                  <EditableText value={content.aboutTitle} onChange={(val) => handleContentChange('aboutTitle', val)} editMode={editMode} />
+                </div>
+                <div className="text-sm md:text-base leading-relaxed md:leading-loose" style={{ color: colors.secondary, fontFamily: 'Georgia, serif' }}>
+                  <EditableText value={content.aboutText} onChange={(val) => handleContentChange('aboutText', val)} editMode={editMode} multiline />
+                </div>
+                <div className="hidden md:flex items-center gap-4 mt-8 pt-6 border-t" style={{ borderColor: colors.primary + '20' }}>
+                  <div className="flex -space-x-3">
+                    {[1,2,3].map(i => <div key={i} className="w-10 h-10 rounded-full border-2 border-white" style={{ backgroundColor: i === 1 ? colors.primary : i === 2 ? colors.accent : colors.secondary }} />)}
+                  </div>
+                  <span className="text-sm italic" style={{ color: colors.secondary }}>Creado con pasión y dedicación</span>
+                </div>
+              </div>
+              {/* Stats - abajo en móvil, horizontal y compacto */}
+              <div className="md:col-span-2 md:order-1">
+                <div className="bg-white rounded-2xl md:rounded-[40px] p-4 md:p-8 shadow-lg border" style={{ borderColor: colors.primary + '20' }}>
+                  <div className="flex items-center gap-4 md:flex-col md:text-center">
+                    <div className="w-12 h-12 md:w-20 md:h-20 md:mx-auto md:mb-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: `linear-gradient(135deg, ${colors.primary}20, ${colors.accent}20)`, border: `2px solid ${colors.primary}` }}>
+                      <Award className="w-6 h-6 md:w-10 md:h-10" style={{ color: colors.primary }} />
                     </div>
-                    <div className="space-y-4">
-                      <div className="py-3 border-b" style={{ borderColor: colors.primary + '20' }}>
-                        <div className="text-3xl font-serif" style={{ color: colors.primary }}>
+                    <div className="flex gap-6 md:flex-col md:gap-4 md:w-full">
+                      <div className="md:py-3 md:border-b" style={{ borderColor: colors.primary + '20' }}>
+                        <div className="text-lg md:text-3xl font-serif font-bold" style={{ color: colors.primary }}>
                           <EditableText value={content.stat1Value || '5+'} onChange={(val) => handleContentChange('stat1Value', val)} editMode={editMode} />
                         </div>
-                        <div className="text-sm italic" style={{ color: colors.secondary }}>
-                          <EditableText value={content.stat1Label || 'Años de experiencia'} onChange={(val) => handleContentChange('stat1Label', val)} editMode={editMode} />
+                        <div className="text-[10px] md:text-sm italic" style={{ color: colors.secondary }}>
+                          <EditableText value={content.stat1Label || 'Años exp.'} onChange={(val) => handleContentChange('stat1Label', val)} editMode={editMode} />
                         </div>
                       </div>
-                      <div className="py-3">
-                        <div className="text-3xl font-serif" style={{ color: colors.primary }}>
+                      <div className="md:py-3">
+                        <div className="text-lg md:text-3xl font-serif font-bold" style={{ color: colors.primary }}>
                           <EditableText value={content.stat2Value || '100%'} onChange={(val) => handleContentChange('stat2Value', val)} editMode={editMode} />
                         </div>
-                        <div className="text-sm italic" style={{ color: colors.secondary }}>
+                        <div className="text-[10px] md:text-sm italic" style={{ color: colors.secondary }}>
                           <EditableText value={content.stat2Label || 'Compromiso'} onChange={(val) => handleContentChange('stat2Label', val)} editMode={editMode} />
                         </div>
                       </div>
@@ -4416,33 +4599,15 @@ function WebsitePreview({
                   </div>
                 </div>
               </div>
-              <div className="md:col-span-3">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-[1px]" style={{ backgroundColor: colors.primary }} />
-                  <span className="text-sm italic" style={{ color: colors.accent }}>Nuestra Historia</span>
-                </div>
-                <div className="text-3xl md:text-4xl font-serif mb-6" style={{ color: colors.primary }}>
-                  <EditableText value={content.aboutTitle} onChange={(val) => handleContentChange('aboutTitle', val)} editMode={editMode} />
-                </div>
-                <div className="text-base leading-loose" style={{ color: colors.secondary, fontFamily: 'Georgia, serif' }}>
-                  <EditableText value={content.aboutText} onChange={(val) => handleContentChange('aboutText', val)} editMode={editMode} multiline />
-                </div>
-                <div className="flex items-center gap-4 mt-8 pt-6 border-t" style={{ borderColor: colors.primary + '20' }}>
-                  <div className="flex -space-x-3">
-                    {[1,2,3].map(i => <div key={i} className="w-10 h-10 rounded-full border-2 border-white" style={{ backgroundColor: i === 1 ? colors.primary : i === 2 ? colors.accent : colors.secondary }} />)}
-                  </div>
-                  <span className="text-sm italic" style={{ color: colors.secondary }}>Creado con pasión y dedicación</span>
-                </div>
-              </div>
             </div>
           ) : template.style === 'tech' ? (
             /* TECH: Diseño futurista, glassmorphism, elementos geométricos */
             <div className="relative">
-              <div className="grid md:grid-cols-2 gap-8 items-center">
-                <div className="relative">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div className="relative order-2 md:order-1">
                   <div className="absolute inset-0 rounded-2xl opacity-20" style={{ background: `linear-gradient(135deg, ${colors.primary}, transparent)` }} />
-                  <div className="relative backdrop-blur-sm rounded-2xl p-8 border" style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: colors.primary + '30' }}>
-                    <div className="flex items-start gap-6">
+                  <div className="relative backdrop-blur-sm rounded-2xl p-6 md:p-8 border" style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: colors.primary + '30' }}>
+                    <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                       <div className="w-16 h-16 rounded-xl flex items-center justify-center relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>
                         <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)`, animation: 'shine 3s infinite' }} />
                         <Zap className="w-8 h-8 text-white" />
@@ -4477,7 +4642,7 @@ function WebsitePreview({
                     </div>
                   </div>
                 </div>
-                <div>
+                <div className="order-1 md:order-2">
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-xs font-mono px-2 py-1 rounded" style={{ backgroundColor: colors.primary + '20', color: colors.primary }}>&lt;about&gt;</span>
                   </div>
@@ -4632,10 +4797,10 @@ function WebsitePreview({
             {/* Cards según template */}
             <div className={`grid gap-6 ${
               template.style === 'minimal' ? 'grid-cols-1 md:grid-cols-2 gap-8' :
-              template.style === 'energetic' ? 'grid-cols-2 lg:grid-cols-4 gap-4' :
+              template.style === 'energetic' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' :
               template.style === 'artisan' ? 'grid-cols-1 md:grid-cols-2 gap-8' :
               template.style === 'tech' ? 'grid-cols-1 md:grid-cols-2 gap-6' :
-              'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'
+              'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'
             }`}>
               {content.services.slice(0, 4).map((service, index) => {
                 const ServiceIcon = [Target, Lightbulb, Shield, TrendingUp][index] || Star;
@@ -4796,12 +4961,18 @@ function WebsitePreview({
               'grid-cols-2 md:grid-cols-3 gap-3 md:gap-6'
             }`}>
               {products.map((product) => (
-                <div key={product.id} className={`group ${
+                <div 
+                  key={product.id} 
+                  onClick={() => {
+                    setSelectedProduct(product);
+                    setShowProductDetailModal(true);
+                  }}
+                  className={`group cursor-pointer ${
                   template.style === 'minimal' ? 'flex gap-6 items-start pb-6 border-b' :
                   template.style === 'energetic' ? 'bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all' :
                   template.style === 'artisan' ? 'bg-white rounded-[24px] overflow-hidden border-2 hover:shadow-xl transition-all' :
                   template.style === 'tech' ? 'rounded-xl overflow-hidden border backdrop-blur-sm hover:border-opacity-100 transition-all' :
-                  'bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-lg'
+                  'bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all'
                 }`} style={{
                   borderColor: template.style === 'artisan' ? colors.primary + '10' : template.style === 'tech' ? colors.primary + '30' : undefined,
                   backgroundColor: template.style === 'tech' ? 'rgba(255,255,255,0.03)' : undefined
@@ -4862,140 +5033,114 @@ function WebsitePreview({
       )}
 
       {/* ============ APPOINTMENT SERVICES SECTION ============ */}
-      {siteType === 'appointments' && appointmentServices && appointmentServices.length > 0 && (
-        <section className="py-12 md:py-20 px-4 md:px-6" style={{ backgroundColor: colors.primary + '05' }}>
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-8 md:mb-12">
-              <span 
-                className="inline-block px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold mb-4 md:mb-6"
-                style={{ backgroundColor: colors.accent + '20', color: colors.accent }}
-              >
-                📅 Agenda tu cita
-              </span>
-              
+      {appointmentServices && appointmentServices.length > 0 && (
+        <section className="py-16 md:py-24 px-4 md:px-6 bg-gradient-to-b from-white to-gray-50">
+          <div className="max-w-4xl mx-auto">
+            {/* Header corporativo */}
+            <div className="text-center mb-12 md:mb-16">
               <h2 
-                className="text-2xl md:text-4xl font-bold"
+                className="text-3xl md:text-5xl font-bold mb-4"
                 style={{ fontFamily: template.fonts.heading, color: colors.primary }}
               >
                 Nuestros Servicios
               </h2>
-              <p className="text-sm md:text-base text-gray-500 mt-2 max-w-2xl mx-auto">
-                Elige el servicio que necesitas y agenda tu cita en línea de forma rápida y sencilla
+              <div 
+                className="w-20 h-1 mx-auto rounded-full mb-6"
+                style={{ backgroundColor: colors.accent }}
+              />
+              <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
+                Soluciones profesionales diseñadas para satisfacer tus necesidades
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {appointmentServices.filter(s => s.active).map((service) => (
+            {/* Lista de servicios - Diseño corporativo */}
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-10">
+              {appointmentServices.filter(s => s.active).map((service, index, arr) => (
                 <div 
                   key={service.id} 
-                  className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
+                  className={`flex items-center gap-4 p-5 md:p-6 ${index !== arr.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-gray-50 transition-colors`}
                 >
-                  {/* Header con color del servicio */}
-                  <div 
-                    className="h-2"
-                    style={{ backgroundColor: service.color }}
-                  />
+                  {/* Imagen o indicador de color */}
+                  {service.image ? (
+                    <img 
+                      src={service.image} 
+                      alt={service.name}
+                      className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div 
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: service.color || colors.accent }}
+                    />
+                  )}
                   
-                  <div className="p-5 md:p-6">
-                    {/* Nombre y badges */}
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-bold text-lg md:text-xl" style={{ color: colors.primary }}>
-                        {service.name}
-                      </h3>
-                      <div className="flex gap-1">
-                        {service.modality === 'virtual' && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-600">
-                            Virtual
-                          </span>
-                        )}
-                        {service.modality === 'presencial' && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-600">
-                            Presencial
-                          </span>
-                        )}
-                        {service.modality === 'ambos' && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-600">
-                            Virtual/Presencial
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Descripción */}
+                  {/* Info del servicio */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-base md:text-lg" style={{ color: colors.primary }}>
+                      {service.name}
+                    </h3>
                     {service.description && (
-                      <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+                      <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">
                         {service.description}
                       </p>
                     )}
-                    
-                    {/* Info row */}
-                    <div className="flex items-center gap-4 mb-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4" />
-                        <span>
-                          {service.duration >= 60 
-                            ? `${Math.floor(service.duration / 60)}h${service.duration % 60 > 0 ? ` ${service.duration % 60}min` : ''}`
-                            : `${service.duration} min`
-                          }
-                        </span>
-                      </div>
-                      {service.capacity === 'grupal' && service.maxParticipants && (
-                        <div className="flex items-center gap-1.5">
-                          <Users className="w-4 h-4" />
-                          <span>Hasta {service.maxParticipants} personas</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Precio y botón */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <div>
-                        {service.priceType === 'fijo' ? (
-                          <span className="text-2xl font-bold" style={{ color: colors.accent }}>
-                            ${service.price.toLocaleString()}
-                            <span className="text-sm font-normal text-gray-400 ml-1">MXN</span>
-                          </span>
-                        ) : (
-                          <span className="text-sm font-medium text-gray-500">
-                            Precio a cotizar
-                          </span>
-                        )}
-                      </div>
-                      
-                      <button
-                        className="px-5 py-2.5 rounded-xl font-semibold text-white text-sm transition hover:scale-105 flex items-center gap-2"
-                        style={{ backgroundColor: colors.accent }}
-                      >
-                        <CalendarDays className="w-4 h-4" />
-                        Agendar
-                      </button>
-                    </div>
-                    
-                    {/* Depósito requerido */}
-                    {service.requireDeposit && service.depositPercentage && (
-                      <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
-                        <CreditCard className="w-3 h-3" />
-                        Requiere depósito del {service.depositPercentage}%
-                      </p>
+                  </div>
+                  
+                  {/* Badges */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="hidden md:flex items-center gap-1 text-xs text-gray-500">
+                      <Clock className="w-3.5 h-3.5" />
+                      {service.duration >= 60 
+                        ? `${Math.floor(service.duration / 60)}h${service.duration % 60 > 0 ? ` ${service.duration % 60}min` : ''}`
+                        : `${service.duration} min`
+                      }
+                    </span>
+                    {service.modality === 'virtual' && (
+                      <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-100">
+                        Virtual
+                      </span>
+                    )}
+                    {service.modality === 'presencial' && (
+                      <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">
+                        Presencial
+                      </span>
+                    )}
+                    {service.modality === 'ambos' && (
+                      <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-purple-50 text-purple-600 border border-purple-100">
+                        Híbrido
+                      </span>
                     )}
                   </div>
                 </div>
               ))}
             </div>
             
-            {/* CTA de agenda */}
-            <div className="mt-8 text-center">
-              <p className="text-sm text-gray-500 mb-3">
-                ¿Tienes dudas sobre nuestros servicios?
-              </p>
+            {/* Botón único de agendar */}
+            <div className="text-center">
+              <button
+                onClick={() => setShowBookingModal(true)}
+                className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-white text-lg transition-all hover:scale-105 hover:shadow-xl shadow-lg"
+                style={{ backgroundColor: colors.accent }}
+              >
+                <CalendarDays className="w-6 h-6" />
+                Agendar Cita
+              </button>
+              
+              {/* WhatsApp secundario */}
               {business.whatsapp && (
-                <button
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-white transition hover:scale-105"
-                  style={{ backgroundColor: '#25D366' }}
-                >
-                  <MessageSquare className="w-5 h-5" />
-                  Escríbenos por WhatsApp
-                </button>
+                <div className="mt-6">
+                  <p className="text-sm text-gray-400 mb-2">
+                    ¿Prefieres contactarnos directamente?
+                  </p>
+                  <button
+                    onClick={() => window.open(`https://wa.me/${business.whatsapp?.replace(/[^0-9]/g, '')}`, '_blank')}
+                    className="inline-flex items-center gap-2 text-sm font-medium transition hover:opacity-80"
+                    style={{ color: colors.accent }}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Escríbenos por WhatsApp
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -5305,6 +5450,494 @@ function WebsitePreview({
           )}
         </div>
       </footer>
+
+      {/* ============ MODAL DE AGENDAMIENTO ============ */}
+      <AnimatePresence>
+        {showBookingModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowBookingModal(false);
+              setSelectedService(null);
+              setSelectedTime(null);
+              setBookingStep('select');
+              setCustomerName('');
+              setCustomerPhone('');
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-lg bg-white rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-5 border-b" style={{ backgroundColor: colors.accent + '10' }}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: colors.accent }}>
+                      <CalendarDays className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Agendar Cita</h3>
+                      <p className="text-sm text-gray-500">{bookingStep === 'select' ? 'Selecciona servicio, fecha y hora' : 'Ingresa tus datos de contacto'}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowBookingModal(false);
+                      setSelectedService(null);
+                      setSelectedTime(null);
+                      setBookingStep('select');
+                      setCustomerName('');
+                      setCustomerPhone('');
+                    }}
+                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-5 space-y-5">
+                {/* Paso 1: Seleccionar Servicio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    1. Selecciona un servicio
+                  </label>
+                  <div className="space-y-2">
+                    {appointmentServices.filter(s => s.active).map((service) => (
+                      <button
+                        key={service.id}
+                        onClick={() => {
+                          setSelectedService(service);
+                          setSelectedTime(null);
+                        }}
+                        className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                          selectedService?.id === service.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                      >
+                        <div className="flex gap-4 items-start">
+                          {/* Imagen del servicio */}
+                          {service.image && (
+                            <img 
+                              src={service.image} 
+                              alt={service.name}
+                              className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                            />
+                          )}
+                          <div className="flex-1 flex justify-between items-start">
+                            <div>
+                              <h4 className="font-semibold text-gray-900">{service.name}</h4>
+                              {service.description && (
+                                <p className="text-sm text-gray-500 mt-1">{service.description}</p>
+                              )}
+                              <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {service.duration} min
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full ${
+                                  service.modality === 'presencial' ? 'bg-blue-100 text-blue-600' :
+                                  service.modality === 'virtual' ? 'bg-purple-100 text-purple-600' :
+                                  'bg-cyan-100 text-cyan-600'
+                                }`}>
+                                {service.modality === 'presencial' ? '📍 Presencial' :
+                                 service.modality === 'virtual' ? '🎥 Virtual' : '🔄 Híbrido'}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="font-bold flex-shrink-0" style={{ color: colors.accent }}>
+                            {service.price === 0 ? 'Cotizar' : `$${service.price.toLocaleString()}`}
+                          </span>
+                        </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Paso 2: Seleccionar Fecha y Hora */}
+                {selectedService && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      2. Selecciona fecha y hora
+                    </label>
+                    
+                    {/* Selector de fecha */}
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-600">Fecha</span>
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-2">
+                        {[...Array(7)].map((_, i) => {
+                          const date = new Date();
+                          date.setDate(date.getDate() + i);
+                          const isSelected = selectedDate.toDateString() === date.toDateString();
+                          const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                setSelectedDate(new Date(date));
+                                setSelectedTime(null);
+                              }}
+                              className={`flex-shrink-0 w-16 py-3 rounded-xl border-2 text-center transition-all ${
+                                isSelected
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              <div className="text-xs text-gray-500">{dayNames[date.getDay()]}</div>
+                              <div className={`text-lg font-bold ${isSelected ? 'text-blue-600' : 'text-gray-900'}`}>
+                                {date.getDate()}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Horarios disponibles */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-600">Horarios disponibles</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {(() => {
+                          // Generar horarios según el día seleccionado
+                          const dayNames = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+                          const dayName = dayNames[selectedDate.getDay()];
+                          
+                          // Horarios de ejemplo basados en el día
+                          const schedules: { [key: string]: string[] } = {
+                            lunes: ['09:00', '10:00', '11:00', '12:00', '16:00', '17:00', '18:00', '19:00'],
+                            martes: ['09:00', '10:00', '11:00', '12:00', '16:00', '17:00', '18:00', '19:00'],
+                            miercoles: ['09:00', '10:00', '11:00', '12:00', '16:00', '17:00', '18:00', '19:00'],
+                            jueves: ['09:00', '10:00', '11:00', '12:00', '16:00', '17:00', '18:00', '19:00'],
+                            viernes: ['09:00', '10:00', '11:00', '12:00', '16:00', '17:00', '18:00', '19:00'],
+                            sabado: ['10:00', '11:00', '12:00', '13:00'],
+                            domingo: [],
+                          };
+                          
+                          const times = schedules[dayName] || [];
+                          
+                          if (times.length === 0) {
+                            return (
+                              <div className="col-span-4 text-center py-6 text-gray-500">
+                                <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                <p>No hay horarios disponibles este día</p>
+                              </div>
+                            );
+                          }
+                          
+                          return times.map((time) => (
+                            <button
+                              key={time}
+                              onClick={() => setSelectedTime(time)}
+                              className={`py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                                selectedTime === time
+                                  ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                              }`}
+                            >
+                              {time}
+                            </button>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Paso 3: Datos de contacto */}
+                {bookingStep === 'contact' && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-4"
+                  >
+                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">3</span>
+                      Tus datos de contacto
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Tu nombre</label>
+                        <input
+                          type="text"
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          placeholder="Ej: Juan Pérez"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Tu WhatsApp <span className="text-red-500">*</span></label>
+                        <input
+                          type="tel"
+                          value={customerPhone}
+                          onChange={(e) => setCustomerPhone(e.target.value)}
+                          placeholder="Ej: 8112345678"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Te enviaremos confirmación y recordatorio</p>
+                      </div>
+                    </div>
+                    
+                    {/* Resumen */}
+                    <div className="bg-blue-50 rounded-xl p-4 mt-4">
+                      <p className="text-sm font-medium text-blue-900 mb-2">📋 Resumen de tu cita:</p>
+                      <div className="text-sm text-blue-800 space-y-1">
+                        <p>• <strong>Servicio:</strong> {selectedService?.name}</p>
+                        <p>• <strong>Fecha:</strong> {selectedDate.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                        <p>• <strong>Hora:</strong> {selectedTime}</p>
+                        <p>• <strong>Precio:</strong> {selectedService?.price === 0 ? 'Solicitar Cotización' : `$${selectedService?.price}`}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t bg-gray-50">
+                {bookingStep === 'select' ? (
+                  <button
+                    onClick={() => setBookingStep('contact')}
+                    disabled={!selectedService || !selectedTime}
+                    className="w-full py-3 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: selectedService && selectedTime ? colors.accent : '#9CA3AF' }}
+                  >
+                    {selectedService && selectedTime ? 'Continuar →' : 'Selecciona servicio y horario'}
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <button
+                      onClick={async () => {
+                        if (selectedService && selectedTime && customerPhone) {
+                          const dateStr = selectedDate.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+                          
+                          try {
+                            const response = await fetch('/api/quantum-web/send-appointment', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                phoneNumber: business.whatsapp?.replace(/[^0-9]/g, '') || '',
+                                businessName: content.heroTitle || business.name,
+                                businessPhone: business.whatsapp?.replace(/[^0-9]/g, '') || '',
+                                serviceName: selectedService.name,
+                                serviceDescription: selectedService.description,
+                                serviceDuration: selectedService.duration,
+                                servicePrice: selectedService.price,
+                                date: dateStr,
+                                time: selectedTime,
+                                customerName: customerName,
+                                customerPhone: customerPhone.replace(/[^0-9]/g, '').startsWith('52') 
+                                  ? customerPhone.replace(/[^0-9]/g, '') 
+                                  : '52' + customerPhone.replace(/[^0-9]/g, '')
+                              })
+                            });
+                            
+                            const data = await response.json();
+                            
+                            if (data.success) {
+                              alert('✅ ¡Cita solicitada!\n\nTe enviamos confirmación por WhatsApp.\nTe recordaremos 24 horas antes.');
+                              setShowBookingModal(false);
+                              setSelectedService(null);
+                              setSelectedTime(null);
+                              setCustomerName('');
+                              setCustomerPhone('');
+                              setBookingStep('select');
+                            } else {
+                              const message = `Hola, me gustaría agendar una cita:\n\n👤 Nombre: ${customerName}\n📱 Tel: ${customerPhone}\n📋 Servicio: ${selectedService.name}\n📅 Fecha: ${dateStr}\n🕐 Hora: ${selectedTime}`;
+                              window.open(`https://wa.me/${business.whatsapp?.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+                              setShowBookingModal(false);
+                              setSelectedService(null);
+                              setSelectedTime(null);
+                              setCustomerName('');
+                              setCustomerPhone('');
+                              setBookingStep('select');
+                            }
+                          } catch (error) {
+                            const message = `Hola, me gustaría agendar una cita:\n\n👤 Nombre: ${customerName}\n📱 Tel: ${customerPhone}\n📋 Servicio: ${selectedService.name}\n📅 Fecha: ${dateStr}\n🕐 Hora: ${selectedTime}`;
+                            window.open(`https://wa.me/${business.whatsapp?.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+                            setShowBookingModal(false);
+                            setSelectedService(null);
+                            setSelectedTime(null);
+                            setCustomerName('');
+                            setCustomerPhone('');
+                            setBookingStep('select');
+                          }
+                        }
+                      }}
+                      disabled={!customerPhone}
+                      className="w-full py-3 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      style={{ backgroundColor: customerPhone ? colors.accent : '#9CA3AF' }}
+                    >
+                      <MessageSquare className="w-5 h-5" />
+                      Confirmar Cita
+                    </button>
+                    <button
+                      onClick={() => setBookingStep('select')}
+                      className="w-full py-2 text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      ← Volver
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Detalle de Producto */}
+      <AnimatePresence>
+        {showProductDetailModal && selectedProduct && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowProductDetailModal(false);
+              setSelectedProduct(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden shadow-2xl"
+            >
+              {/* Imagen del producto */}
+              <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200">
+                {selectedProduct.image ? (
+                  <img 
+                    src={selectedProduct.image} 
+                    alt={selectedProduct.name} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Package className="w-24 h-24 text-gray-300" />
+                  </div>
+                )}
+                {/* Botón cerrar */}
+                <button
+                  onClick={() => {
+                    setShowProductDetailModal(false);
+                    setSelectedProduct(null);
+                  }}
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-lg"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+                {/* Badge destacado */}
+                {selectedProduct.featured && (
+                  <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full text-sm font-bold text-white flex items-center gap-1.5" style={{ backgroundColor: colors.accent }}>
+                    <Star className="w-4 h-4 fill-current" />
+                    Destacado
+                  </div>
+                )}
+                {/* Badge descuento */}
+                {selectedProduct.originalPrice && (
+                  <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-full text-sm font-bold text-white bg-red-500">
+                    -{Math.round((1 - selectedProduct.price / selectedProduct.originalPrice) * 100)}% OFF
+                  </div>
+                )}
+              </div>
+
+              {/* Contenido */}
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-2" style={{ color: colors.primary }}>
+                  {selectedProduct.name}
+                </h2>
+                
+                {selectedProduct.description && (
+                  <p className="text-gray-600 mb-4 leading-relaxed">
+                    {selectedProduct.description}
+                  </p>
+                )}
+
+                {/* Precio */}
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="text-3xl font-bold" style={{ color: colors.accent }}>
+                    ${selectedProduct.price.toLocaleString()}
+                  </span>
+                  {selectedProduct.originalPrice && (
+                    <span className="text-lg line-through text-gray-400">
+                      ${selectedProduct.originalPrice.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+
+                {/* Botón de compra */}
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/quantum-web/send-product-interest', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          phoneNumber: business.whatsapp?.replace(/[^0-9]/g, '') || '',
+                          businessName: content.heroTitle || business.name,
+                          businessPhone: business.whatsapp?.replace(/[^0-9]/g, '') || '',
+                          productName: selectedProduct.name,
+                          productDescription: selectedProduct.description,
+                          productPrice: selectedProduct.price
+                        })
+                      });
+                      
+                      const data = await response.json();
+                      
+                      if (data.success) {
+                        alert('✅ ¡Compra registrada!\n\nTe contactaremos por WhatsApp para coordinar el pago y envío.');
+                        setShowProductDetailModal(false);
+                        setSelectedProduct(null);
+                      } else {
+                        // Fallback - abrir WhatsApp
+                        const message = `Hola, quiero comprar:\n\n🛍️ *${selectedProduct.name}*\n💰 Precio: $${selectedProduct.price.toLocaleString()}`;
+                        window.open(`https://wa.me/${business.whatsapp?.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+                        alert('📱 Te contactaremos por WhatsApp pronto.');
+                        setShowProductDetailModal(false);
+                        setSelectedProduct(null);
+                      }
+                    } catch (error) {
+                      const message = `Hola, quiero comprar:\n\n🛍️ *${selectedProduct.name}*\n💰 Precio: $${selectedProduct.price.toLocaleString()}`;
+                      window.open(`https://wa.me/${business.whatsapp?.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+                      alert('📱 Te contactaremos por WhatsApp pronto.');
+                      setShowProductDetailModal(false);
+                      setSelectedProduct(null);
+                    }
+                  }}
+                  className="w-full py-4 rounded-xl font-bold text-white transition-all hover:opacity-90 flex items-center justify-center gap-2 text-lg"
+                  style={{ backgroundColor: '#25D366' }}
+                >
+                  <ShoppingCart className="w-6 h-6" />
+                  Comprar
+                </button>
+                <p className="text-center text-xs text-gray-500 mt-2">
+                  Te contactaremos por WhatsApp para coordinar
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
