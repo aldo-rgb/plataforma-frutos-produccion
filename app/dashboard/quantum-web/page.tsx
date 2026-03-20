@@ -307,10 +307,8 @@ export default function QuantumWebEngine() {
     facebook: ''
   });
   
-  // Template seleccionado (Corporativo Profesional por defecto)
-  const [selectedTemplate, setSelectedTemplate] = useState<QuantumTemplate | null>(
-    QUANTUM_TEMPLATES.find(t => t.id === 'corporativo') || null
-  );
+  // Template seleccionado
+  const [selectedTemplate, setSelectedTemplate] = useState<QuantumTemplate | null>(null);
   
   // Colores personalizados de la marca (3 colores)
   const [brandColors, setBrandColors] = useState<[string, string, string]>(['#1F2937', '#6B7280', '#D1D5DB']);
