@@ -3426,7 +3426,7 @@ model ReporteAnonimoVision {
   revisadoPor                                          Int?
   revisadoAt                                           DateTime?
   createdAt                                            DateTime     @default(now())
-  updatedAt                                            DateTime
+  updatedAt                                            DateTime     @updatedAt
   Organization                                         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   Usuario_ReporteAnonimoVision_reportedUserIdToUsuario Usuario?     @relation("ReporteAnonimoVision_reportedUserIdToUsuario", fields: [reportedUserId], references: [id])
   Usuario_ReporteAnonimoVision_reporterIdToUsuario     Usuario      @relation("ReporteAnonimoVision_reporterIdToUsuario", fields: [reporterId], references: [id], onDelete: Cascade)

@@ -115,7 +115,8 @@ export async function POST(request: Request) {
         tipoReportado,
         mensaje: mensaje.trim(),
         categoria,
-        estado: 'PENDIENTE'
+        estado: 'PENDIENTE',
+        updatedAt: new Date()
       }
     });
 
