@@ -2671,6 +2671,7 @@ export default function QuantumWebEngine() {
               }}
               onHeroImageChange={(url) => setHeroImage(url)}
               heroImage={heroImage}
+              brandColors={brandColors}
             />
           )}
         </div>
@@ -3505,7 +3506,8 @@ function WebsitePreview({
   editMode = false,
   onContentChange,
   onHeroImageChange,
-  heroImage: externalHeroImage
+  heroImage: externalHeroImage,
+  brandColors
 }: {
   template: QuantumTemplate;
   content: WebContent;
@@ -3517,13 +3519,20 @@ function WebsitePreview({
   onContentChange?: (field: string, value: string) => void;
   onHeroImageChange?: (url: string) => void;
   heroImage?: string;
+  brandColors?: [string, string, string];
 }) {
   const [showImageModal, setShowImageModal] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const colors = template.colors;
+  // Usar brandColors personalizados si existen, sino los del template
+  const colors = brandColors ? {
+    ...template.colors,
+    primary: brandColors[0],
+    secondary: brandColors[1],
+    accent: brandColors[2]
+  } : template.colors;
   const isDarkTheme = template.style === 'energetic' || template.style === 'tech';
   const heroImage = externalHeroImage || (content as any).heroImage || PREVIEW_HERO_IMAGES[business.category || 'otro'] || PREVIEW_HERO_IMAGES.otro;
   
