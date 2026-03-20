@@ -324,8 +324,8 @@ export default function QuantumWebEngine() {
   // Preview mode
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
   
-  // MODO EDICIÓN - Para editar textos e imágenes inline
-  const [editMode, setEditMode] = useState(false);
+  // MODO EDICIÓN - Para editar textos e imágenes inline (activo por defecto)
+  const [editMode, setEditMode] = useState(true);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [imagePickerField, setImagePickerField] = useState<string | null>(null);
