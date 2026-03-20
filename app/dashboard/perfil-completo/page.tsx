@@ -127,6 +127,7 @@ export default function ConfiguracionCompletaPage() {
   // Estados para modal de cambio de contraseña
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [hasBasicAttendance, setHasBasicAttendance] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -294,6 +295,52 @@ export default function ConfiguracionCompletaPage() {
     } catch (error) {
       console.error('Error uploading image:', error);
       setError('Error al subir imagen');
+    }
+  };
+
+  const handleProfilePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Solo se permiten imágenes (JPG, PNG, WebP)');
+      return;
+    }
+
+    // Validar tamaño (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('La imagen es demasiado grande (máximo 5MB)');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/profile/upload-photo', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        setProfileImage(data.url);
+        setLastAvatarChange(new Date().toISOString());
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+      } else {
+        setError(data.error || 'Error al subir foto');
+      }
+    } catch (error) {
+      console.error('Error uploading profile photo:', error);
+      setError('Error al subir foto de perfil');
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -516,18 +563,48 @@ export default function ConfiguracionCompletaPage() {
                   </p>
                 )}
                 
-                <button
-                  onClick={() => setShowAvatarModal(true)}
-                  disabled={!canChangeAvatar}
-                  className={`w-full md:w-auto px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg ${
-                    canChangeAvatar 
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-purple-500/30' 
+                {/* Botones de acción */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  {/* Botón Generar Avatar con IA */}
+                  <button
+                    onClick={() => setShowAvatarModal(true)}
+                    disabled={!canChangeAvatar}
+                    className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg ${
+                      canChangeAvatar 
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-purple-500/30' 
+                        : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <Sparkles size={20} />
+                    {profileImage ? 'Regenerar Avatar' : 'Generar Avatar'}
+                  </button>
+                  
+                  {/* Botón Subir Foto */}
+                  <label className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer ${
+                    canChangeAvatar && !uploadingPhoto
+                      ? 'bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white shadow-cyan-500/30' 
                       : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                  }`}
-                >
-                  <Sparkles size={20} />
-                  {profileImage ? 'Regenerar Avatar' : 'Generar Avatar'}
-                </button>
+                  }`}>
+                    {uploadingPhoto ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        Subiendo...
+                      </>
+                    ) : (
+                      <>
+                        <Camera size={20} />
+                        Subir Foto
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={handleProfilePhotoUpload}
+                      disabled={!canChangeAvatar || uploadingPhoto}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
                 
                 {!canChangeAvatar && (
                   <p className="text-xs md:text-sm text-yellow-400 flex items-center justify-center gap-2">

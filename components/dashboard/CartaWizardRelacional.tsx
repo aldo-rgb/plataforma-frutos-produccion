@@ -81,6 +81,9 @@ export default function CartaWizardRelacional() {
   // NUEVO: Tier del usuario (FREE, STANDARD, PREMIUM) - para controlar acceso a áreas
   const [userTier, setUserTier] = useState<string>('FREE');
   
+  // NUEVO: Color corporativo de la organización
+  const [brandColor, setBrandColor] = useState<string>('#6366F1');
+  
   // PASO 1: Declaración del Ser (NUEVO)
   const [declaracionesSer, setDeclaracionesSer] = useState<Record<string, string>>({});
   const [showQuantumModal, setShowQuantumModal] = useState(false);
@@ -427,6 +430,11 @@ export default function CartaWizardRelacional() {
       const visionEndDateValue = areasConfigData.visionEndDate || null;
       const userLevelValue = areasConfigData.userLevel || null;
       const userTierValue = areasConfigData.userTier || 'FREE';
+      const brandColorValue = areasConfigData.brandColor || '#6366F1';
+      
+      // Guardar color corporativo
+      setBrandColor(brandColorValue);
+      console.log(`🎨 Color corporativo: ${brandColorValue}`);
       
       // Guardar nivel del usuario
       if (userLevelValue) {
@@ -1578,7 +1586,13 @@ export default function CartaWizardRelacional() {
       )}
 
       {/* HEADER */}
-      <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-b border-purple-500/30 sticky top-0 z-50 backdrop-blur-lg">
+      <div 
+        className="border-b sticky top-0 z-50 backdrop-blur-lg"
+        style={{ 
+          background: `linear-gradient(to right, ${brandColor}15, ${brandColor}08)`,
+          borderColor: `${brandColor}30`
+        }}
+      >
         <div className="max-w-5xl mx-auto p-4">
           {/* Alerta de solo lectura */}
           {isReadOnly && (
@@ -1594,8 +1608,8 @@ export default function CartaWizardRelacional() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
-                <Sparkles className="text-purple-400 w-5 h-5 sm:w-6 sm:h-6" />
-                WIZARD 2.0
+                <Sparkles style={{ color: brandColor }} className="w-5 h-5 sm:w-6 sm:h-6" />
+                Carta F.R.U.T.O.S.
               </h1>
               <p className="text-xs sm:text-sm text-gray-400 truncate">Múltiples acciones por área · Configuración individual</p>
             </div>
@@ -1653,12 +1667,13 @@ export default function CartaWizardRelacional() {
                   }}
                   disabled={step.id > currentStep}
                   className={`flex items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl flex-1 transition-all ${
-                    currentStep === step.id 
-                      ? 'bg-purple-600 text-white' 
-                      : currentStep > step.id
+                    currentStep > step.id
                       ? 'bg-green-600/20 text-green-400 cursor-pointer'
-                      : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                      : currentStep < step.id 
+                      ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                      : 'text-white'
                   }`}
+                  style={currentStep === step.id ? { backgroundColor: brandColor } : undefined}
                 >
                   <span className="text-lg sm:text-2xl">{step.emoji}</span>
                   <div className="text-left flex-1 min-w-0">
@@ -1675,7 +1690,7 @@ export default function CartaWizardRelacional() {
           </div>
 
           {saving && (
-            <div className="mt-2 text-xs text-purple-400 flex items-center gap-1">
+            <div className="mt-2 text-xs flex items-center gap-1" style={{ color: brandColor }}>
               <Loader2 size={12} className="animate-spin" />
               Guardando...
             </div>
@@ -1688,31 +1703,41 @@ export default function CartaWizardRelacional() {
         {/* Paso 1: Declaración del Ser (NUEVO) */}
         {currentStep === 1 && (
           <div className="space-y-4">
-            <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-lg p-3 sm:p-4 mb-4">
+            <div 
+              className="rounded-lg p-3 sm:p-4 mb-4"
+              style={{ 
+                background: `linear-gradient(to right, ${brandColor}10, ${brandColor}05)`,
+                border: `1px solid ${brandColor}30`
+              }}
+            >
               <div className="flex items-start gap-2">
                 <div className="text-xl sm:text-2xl">🧘</div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm sm:text-base font-bold text-white mb-1.5">Antes de definir qué quieres tener, define quién quieres ser</h3>
-                  <p className="text-xs text-purple-200 mb-3">
-                    <strong>💡 Instrucción:</strong> Escribe en presente quién te comprometes ser para alcanzar tus metas. Todas las declaraciones DEBEN comenzar con <span className="text-purple-300 font-bold">"Yo soy" + manera de SER</span>.
+                  <p className="text-xs text-gray-300 mb-3">
+                    <strong>💡 Instrucción:</strong> Escribe en presente quién te comprometes ser para alcanzar tus metas. Todas las declaraciones DEBEN comenzar con <span style={{ color: brandColor }} className="font-bold">"Yo soy" + manera de SER</span>.
                   </p>
                   
                   {/* Botón Quantum Coach */}
                   <button
                     onClick={() => setShowQuantumSelectionModal(true)}
                     disabled={isReadOnly}
-                    className="relative bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 
+                    className="relative hover:opacity-90 
                              disabled:from-slate-700 disabled:to-slate-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold 
-                             transition-all flex items-center gap-2 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/60 
+                             transition-all flex items-center gap-2 shadow-lg 
                              hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-                             border border-cyan-400/30 overflow-hidden group"
+                             overflow-hidden group"
+                    style={{ 
+                      background: `linear-gradient(to right, ${brandColor}, ${brandColor}dd)`,
+                      boxShadow: `0 10px 25px ${brandColor}30`
+                    }}
                   >
                     {/* Glow effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     
                     {/* Animated orb */}
                     <div className="relative">
-                      <div className="absolute inset-0 bg-cyan-300 rounded-full blur-sm opacity-50 animate-pulse"></div>
+                      <div className="absolute inset-0 bg-white/30 rounded-full blur-sm opacity-50 animate-pulse"></div>
                       <Atom size={16} className="relative text-white animate-spin sm:w-5 sm:h-5" style={{ animationDuration: '8s' }} />
                     </div>
                     
@@ -2038,9 +2063,9 @@ export default function CartaWizardRelacional() {
             </div>
 
             {areasVisiblesStep2.map((area) => (
-              <div key={area.key} className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-6">
+              <div key={area.key} className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-4 sm:p-6">
                 {/* Botón de sugerencias QUANTUM */}
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <h3 className="text-white font-bold flex items-center gap-2">
                     <span className="text-2xl">{area.emoji}</span>
                     {area.name}
@@ -2049,20 +2074,24 @@ export default function CartaWizardRelacional() {
                     <button
                       onClick={() => handleGetSuggestions(area.key)}
                       disabled={loadingSuggestions === area.key}
-                      className="group relative px-4 py-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 hover:from-purple-600/40 hover:to-blue-600/40 border border-purple-500/50 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="group relative w-full sm:w-auto px-3 sm:px-4 py-2 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ 
+                        background: `linear-gradient(to right, ${brandColor}20, ${brandColor}15)`,
+                        border: `1px solid ${brandColor}50`
+                      }}
                     >
-                      <div className="flex items-center gap-2 text-sm font-medium">
+                      <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-medium">
                         {loadingSuggestions === area.key ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                            <span className="text-purple-300">Generando ideas...</span>
+                            <Loader2 className="w-4 h-4 animate-spin" style={{ color: brandColor }} />
+                            <span style={{ color: brandColor }}>Generando...</span>
                           </>
                         ) : (
                           <>
-                            <Atom className="w-4 h-4 text-purple-400 group-hover:rotate-180 transition-transform duration-500" />
-                            <span className="text-purple-300">💡 Sugerir logros con QUANTUM</span>
+                            <Atom className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" style={{ color: brandColor }} />
+                            <span style={{ color: brandColor }}>💡 Sugerir logros</span>
                           </>
-                        )}
+                        )}}
                       </div>
                     </button>
                   )}
@@ -2304,37 +2333,44 @@ export default function CartaWizardRelacional() {
                 )}
 
                 {/* Navegación entre objetivos - FIJO EN MÓVIL */}
-                <div className="sticky bottom-0 left-0 right-0 bg-[#0a0b0d]/95 backdrop-blur-sm border-t border-gray-800 -mx-4 px-4 py-4 mt-4 z-20">
+                <div className="fixed bottom-0 left-0 right-0 bg-[#0a0b0d]/95 backdrop-blur-sm border-t border-gray-800 px-4 py-4 z-50">
                   {/* Barra de progreso compacta */}
-                  <div className="mb-3">
+                  <div className="mb-3 max-w-5xl mx-auto">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-gray-400">Progreso</span>
-                      <span className="text-xs font-bold text-purple-300">
+                      <span className="text-xs font-bold" style={{ color: brandColor }}>
                         {currentObjetivoData.index} / {currentObjetivoData.total}
                       </span>
                     </div>
                     <div className="w-full bg-gray-800 rounded-full h-2">
                       <div 
-                        className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all"
-                        style={{ width: `${(currentObjetivoData.index / currentObjetivoData.total) * 100}%` }}
+                        className="h-2 rounded-full transition-all"
+                        style={{ 
+                          width: `${(currentObjetivoData.index / currentObjetivoData.total) * 100}%`,
+                          backgroundColor: brandColor
+                        }}
                       />
                     </div>
                   </div>
 
                   {/* Botones de navegación */}
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 max-w-5xl mx-auto">
                     <button
                       onClick={handlePrevObjetivo}
                       disabled={currentObjetivoIndexStep3 === 0}
                       className="px-4 py-3 bg-gray-800 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex-shrink-0"
                     >
                       <ChevronLeft size={20} />
-                      <span className="hidden sm:inline">Anterior</span>
+                      <span className="hidden sm:inline">Atrás</span>
                     </button>
 
                     <button
                       onClick={handleNextObjetivo}
-                      className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-purple-500/30"
+                      className="flex-1 sm:flex-none px-6 py-3 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all"
+                      style={{ 
+                        backgroundColor: brandColor,
+                        boxShadow: `0 10px 25px ${brandColor}30`
+                      }}
                     >
                       {currentObjetivoIndexStep3 < objetivosFlattened.length - 1 ? (
                         <>
@@ -2424,14 +2460,17 @@ export default function CartaWizardRelacional() {
                 <div className="mt-6 bg-gray-900/50 border border-gray-800 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-400">Progreso de revisión</span>
-                    <span className="text-sm font-bold text-purple-300">
+                    <span className="text-sm font-bold" style={{ color: brandColor }}>
                       {accionesRevisadas.size} de {metasFlattened.length} {accionesRevisadas.size < metasFlattened.length ? 'revisadas' : 'completadas'}
                     </span>
                   </div>
                   <div className="w-full bg-gray-800 rounded-full h-2">
                     <div 
-                      className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all"
-                      style={{ width: `${(accionesRevisadas.size / metasFlattened.length) * 100}%` }}
+                      className="h-2 rounded-full transition-all"
+                      style={{ 
+                        width: `${(accionesRevisadas.size / metasFlattened.length) * 100}%`,
+                        backgroundColor: brandColor
+                      }}
                     />
                   </div>
                   {accionesRevisadas.size < metasFlattened.length && (
@@ -2535,7 +2574,8 @@ export default function CartaWizardRelacional() {
                       </div>
                       <button
                         onClick={() => setShowAvatarModal(true)}
-                        className="px-4 sm:px-6 py-2 sm:py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all flex items-center gap-2 text-sm sm:text-base"
+                        className="px-4 sm:px-6 py-2 sm:py-3 hover:opacity-90 text-white rounded-xl font-bold transition-all flex items-center gap-2 text-sm sm:text-base"
+                        style={{ backgroundColor: brandColor }}
                       >
                         <Sparkles size={18} />
                         Regenerar Perfil del Consejo
@@ -2544,7 +2584,11 @@ export default function CartaWizardRelacional() {
                   ) : (
                     <button
                       onClick={() => setShowAvatarModal(true)}
-                      className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-black uppercase tracking-wider transition-all shadow-lg shadow-purple-500/50 flex items-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg"
+                      className="px-6 sm:px-8 py-3 sm:py-4 hover:opacity-90 text-white rounded-xl font-black uppercase tracking-wider transition-all shadow-lg flex items-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg"
+                      style={{ 
+                        backgroundColor: brandColor,
+                        boxShadow: `0 10px 25px ${brandColor}50`
+                      }}
                     >
                       <Sparkles size={20} />
                       Configurar Rol en el Consejo
@@ -2664,9 +2708,10 @@ export default function CartaWizardRelacional() {
                 }
               }}
               disabled={!canAdvanceToStep5()}
-              className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-purple-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="px-6 py-3 text-white rounded-xl font-bold flex items-center gap-2 hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              style={{ backgroundColor: brandColor }}
             >
-              Siguiente: Avatar Cuántico
+              Siguiente
               <ChevronRight size={20} />
             </button>
           ) : (
@@ -2818,7 +2863,8 @@ export default function CartaWizardRelacional() {
               ) : (
                 <button
                   onClick={() => setErrorModal({ show: false, title: '', message: '' })}
-                  className="mt-2 sm:mt-4 w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:scale-105 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-xl transition-all text-sm sm:text-base"
+                  className="mt-2 sm:mt-4 w-full hover:shadow-lg hover:scale-105 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-xl transition-all text-sm sm:text-base"
+                  style={{ backgroundColor: brandColor }}
                 >
                   Entendido
                 </button>
@@ -2857,7 +2903,8 @@ export default function CartaWizardRelacional() {
                     setShowNoMentorConfirmModal(false);
                     window.location.href = '/dashboard/suscripcion';
                   }}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:scale-[1.02] text-white font-bold py-2.5 px-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+                  className="w-full hover:shadow-lg hover:scale-[1.02] text-white font-bold py-2.5 px-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+                  style={{ backgroundColor: brandColor }}
                 >
                   <span>💎</span>
                   Ver Paquetes de Llamadas
@@ -2957,15 +3004,31 @@ export default function CartaWizardRelacional() {
                     className={`group w-full text-left transition-all duration-300 rounded-xl p-4 border-2 ${
                       isSelected
                         ? 'bg-gradient-to-r from-green-600/30 to-green-600/20 border-green-500/50 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-gray-800 to-gray-800/50 hover:from-purple-600/20 hover:to-blue-600/20 border-gray-700 hover:border-purple-500/50 hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/20'
+                        : 'bg-gradient-to-r from-gray-800 to-gray-800/50 border-gray-700 hover:scale-[1.02] hover:shadow-lg'
                     }`}
+                    style={!isSelected ? { 
+                      ['--hover-border' as string]: `${brandColor}50`
+                    } : undefined}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = `${brandColor}50`;
+                        e.currentTarget.style.background = `linear-gradient(to right, ${brandColor}15, ${brandColor}10)`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = '';
+                        e.currentTarget.style.background = '';
+                      }
+                    }}
                   >
                     <div className="flex items-start gap-4">
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm transition-transform ${
-                        isSelected
-                          ? 'bg-green-500'
-                          : 'bg-gradient-to-br from-purple-500 to-blue-500 group-hover:scale-110'
-                      }`}>
+                      <div 
+                        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm transition-transform ${
+                          isSelected ? 'bg-green-500' : 'group-hover:scale-110'
+                        }`}
+                        style={!isSelected ? { backgroundColor: brandColor } : undefined}
+                      >
                         {isSelected ? '✓' : index + 1}
                       </div>
                       <div className="flex-1">
@@ -3004,7 +3067,8 @@ export default function CartaWizardRelacional() {
               )}
               <button
                 onClick={handleCloseQuantumModal}
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-lg"
+                className="px-6 py-3 hover:opacity-90 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-lg"
+                style={{ backgroundColor: brandColor }}
               >
                 Listo, continuar
               </button>
@@ -3066,15 +3130,28 @@ export default function CartaWizardRelacional() {
                     className={`group w-full text-left transition-all duration-300 rounded-xl p-4 border-2 ${
                       isSelected
                         ? 'bg-gradient-to-r from-green-600/30 to-green-600/20 border-green-500/50 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-gray-800 to-gray-800/50 hover:from-purple-600/20 hover:to-blue-600/20 border-gray-700 hover:border-purple-500/50 hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/20'
+                        : 'bg-gradient-to-r from-gray-800 to-gray-800/50 border-gray-700 hover:scale-[1.02] hover:shadow-lg'
                     }`}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = `${brandColor}50`;
+                        e.currentTarget.style.background = `linear-gradient(to right, ${brandColor}15, ${brandColor}10)`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = '';
+                        e.currentTarget.style.background = '';
+                      }
+                    }}
                   >
                     <div className="flex items-start gap-4">
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm transition-transform ${
-                        isSelected
-                          ? 'bg-green-500'
-                          : 'bg-gradient-to-br from-purple-500 to-blue-500 group-hover:scale-110'
-                      }`}>
+                      <div 
+                        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm transition-transform ${
+                          isSelected ? 'bg-green-500' : 'group-hover:scale-110'
+                        }`}
+                        style={!isSelected ? { backgroundColor: brandColor } : undefined}
+                      >
                         {isSelected ? '✓' : index + 1}
                       </div>
                       <div className="flex-1">
@@ -3113,7 +3190,8 @@ export default function CartaWizardRelacional() {
               )}
               <button
                 onClick={handleCloseActionSuggestionsModal}
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-lg"
+                className="px-6 py-3 hover:opacity-90 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-lg"
+                style={{ backgroundColor: brandColor }}
               >
                 Listo, continuar
               </button>

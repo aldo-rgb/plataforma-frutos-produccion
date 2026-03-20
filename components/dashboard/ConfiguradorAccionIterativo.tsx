@@ -433,7 +433,7 @@ export default function ConfiguradorAccionIterativo({
                       }}
                       className={`p-3 rounded-lg font-bold text-xs transition-all ${
                         isSelected
-                          ? 'bg-gradient-to-br from-purple-500 to-blue-600 text-white shadow-lg scale-105'
+                          ? 'bg-gradient-to-br from-purple-500 to-blue-600 text-white shadow-lg'
                           : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
                       }`}
                     >
@@ -597,7 +597,7 @@ export default function ConfiguradorAccionIterativo({
                 onClick={onPrev}
                 className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center gap-2"
               >
-                ← Acción Anterior
+                ← Anterior
               </button>
             )}
             <button
@@ -625,7 +625,7 @@ export default function ConfiguradorAccionIterativo({
               ) : (
                 <>
                   <Check size={20} />
-                  {metaIndex < totalMetas ? 'Guardar y Siguiente Acción →' : 'Guardar y Finalizar'}
+                  Guardar →
                 </>
               )}
             </button>

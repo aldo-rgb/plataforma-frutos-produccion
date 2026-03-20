@@ -60,14 +60,17 @@ export async function GET(req: NextRequest) {
     // Primero buscar por VisionParticipante (agregado por coordinador)
     const targetUser = await prisma.usuario.findUnique({
       where: { id: userId },
-      select: { 
-        tier: true, // Agregar tier del usuario
+      include: {
+        Organization_Usuario_organizationIdToOrganization: {
+          select: { brandColor: true }
+        },
         VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           include: {
             Vision: {
               select: {
                 id: true,
                 nombre: true,
+                endDate: true,
                 transformationGuestsTarget: true,
                 forceFinanzasArea: true,
                 forceRelacionesArea: true,
@@ -87,6 +90,9 @@ export async function GET(req: NextRequest) {
     
     // Obtener tier del usuario
     const userTier = targetUser?.tier || 'FREE';
+    
+    // Obtener brandColor de la organización
+    const brandColor = targetUser?.Organization_Usuario_organizationIdToOrganization?.brandColor || '#6366F1';
 
     let visionParticipante = targetUser?.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0];
     let visionConfig = visionParticipante?.Vision;
@@ -317,7 +323,8 @@ export async function GET(req: NextRequest) {
         transformationGuestsTarget: visionConfig.transformationGuestsTarget,
         visionEndDate: visionConfig.endDate,
         userLevel, // Incluir nivel del usuario en la respuesta
-        userTier // Incluir tier del usuario
+        userTier, // Incluir tier del usuario
+        brandColor // Color corporativo de la organización
       });
     }
 
@@ -335,7 +342,8 @@ export async function GET(req: NextRequest) {
         areas: defaultConfigs,
         perteneceAGrupo: false,
         isDefault: true,
-        userTier
+        userTier,
+        brandColor
       });
     }
 
@@ -344,7 +352,8 @@ export async function GET(req: NextRequest) {
       areas: configs.map(c => ({ areaKey: c.areaKey, enabled: c.enabled })),
       perteneceAGrupo,
       isDefault: false,
-      userTier
+      userTier,
+      brandColor
     });
 
   } catch (error: any) {
