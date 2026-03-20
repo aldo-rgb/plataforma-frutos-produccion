@@ -23,7 +23,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { id: 2, title: 'Objetivo', subtitle: 'Visualización', emoji: '✨' },
   { id: 3, title: 'HACER', subtitle: 'Acciones', emoji: '🎯' },
   { id: 4, title: 'Acciones', subtitle: 'Frecuencia', emoji: '🔥' },
-  { id: 5, title: 'Avatar Cuántico', subtitle: 'Tu Identidad', emoji: '⚡' }
+  { id: 5, title: 'Avatar', subtitle: 'Tu Identidad', emoji: '⚡' }
 ];
 
 const AREAS = [
@@ -2532,7 +2532,7 @@ export default function CartaWizardRelacional() {
               <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500/50 rounded-xl p-8 sm:p-12 text-center">
                 <div className="flex flex-col items-center gap-4 sm:gap-6">
                   <Loader2 className="w-12 h-12 sm:w-16 sm:h-16 text-purple-400 animate-spin" />
-                  <p className="text-lg sm:text-xl text-white">Cargando tu Avatar Cuántico...</p>
+                  <p className="text-lg sm:text-xl text-white">Cargando tu Avatar...</p>
                 </div>
               </div>
             ) : (
@@ -2544,12 +2544,12 @@ export default function CartaWizardRelacional() {
                   
                   <div className="space-y-2 sm:space-y-3">
                     <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 uppercase tracking-wider">
-                      ⚡ Tu Rol en el Consejo Quantum Matter
+                      ⚡ Crea tu Avatar
                     </h2>
                     <p className="text-sm sm:text-base md:text-xl text-white max-w-2xl mx-auto px-2">
                       {hasAvatar 
-                        ? '¡Ya tienes tu Perfil Ejecutivo! Puedes enviarlo a revisión o regenerar uno nuevo.' 
-                        : 'Antes de enviar tus objetivos, vamos a configurar tu Rol en el Consejo Quantum Matter que representará tu identidad corporativa en la plataforma.'
+                        ? '¡Ya tienes tu Avatar! Puedes enviarlo a revisión o regenerar uno nuevo.' 
+                        : 'Genera tu avatar personalizado con Inteligencia Artificial para completar tu carta.'
                       }
                     </p>
                   </div>
@@ -2562,7 +2562,7 @@ export default function CartaWizardRelacional() {
                           <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity"></div>
                           <img 
                             src={avatarUrl} 
-                            alt="Perfil Ejecutivo del Consejo" 
+                            alt="Tu Avatar" 
                             className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-2xl object-cover border-4 border-purple-500/50 shadow-2xl shadow-purple-500/50"
                           />
                         </div>
@@ -2570,7 +2570,7 @@ export default function CartaWizardRelacional() {
                       
                       <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/50 rounded-lg px-4 sm:px-6 py-2 sm:py-3">
                         <CheckCircle2 className="text-green-400" size={20} />
-                        <span className="text-sm sm:text-base text-green-300 font-bold">Perfil Ejecutivo Generado</span>
+                        <span className="text-sm sm:text-base text-green-300 font-bold">Avatar Generado</span>
                       </div>
                       <button
                         onClick={() => setShowAvatarModal(true)}
@@ -2578,7 +2578,7 @@ export default function CartaWizardRelacional() {
                         style={{ backgroundColor: brandColor }}
                       >
                         <Sparkles size={18} />
-                        Regenerar Perfil del Consejo
+                        Regenerar Avatar
                       </button>
                     </div>
                   ) : (
@@ -2591,7 +2591,7 @@ export default function CartaWizardRelacional() {
                       }}
                     >
                       <Sparkles size={20} />
-                      Configurar Rol en el Consejo
+                      Crear Avatar
                     </button>
                   )}
                 </div>
@@ -2602,20 +2602,20 @@ export default function CartaWizardRelacional() {
             <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 sm:p-6">
               <h3 className="text-sm sm:text-base text-blue-300 font-bold mb-2 sm:mb-3 flex items-center gap-2">
                 <Brain size={18} />
-                ¿Qué es el Perfil del Consejo Quantum Matter?
+                ¿Qué es el Avatar?
               </h3>
               <ul className="space-y-2 text-gray-300 text-xs sm:text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-1">•</span>
-                  <span>Una representación visual única generada por IA basada en tus metas y objetivos corporativos</span>
+                  <span>Una imagen única generada por IA basada en tus metas y objetivos</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-1">•</span>
-                  <span>Refleja tu rol ejecutivo y el camino que estás tomando en el Consejo</span>
+                  <span>Representa tu identidad y el camino de transformación que estás tomando</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-1">•</span>
-                  <span>Será tu identidad profesional en toda la plataforma y en las competencias</span>
+                  <span>Será tu imagen de perfil en toda la plataforma</span>
                 </li>
               </ul>
             </div>
@@ -2738,7 +2738,7 @@ export default function CartaWizardRelacional() {
                   </div>
                 ) : (
                   <div className="text-[10px] sm:text-xs text-yellow-400 max-w-xs">
-                    ⚠️ Genera tu Avatar Cuántico para completar la carta
+                    ⚠️ Genera tu Avatar para completar la carta
                   </div>
                 )
               ) : (
@@ -2797,7 +2797,7 @@ export default function CartaWizardRelacional() {
                         {!validateStep2() && <div>• Paso 2: Objetivos</div>}
                         {!validateStep3() && <div>• Paso 3: Acciones SMART</div>}
                         {!validateStep4() && <div>• Paso 4: Plan de Acción ({metasConfiguradas.length}/{totalAcciones})</div>}
-                        {!hasAvatar && <div>• Paso 5: Avatar Cuántico</div>}
+                        {!hasAvatar && <div>• Paso 5: Avatar</div>}
                       </div>
                     )}
                     {allStepsValid && estado !== 'BORRADOR' && !hasChanges && (

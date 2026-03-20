@@ -606,7 +606,7 @@ export default function ConfiguradorAccionIterativo({
               className={`flex-1 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 ${
                 guardado 
                   ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:scale-105'
+                  : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90'
               } disabled:opacity-70 disabled:cursor-not-allowed`}
             >
               {guardando ? (
