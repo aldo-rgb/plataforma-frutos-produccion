@@ -112,6 +112,11 @@ interface WebContent {
   services: { icon: string; title: string; description: string }[];
   ctaText: string;
   testimonials: { name: string; text: string; rating: number }[];
+  // Stats editables
+  stat1Value?: string;
+  stat1Label?: string;
+  stat2Value?: string;
+  stat2Label?: string;
 }
 
 // ============================================
@@ -3845,15 +3850,39 @@ function WebsitePreview({
                       <Award className="w-10 h-10 md:w-14 md:h-14 text-white" />
                     </div>
                     
-                    {/* Stats */}
+                    {/* Stats editables */}
                     <div className="grid grid-cols-2 gap-4 mt-6">
                       <div className="text-center p-4 rounded-xl bg-white shadow-sm">
-                        <div className="text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>5+</div>
-                        <div className="text-xs md:text-sm text-gray-500">Años de experiencia</div>
+                        <div className="text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>
+                          <EditableText
+                            value={content.stat1Value || '5+'}
+                            onChange={(val) => handleContentChange('stat1Value', val)}
+                            editMode={editMode}
+                          />
+                        </div>
+                        <div className="text-xs md:text-sm text-gray-500">
+                          <EditableText
+                            value={content.stat1Label || 'Años de experiencia'}
+                            onChange={(val) => handleContentChange('stat1Label', val)}
+                            editMode={editMode}
+                          />
+                        </div>
                       </div>
                       <div className="text-center p-4 rounded-xl bg-white shadow-sm">
-                        <div className="text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>100%</div>
-                        <div className="text-xs md:text-sm text-gray-500">Compromiso</div>
+                        <div className="text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>
+                          <EditableText
+                            value={content.stat2Value || '100%'}
+                            onChange={(val) => handleContentChange('stat2Value', val)}
+                            editMode={editMode}
+                          />
+                        </div>
+                        <div className="text-xs md:text-sm text-gray-500">
+                          <EditableText
+                            value={content.stat2Label || 'Compromiso'}
+                            onChange={(val) => handleContentChange('stat2Label', val)}
+                            editMode={editMode}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
