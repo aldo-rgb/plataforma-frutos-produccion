@@ -245,6 +245,12 @@ RESPONDE ÚNICAMENTE CON UN JSON en este formato exacto:
     const iaResponse = JSON.parse(completion.choices[0].message.content || '{}');
     logger.debug('📝 Candidatos generados:', iaResponse.candidates?.length || 0);
 
+    // Auto-seleccionar un candidato aleatorio
+    const candidates = iaResponse.candidates || [];
+    const randomIndex = Math.floor(Math.random() * candidates.length);
+    const autoSelectedCandidate = candidates[randomIndex];
+    logger.debug('🎲 Candidato auto-seleccionado:', autoSelectedCandidate?.designation);
+
     // Guardar las opciones en la base de datos para referencia
     logger.debug('💾 Intentando guardar en BD...');
     logger.debug('Usuario ID:', usuario.id);
@@ -255,7 +261,8 @@ RESPONDE ÚNICAMENTE CON UN JSON en este formato exacto:
       data: {
         userId: usuario.id,
         candidates: iaResponse.candidates,
-        status: 'PENDING_SELECTION',
+        selectedOption: autoSelectedCandidate,
+        status: 'AUTO_SELECTED',
         generatedAt: new Date(),
         gender: gender  // Guardar el género seleccionado
       }
@@ -270,6 +277,7 @@ RESPONDE ÚNICAMENTE CON UN JSON en este formato exacto:
       success: true,
       identityId: identityRecord.id,
       candidates: iaResponse.candidates,
+      autoSelected: autoSelectedCandidate,
       userContext: {
         nombre: usuario.nombre,
         nivel: usuario.nivelActual,

@@ -1619,7 +1619,7 @@ export default function CartaWizardRelacional() {
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
                 <Sparkles style={{ color: brandColor }} className="w-5 h-5 sm:w-6 sm:h-6" />
-                Carta F.R.U.T.O.S.
+                Carta de Objetivos
               </h1>
               <p className="text-xs sm:text-sm text-gray-400 truncate">Múltiples acciones por área · Configuración individual</p>
             </div>
@@ -2810,7 +2810,7 @@ export default function CartaWizardRelacional() {
                         {!validateStep2() && <div>• Paso 2: Objetivos</div>}
                         {!validateStep3() && <div>• Paso 3: Acciones SMART</div>}
                         {!validateStep4() && <div>• Paso 4: Plan de Acción ({metasConfiguradas.length}/{totalAcciones})</div>}
-                        {!hasAvatar && <div>• Paso 5: Avatar</div>}
+                        {!hasAvatar && <div>• Paso 5: Perfil</div>}
                       </div>
                     )}
                     {allStepsValid && estado !== 'BORRADOR' && !hasChanges && (

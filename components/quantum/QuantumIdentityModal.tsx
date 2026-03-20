@@ -41,7 +41,6 @@ export default function QuantumIdentityModal({
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [identityId, setIdentityId] = useState<number | null>(null);
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [errorTitle, setErrorTitle] = useState<string>('Error');
@@ -336,10 +335,14 @@ export default function QuantumIdentityModal({
       setCandidates(data.candidates);
       setIdentityId(data.identityId);
 
-      // Transición a selección después de la animación
+      // Auto-seleccionar el candidato asignado por el backend
+      const autoSelected = data.autoSelected || data.candidates[Math.floor(Math.random() * data.candidates.length)];
+      setSelectedCandidate(autoSelected);
+
+      // Ir directo a captura de fotos (sin mostrar pantalla de selección)
       setTimeout(() => {
-        setStage('selection');
         setIsGenerating(false);
+        setShowPhotoCaptureOptions(true);
       }, 3000);
 
     } catch (error: any) {
@@ -349,72 +352,6 @@ export default function QuantumIdentityModal({
       setStage('error');
       setIsGenerating(false);
     }
-  };
-
-  const handleSelectCandidate = (candidate: Candidate) => {
-    setSelectedCandidate(candidate);
-  };
-
-  const confirmSelection = async () => {
-    if (!selectedCandidate || !identityId) return;
-
-    // Siempre abrir el modal de opciones de captura de fotos
-    setShowPhotoCaptureOptions(true);
-  };
-
-  const getArchetypeIcon = (archetype: string) => {
-    switch (archetype) {
-      case 'DIRECTOR': return <Shield className="text-purple-400" size={40} />;
-      case 'ARCHITECT': return <Target className="text-blue-400" size={40} />;
-      case 'CURATOR': return <Brain className="text-cyan-400" size={40} />;
-      case 'MODELER': return <Sparkles className="text-indigo-400" size={40} />;
-      case 'OVERSEER': return <Shield className="text-gray-400" size={40} />;
-      case 'STRATEGIST': return <Target className="text-amber-400" size={40} />;
-      case 'ENGINEER': return <Zap className="text-teal-400" size={40} />;
-      case 'ANALYST': return <Brain className="text-green-400" size={40} />;
-      case 'ARCHIVIST': return <Brain className="text-slate-400" size={40} />;
-      case 'SENTINEL': return <Shield className="text-red-400" size={40} />;
-      case 'OBSERVER': return <Sparkles className="text-purple-400" size={40} />;
-      case 'INTERFACE': return <Target className="text-pink-400" size={40} />;
-      default: return <Target className="text-purple-400" size={40} />;
-    }
-  };
-
-  const getArchetypeGradient = (archetype: string) => {
-    switch (archetype) {
-      case 'DIRECTOR': return 'from-purple-600 to-indigo-600';
-      case 'ARCHITECT': return 'from-blue-600 to-cyan-600';
-      case 'CURATOR': return 'from-cyan-600 to-teal-600';
-      case 'MODELER': return 'from-indigo-600 to-purple-600';
-      case 'OVERSEER': return 'from-gray-600 to-slate-600';
-      case 'STRATEGIST': return 'from-amber-600 to-orange-600';
-      case 'ENGINEER': return 'from-teal-600 to-emerald-600';
-      case 'ANALYST': return 'from-green-600 to-lime-600';
-      case 'ARCHIVIST': return 'from-slate-600 to-gray-600';
-      case 'SENTINEL': return 'from-red-600 to-rose-600';
-      case 'OBSERVER': return 'from-purple-600 to-pink-600';
-      case 'INTERFACE': return 'from-pink-600 to-fuchsia-600';
-      default: return 'from-purple-600 to-pink-600';
-    }
-  };
-
-  const shareToTwitter = () => {
-    const text = `🏢 Mi rol en el Consejo Quantum Matter: ${selectedCandidate?.designation}\n\n${selectedCandidate?.rationale}\n\n#QuantumMatter #Frutos #ConsejoCuantico`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-  };
-
-  const shareToFacebook = () => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank');
-  };
-
-  const shareToLinkedIn = () => {
-    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`, '_blank');
-  };
-
-  const copyToClipboard = () => {
-    const text = `Mi rol en el Consejo Quantum Matter: ${selectedCandidate?.designation}\n${selectedCandidate?.rationale}`;
-    navigator.clipboard.writeText(text);
-    alert('¡Copiado al portapapeles!');
   };
 
   if (!isOpen) return null;
@@ -597,110 +534,11 @@ export default function QuantumIdentityModal({
           <h2 className="text-3xl font-black text-white uppercase tracking-wider">
             ANALIZANDO PERFIL EJECUTIVO...
           </h2>
-          <p className="text-slate-400">El Consejo está evaluando tu alineacion...</p>
+          <p className="text-slate-400">Creando Perfil...</p>
           <div className="flex items-center justify-center gap-2">
             <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
             <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-          </div>
-        </div>
-      )}
-
-      {/* STAGE 2: SELECTION */}
-      {stage === 'selection' && (
-        <div className="max-w-6xl w-full space-y-6 sm:space-y-8 bg-slate-900/80 backdrop-blur-xl p-4 sm:p-6 md:p-8 rounded-3xl border-2 border-purple-500/30 max-h-[95vh] overflow-y-auto">
-          
-          {/* Header */}
-          <div className="text-center space-y-3 sm:space-y-4">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 uppercase tracking-wider leading-tight">
-              ROLES DEL CONSEJO DISPONIBLES
-            </h2>
-            <p className="text-base sm:text-lg md:text-xl text-slate-300 px-4">
-              El Consejo Quantum Matter ha identificado 3 roles compatibles con tu perfil.
-            </p>
-            <p className="text-sm sm:text-base md:text-lg text-purple-400 font-semibold">
-              Selecciona tu Posición en el Consejo.
-            </p>
-          </div>
-
-          {/* Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-            {candidates.map((candidate) => (
-              <button
-                key={candidate.id}
-                onClick={() => handleSelectCandidate(candidate)}
-                onMouseEnter={() => setHoveredCard(candidate.id)}
-                onMouseLeave={() => setHoveredCard(null)}
-                className={`
-                  relative p-4 sm:p-6 rounded-2xl border-2 transition-all duration-300 transform
-                  ${selectedCandidate?.id === candidate.id
-                    ? `border-purple-500 bg-gradient-to-br ${getArchetypeGradient(candidate.archetype)}/20 scale-105 shadow-2xl`
-                    : 'border-slate-700 bg-slate-900/50 hover:scale-105 hover:border-slate-500'
-                  }
-                  ${hoveredCard === candidate.id ? 'shadow-2xl shadow-purple-500/50' : ''}
-                `}
-              >
-                {/* Glow Effect */}
-                {(selectedCandidate?.id === candidate.id || hoveredCard === candidate.id) && (
-                  <div className={`absolute inset-0 bg-gradient-to-br ${getArchetypeGradient(candidate.archetype)} opacity-20 blur-xl rounded-2xl`}></div>
-                )}
-
-                <div className="relative z-10 space-y-3 sm:space-y-4">
-                  {/* Icon */}
-                  <div className="flex justify-center">
-                    {getArchetypeIcon(candidate.archetype)}
-                  </div>
-
-                  {/* Designation */}
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white uppercase tracking-wider sm:tracking-widest text-center leading-tight">
-                    {candidate.designation}
-                  </h3>
-
-                  {/* Rationale */}
-                  <p className="text-xs sm:text-sm text-slate-300 text-center leading-relaxed">
-                    {candidate.rationale}
-                  </p>
-
-                  {/* Archetype Badge */}
-                  <div className="flex justify-center">
-                    <span className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${getArchetypeGradient(candidate.archetype)} text-white`}>
-                      {candidate.archetype}
-                    </span>
-                  </div>
-
-                  {/* Selection Indicator */}
-                  {selectedCandidate?.id === candidate.id && (
-                    <div className="flex justify-center">
-                      <CheckCircle className="text-green-400 animate-pulse" size={28} />
-                    </div>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Confirm Button */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4">
-            <button
-              onClick={onClose}
-              className="w-full sm:w-auto px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-semibold transition-all"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={confirmSelection}
-              disabled={!selectedCandidate}
-              className={`
-                w-full sm:w-auto px-6 sm:px-8 py-3 rounded-lg font-black uppercase tracking-wide sm:tracking-wider transition-all text-sm sm:text-base
-                ${selectedCandidate
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg shadow-purple-500/50'
-                  : 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                }
-              `}
-            >
-              <span className="hidden sm:inline">Confirmar Rol en el Consejo</span>
-              <span className="sm:hidden">Confirmar Rol</span>
-            </button>
           </div>
         </div>
       )}
