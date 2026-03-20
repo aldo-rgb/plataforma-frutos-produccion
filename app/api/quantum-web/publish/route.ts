@@ -65,11 +65,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { businessInfo, template, content, products } = await req.json() as {
+    const { businessInfo, template, content, products, brandColors } = await req.json() as {
       businessInfo: BusinessInfo;
       template: QuantumTemplate;
       content: WebContent;
       products: Product[];
+      brandColors?: [string, string, string];
     };
 
     if (!businessInfo?.name || !template || !content) {
@@ -117,6 +118,14 @@ export async function POST(req: Request) {
       counter++;
     }
 
+    // Calcular los colores finales (brandColors personalizados o los del template)
+    const finalColors = brandColors ? {
+      ...template.colors,
+      primary: brandColors[0],
+      secondary: brandColors[1],
+      accent: brandColors[2]
+    } : template.colors;
+
     // Crear o actualizar el sitio web
     const website = await prisma.quantumWebsite.upsert({
       where: { 
@@ -138,7 +147,7 @@ export async function POST(req: Request) {
         facebook: businessInfo.facebook,
         templateId: template.id,
         templateStyle: template.style,
-        templateColors: template.colors,
+        templateColors: finalColors,
         templateFonts: template.fonts,
         heroTitle: content.heroTitle,
         heroSubtitle: content.heroSubtitle,
@@ -167,7 +176,7 @@ export async function POST(req: Request) {
         facebook: businessInfo.facebook,
         templateId: template.id,
         templateStyle: template.style,
-        templateColors: template.colors,
+        templateColors: finalColors,
         templateFonts: template.fonts,
         heroTitle: content.heroTitle,
         heroSubtitle: content.heroSubtitle,

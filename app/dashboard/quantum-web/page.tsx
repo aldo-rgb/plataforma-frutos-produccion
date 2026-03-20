@@ -531,6 +531,14 @@ export default function QuantumWebEngine() {
           
           // Ir directo a la preview para editar
           setStep('preview');
+          
+          // Cargar colores personalizados si existen
+          if (site.templateColors) {
+            const savedColors = site.templateColors as { primary?: string; secondary?: string; accent?: string };
+            if (savedColors.primary && savedColors.secondary && savedColors.accent) {
+              setBrandColors([savedColors.primary, savedColors.secondary, savedColors.accent]);
+            }
+          }
         }
       }
     } catch (error) {
@@ -717,7 +725,8 @@ export default function QuantumWebEngine() {
           businessInfo,
           template: selectedTemplate,
           content: webContent,
-          products
+          products,
+          brandColors
         })
       });
       
