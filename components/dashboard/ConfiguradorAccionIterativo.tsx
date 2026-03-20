@@ -508,37 +508,25 @@ export default function ConfiguradorAccionIterativo({
         </div>
       )}
 
-      {/* PASO 2 (Alternativo): Para ONE_TIME - Fecha límite */}
+      {/* PASO 2: Para ONE_TIME - Fecha límite */}
       {habitType === 'ONE_TIME' && (
-        <div className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-4 animate-in slide-in-from-top-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Calendar className="text-blue-400" size={18} />
-            <h3 className="text-white font-bold text-sm">📆 Fecha límite</h3>
-          </div>
-
+        <div className="space-y-2">
+          <label className="text-gray-300 text-sm font-medium flex items-center gap-2">
+            <Calendar className="text-blue-400" size={16} />
+            📆 Fecha límite:
+          </label>
           <input
             type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
-            className="w-full bg-slate-800 text-white text-sm font-medium px-3 py-2.5 rounded-lg border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all cursor-pointer"
+            className="w-full bg-slate-800 text-white text-sm px-3 py-2 rounded-lg border border-slate-700 focus:border-blue-500 outline-none"
             min={new Date().toISOString().split('T')[0]}
             max={maxDate}
           />
-          {maxDate && (
-            <p className="text-yellow-300 text-xs mt-1.5">
-              ⚠️ Máximo: {new Date(maxDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-          )}
-
           {deadline && (
-            <div className="mt-2 bg-blue-500/10 border border-blue-500/30 rounded-lg p-2.5">
-              <p className="text-white font-medium text-sm">
-                ✅ {new Date(deadline + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                <span className="text-blue-300 text-xs ml-2">
-                  ({Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días)
-                </span>
-              </p>
-            </div>
+            <p className="text-green-300 text-xs">
+              ✅ {new Date(deadline + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} ({Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días)
+            </p>
           )}
         </div>
       )}
