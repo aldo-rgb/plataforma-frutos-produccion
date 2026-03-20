@@ -74,6 +74,52 @@ export async function POST(request: Request) {
 
     for (const checkout of abandonedCheckouts) {
       try {
+        // ========================================
+        // VERIFICAR SI EL USUARIO YA COMPLETÓ LA COMPRA
+        // ========================================
+        // Si el usuario ya tiene un ticket PAGADO o enrollment ACTIVO para esta visión,
+        // NO enviar el correo de abandoned checkout
+        if (checkout.userId || checkout.email) {
+          // Buscar usuario por ID o email
+          const existingUser = checkout.userId 
+            ? await prisma.usuario.findUnique({ where: { id: checkout.userId } })
+            : await prisma.usuario.findUnique({ where: { email: checkout.email } });
+          
+          if (existingUser) {
+            // Verificar si tiene ticket pagado para esta visión
+            const paidTicket = await prisma.ticket.findFirst({
+              where: {
+                ownerId: existingUser.id,
+                visionId: checkout.visionId,
+                paymentStatus: { in: ['PAID', 'PARTIAL'] }
+              }
+            });
+            
+            // Verificar si tiene enrollment activo para esta visión
+            const activeEnrollment = await prisma.vision_enrollments.findFirst({
+              where: {
+                userId: existingUser.id,
+                visionId: checkout.visionId,
+                enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+              }
+            });
+            
+            // Si ya pagó o está inscrito, marcar como CONVERTED y saltar
+            if (paidTicket || activeEnrollment) {
+              logger.info(`Checkout ${checkout.id}: Usuario ${existingUser.email} ya completó la compra, saltando...`);
+              await prisma.abandonedCheckout.update({
+                where: { id: checkout.id },
+                data: {
+                  status: 'CONVERTED_FULL', // Marcar como convertido
+                  convertedAt: new Date(),
+                }
+              });
+              results.processed++;
+              continue;
+            }
+          }
+        }
+        
         // Get organization anticipos config
         const orgFull = await prisma.organization.findUnique({
           where: { id: checkout.organizationId },
