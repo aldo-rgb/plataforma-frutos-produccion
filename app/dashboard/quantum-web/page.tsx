@@ -311,7 +311,7 @@ export default function QuantumWebEngine() {
   const [selectedTemplate, setSelectedTemplate] = useState<QuantumTemplate | null>(null);
   
   // Colores personalizados de la marca (3 colores)
-  const [brandColors, setBrandColors] = useState<[string, string, string]>(['#8B5CF6', '#EC4899', '#F97316']);
+  const [brandColors, setBrandColors] = useState<[string, string, string]>(['#1F2937', '#6B7280', '#D1D5DB']);
   
   // Contenido generado por IA
   const [webContent, setWebContent] = useState<WebContent | null>(null);
@@ -1910,7 +1910,7 @@ export default function QuantumWebEngine() {
             Colores de tu Marca
           </h3>
           <p className="text-slate-400 text-sm mb-6">
-            Elige 3 colores que representen tu marca. Los usaremos en toda tu página.
+            Haz clic en cada color para personalizarlo, o selecciona una paleta sugerida.
           </p>
           
           <div className="flex flex-col md:flex-row items-center gap-6">
@@ -1970,11 +1970,11 @@ export default function QuantumWebEngine() {
               <p className="text-xs text-slate-500">Paletas sugeridas:</p>
               <div className="flex gap-2">
                 {[
-                  ['#8B5CF6', '#EC4899', '#F97316'], // Púrpura-Rosa-Naranja
+                  ['#EC4899', '#8B5CF6', '#F97316'], // Rosa-Púrpura-Naranja
                   ['#10B981', '#3B82F6', '#F59E0B'], // Verde-Azul-Ámbar
                   ['#EF4444', '#F97316', '#FBBF24'], // Rojo-Naranja-Amarillo
                   ['#06B6D4', '#8B5CF6', '#EC4899'], // Cyan-Púrpura-Rosa
-                  ['#1F2937', '#6B7280', '#D1D5DB'], // Gris oscuro (profesional)
+                  ['#6B7280', '#9CA3AF', '#D1D5DB'], // Gris (neutro)
                 ].map((palette, i) => (
                   <button
                     key={i}
