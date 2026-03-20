@@ -4467,9 +4467,8 @@ function WebsitePreview({
             <p className="text-white/60 text-sm">
               © {new Date().getFullYear()} {business.name}. Todos los derechos reservados.
             </p>
-            <p className="text-white/40 text-xs flex items-center gap-1">
-              Hecho con <Heart className="w-3 h-3 text-red-400 fill-red-400" /> usando{' '}
-              <span className="text-white/60">Quantum AI Web Engine</span>
+            <p className="text-white/50 text-xs">
+              Hecho con <span className="text-white/70 font-medium">Quantum AI Web Engine</span>
             </p>
           </div>
         </div>
