@@ -23,6 +23,7 @@ interface QuantumIdentityModalProps {
   userLevel: number;
   userRank: string;
   skipReload?: boolean; // Si es true, no recarga la página al cerrar
+  brandColor?: string; // Color corporativo de la organización
 }
 
 export default function QuantumIdentityModal({ 
@@ -31,7 +32,8 @@ export default function QuantumIdentityModal({
   userName, 
   userLevel,
   userRank,
-  skipReload = false
+  skipReload = false,
+  brandColor = '#6366F1'
 }: QuantumIdentityModalProps) {
   const [stage, setStage] = useState<'gender' | 'analyzing' | 'selection' | 'generating' | 'reveal' | 'error'>('gender');
   const [gender, setGender] = useState<'male' | 'female' | 'neutral' | null>(null);
@@ -725,189 +727,130 @@ export default function QuantumIdentityModal({
 
       {/* STAGE 4: REVEAL */}
       {stage === 'reveal' && (
-        <div className="max-w-2xl w-full space-y-8 text-center bg-slate-900/80 backdrop-blur-xl p-4 sm:p-6 md:p-8 rounded-3xl border-2 border-purple-500/30 max-h-[95vh] overflow-y-auto">
+        <div className="max-w-sm w-full space-y-4 text-center bg-slate-900/90 backdrop-blur-xl p-5 rounded-2xl border border-slate-700 max-h-[90vh] overflow-y-auto">
           
-          {/* Avatar Reveal */}
+          {/* Avatar compacto */}
           <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 blur-3xl opacity-50 animate-pulse"></div>
+            <div 
+              className="absolute inset-0 blur-2xl opacity-40 rounded-full"
+              style={{ backgroundColor: brandColor }}
+            ></div>
             <img
               src={avatarUrl}
-              alt="Quantum Avatar"
-              className="relative z-10 w-64 h-64 mx-auto rounded-full border-4 border-purple-500 shadow-2xl shadow-purple-500/50 animate-in fade-in zoom-in duration-1000"
+              alt="Avatar"
+              className="relative z-10 w-32 h-32 mx-auto rounded-full border-2 shadow-xl"
+              style={{ borderColor: brandColor }}
             />
           </div>
 
-          {/* Identity Confirmed */}
-          <div className="space-y-4">
-            <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400 uppercase tracking-wider animate-in slide-in-from-bottom duration-500">
-              ROL CONFIRMADO
-            </h2>
-            <p className="text-3xl font-bold text-white uppercase tracking-widest">
-              BIENVENIDO AL CONSEJO, {selectedCandidate?.designation}
-            </p>
-            <p className="text-slate-400 text-lg">
-              {selectedCandidate?.rationale}
-            </p>
+          {/* Confirmación simple */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <span className="text-green-400 font-bold text-lg">Avatar creado</span>
+            </div>
           </div>
 
-          {/* Guardar en The Vault */}
-          <button
-            onClick={async () => {
-              if (vaultSaveStatus === 'saving') return;
-              setVaultSaveStatus('saving');
-              try {
-                const res = await fetch('/api/avatars/vault', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    avatarUrl: avatarUrl,
-                    vibe: 'quantum-identity',
-                    gender: gender || 'neutral',
-                    sourceImage: 'selfie-generated',
-                    designation: selectedCandidate?.designation,
-                    archetype: selectedCandidate?.archetype
-                  })
-                });
-                if (res.ok) {
-                  setVaultSaveStatus('success');
-                  setTimeout(() => setVaultSaveStatus('idle'), 3000);
-                } else {
+          {/* Botones con color corporativo */}
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={async () => {
+                if (vaultSaveStatus === 'saving') return;
+                setVaultSaveStatus('saving');
+                try {
+                  const res = await fetch('/api/avatars/vault', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      avatarUrl: avatarUrl,
+                      vibe: 'quantum-identity',
+                      gender: gender || 'neutral',
+                      sourceImage: 'selfie-generated',
+                      designation: selectedCandidate?.designation,
+                      archetype: selectedCandidate?.archetype
+                    })
+                  });
+                  if (res.ok) {
+                    setVaultSaveStatus('success');
+                    setTimeout(() => setVaultSaveStatus('idle'), 3000);
+                  } else {
+                    setVaultSaveStatus('error');
+                    setTimeout(() => setVaultSaveStatus('idle'), 3000);
+                  }
+                } catch (error) {
+                  console.error('Error guardando en vault:', error);
                   setVaultSaveStatus('error');
                   setTimeout(() => setVaultSaveStatus('idle'), 3000);
                 }
-              } catch (error) {
-                console.error('Error guardando en vault:', error);
-                setVaultSaveStatus('error');
-                setTimeout(() => setVaultSaveStatus('idle'), 3000);
-              }
-            }}
-            disabled={vaultSaveStatus === 'saving' || vaultSaveStatus === 'success'}
-            className={`w-full px-6 py-4 rounded-xl font-bold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-3 ${
-              vaultSaveStatus === 'success' 
-                ? 'bg-gradient-to-r from-green-600 to-emerald-600 shadow-green-500/30 cursor-default'
-                : vaultSaveStatus === 'error'
-                ? 'bg-gradient-to-r from-red-600 to-rose-600 shadow-red-500/30'
-                : vaultSaveStatus === 'saving'
-                ? 'bg-gradient-to-r from-amber-600/50 to-orange-600/50 shadow-amber-500/20 cursor-wait'
-                : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-amber-500/30'
-            }`}
-          >
-            {vaultSaveStatus === 'saving' ? (
-              <>
-                <Loader2 className="w-6 h-6 animate-spin" />
-                Guardando...
-              </>
-            ) : vaultSaveStatus === 'success' ? (
-              <>
-                <CheckCircle className="w-6 h-6" />
-                ¡Guardado en The Vault!
-              </>
-            ) : vaultSaveStatus === 'error' ? (
-              <>
-                <X className="w-6 h-6" />
-                Error al guardar
-              </>
-            ) : (
-              <>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                </svg>
-                Guardar Selfie en The Vault
-              </>
-            )}
-          </button>
+              }}
+              disabled={vaultSaveStatus === 'saving' || vaultSaveStatus === 'success'}
+              className={`w-full px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm ${
+                vaultSaveStatus === 'success' 
+                  ? 'bg-green-600 cursor-default text-white'
+                  : vaultSaveStatus === 'error'
+                  ? 'bg-red-600 text-white'
+                  : vaultSaveStatus === 'saving'
+                  ? 'opacity-70 cursor-wait text-white'
+                  : 'hover:opacity-90 text-white'
+              }`}
+              style={vaultSaveStatus !== 'success' && vaultSaveStatus !== 'error' ? { backgroundColor: brandColor } : undefined}
+            >
+              {vaultSaveStatus === 'saving' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : vaultSaveStatus === 'success' ? (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  ¡Guardado!
+                </>
+              ) : vaultSaveStatus === 'error' ? (
+                <>
+                  <X className="w-4 h-4" />
+                  Error
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                  Guardar en The Vault
+                </>
+              )}
+            </button>
 
-          {/* Botón Regenerar Avatar */}
-          <button
-            onClick={() => {
-              // Resetear estados y volver al inicio para regenerar
-              setStage('gender');
-              setAvatarUrl('');
-              setVaultSaveStatus('idle');
-              setCapturedPhotos([]);
-              setCaptureMode(null);
-              setShowPhotoCaptureOptions(false);
-              setShowSelfieCapture(false);
-              setUseSelfieMode(false);
-            }}
-            className="w-full px-6 py-4 rounded-xl font-bold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 shadow-purple-500/30"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Regenerar Avatar
-          </button>
+            <button
+              onClick={() => {
+                setStage('gender');
+                setAvatarUrl('');
+                setVaultSaveStatus('idle');
+                setCapturedPhotos([]);
+                setCaptureMode(null);
+                setShowPhotoCaptureOptions(false);
+                setShowSelfieCapture(false);
+                setUseSelfieMode(false);
+              }}
+              className="w-full px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm bg-slate-700 hover:bg-slate-600 text-white"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Regenerar
+            </button>
 
-          {/* Toast de confirmación elegante */}
-          {vaultSaveStatus === 'success' && (
-            <div className="animate-in slide-in-from-bottom fade-in duration-300 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/50 rounded-xl p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <CheckCircle className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-green-400 font-bold">Avatar guardado exitosamente</p>
-                <p className="text-green-300/70 text-sm">Disponible en The Vault → Sección Avatares</p>
-              </div>
-            </div>
-          )}
-
-          {/* Share Section */}
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 space-y-4">
-            <h3 className="text-lg font-bold text-white flex items-center justify-center gap-2">
-              <Share2 size={20} />
-              Comparte tu Rol en el Consejo
-            </h3>
-            
-            <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={shareToTwitter}
-                className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-all"
-                title="Compartir en Twitter"
-              >
-                <Twitter size={24} className="text-white" />
-              </button>
-              <button
-                onClick={shareToFacebook}
-                className="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all"
-                title="Compartir en Facebook"
-              >
-                <Facebook size={24} className="text-white" />
-              </button>
-              <button
-                onClick={shareToLinkedIn}
-                className="p-3 bg-blue-700 hover:bg-blue-800 rounded-lg transition-all"
-                title="Compartir en LinkedIn"
-              >
-                <Linkedin size={24} className="text-white" />
-              </button>
-              <button
-                onClick={copyToClipboard}
-                className="p-3 bg-slate-700 hover:bg-slate-600 rounded-lg transition-all"
-                title="Copiar al portapapeles"
-              >
-                <Copy size={24} className="text-white" />
-              </button>
-            </div>
-          </div>
-
-          {/* Close Button */}
-          <button
-            onClick={() => {
-              // El cooldown ya fue limpiado cuando se guardó el avatar exitosamente
-              // Cerrar modal normalmente - el usuario ya tiene su profileImage en BD
-              onClose();
-              
-              // Solo recargar si no estamos en modo skipReload (ej: dentro del wizard)
-              if (!skipReload) {
-                setTimeout(() => {
+            <button
+              onClick={() => {
+                onClose();
+                if (!skipReload) {
                   window.location.reload();
-                }, 1000);
-              }
-            }}
-            className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-black uppercase tracking-wider transition-all shadow-lg shadow-purple-500/50"
-          >
-            Continuar
-          </button>
+                }
+              }}
+              className="w-full px-4 py-2 rounded-xl font-medium transition-all text-sm text-slate-400 hover:text-white"
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
       )}
 

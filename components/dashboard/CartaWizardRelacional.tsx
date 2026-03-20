@@ -3247,6 +3247,7 @@ export default function CartaWizardRelacional() {
         userLevel={1}
         userRank="Novato"
         skipReload={true} // NO recargar la página, mantener el estado del wizard
+        brandColor={brandColor}
       />
     </div>
   );
