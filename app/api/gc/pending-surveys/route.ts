@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
               isActive: true
             },
             include: {
-              members: {
+              SmallGroupMember: {
                 where: { isActive: true },
                 select: { userId: true }
               }
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
           });
 
           // Obtener todos los participantIds de los squads
-          const allParticipantIds = gcSquads.flatMap(sq => sq.members.map(m => m.userId));
+          const allParticipantIds = gcSquads.flatMap(sq => sq.SmallGroupMember.map(m => m.userId));
           
           // Obtener los participantes que tienen status DROP en vision_enrollments
           const droppedEnrollments = await prisma.vision_enrollments.findMany({

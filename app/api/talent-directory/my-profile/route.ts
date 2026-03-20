@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
     const {
       headline,
       categoryId,
+      categorySlug, // Nuevo: soporte para slug de categoría
       description,
       discountOffer,
       city,
@@ -141,12 +142,40 @@ export async function POST(request: NextRequest) {
     // Si el status es HIDDEN (borrador desde Idea Millonaria), permitir datos parciales
     const isDraft = status === 'HIDDEN';
     
+    // Resolver categoryId desde categorySlug si se proporciona
+    let resolvedCategoryId = categoryId;
+    if (!categoryId && categorySlug) {
+      // Buscar primero por slug exacto, luego intentar variantes
+      const categoryFromSlug = await prisma.businessCategory.findFirst({
+        where: { 
+          OR: [
+            { slug: categorySlug },
+            { slug: categorySlug.toLowerCase() },
+            // Mapeo de slugs del frontend a slugs de BD
+            { slug: categorySlug === 'salud-bienestar' ? 'salud' : categorySlug },
+            { slug: categorySlug === 'educacion-coaching' ? 'educacion' : categorySlug },
+            { slug: categorySlug === 'arte-creatividad' ? 'arte' : categorySlug },
+            { slug: categorySlug === 'belleza-estetica' ? 'belleza' : categorySlug },
+            { slug: categorySlug === 'hogar-servicios' ? 'limpieza' : categorySlug },
+            { slug: categorySlug === 'fitness-deportes' ? 'fitness' : categorySlug },
+            { slug: categorySlug === 'moda-accesorios' ? 'comercio' : categorySlug },
+            { slug: categorySlug === 'gastronomia' ? 'alimentos' : categorySlug },
+            // Búsqueda por nombre parcial
+            { name: { contains: categorySlug.replace(/-/g, ' '), mode: 'insensitive' } }
+          ]
+        }
+      });
+      if (categoryFromSlug) {
+        resolvedCategoryId = categoryFromSlug.id;
+      }
+    }
+    
     // Validaciones - solo aplicar estrictamente si NO es borrador
     if (!isDraft) {
       if (!headline || headline.length > 100) {
         return NextResponse.json({ error: 'El titular es requerido (máx 100 caracteres)' }, { status: 400 });
       }
-      if (!categoryId) {
+      if (!resolvedCategoryId) {
         return NextResponse.json({ error: 'La categoría es requerida' }, { status: 400 });
       }
       if (!description || description.length < 20) {
@@ -168,10 +197,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'El nombre del negocio es requerido' }, { status: 400 });
     }
 
-    // Verificar que la categoría existe (solo si se proporciona)
-    if (categoryId) {
+    // Verificar que la categoría existe (solo si se proporciona y no fue resuelta aún)
+    if (resolvedCategoryId) {
       const category = await prisma.businessCategory.findUnique({
-        where: { id: categoryId }
+        where: { id: resolvedCategoryId }
       });
       if (!category) {
         return NextResponse.json({ error: 'Categoría no válida' }, { status: 400 });
@@ -187,8 +216,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Para borradores, obtener o crear categoría "Otro" por defecto
-    let finalCategoryId = categoryId;
-    if (isDraft && !categoryId) {
+    let finalCategoryId = resolvedCategoryId;
+    if (isDraft && !resolvedCategoryId) {
       const defaultCategory = await prisma.businessCategory.findFirst({
         where: { OR: [{ slug: 'otro' }, { slug: 'other' }, { name: 'Otro' }] }
       });

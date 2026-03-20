@@ -39,10 +39,10 @@ export async function GET(
         isActive: true,
       },
       include: {
-        members: {
+        SmallGroupMember: {
           where: { isActive: true },
           include: {
-            user: {
+            Usuario_SmallGroupMember_userIdToUsuario: {
               select: { id: true, nombre: true, email: true }
             }
           }
@@ -50,7 +50,7 @@ export async function GET(
       }
     });
 
-    if (!smallGroup || smallGroup.members.length === 0) {
+    if (!smallGroup || smallGroup.SmallGroupMember.length === 0) {
       return NextResponse.json({
         success: true,
         hasMembers: false,
@@ -77,18 +77,18 @@ export async function GET(
       success: true,
       hasMembers: true,
       groupId: smallGroup.id,
-      members: smallGroup.members.map(m => ({
+      members: smallGroup.SmallGroupMember.map(m => ({
         id: m.id,
         userId: m.userId,
-        nombre: m.user.nombre,
-        email: m.user.email,
+        nombre: m.Usuario_SmallGroupMember_userIdToUsuario.nombre,
+        email: m.Usuario_SmallGroupMember_userIdToUsuario.email,
       })),
       availableGameChangers: otherGameChangers.map(gc => ({
         id: gc.gameChangerId,
         nombre: gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre,
         email: gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.email,
       })),
-      message: `El Game Changer tiene ${smallGroup.members.length} participante(s) asignado(s)`
+      message: `El Game Changer tiene ${smallGroup.SmallGroupMember.length} participante(s) asignado(s)`
     });
   } catch (error) {
     logger.error('Error checking game changer members:', error);

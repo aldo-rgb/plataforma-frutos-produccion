@@ -108,14 +108,14 @@ export async function GET(request: NextRequest) {
           isActive: true
         },
         include: {
-          members: {
+          SmallGroupMember: {
             where: { isActive: true },
             select: { userId: true }
           }
         }
       });
 
-      const participantIds = squads.flatMap(s => s.members.map(m => m.userId));
+      const participantIds = squads.flatMap(s => s.SmallGroupMember.map(m => m.userId));
       const totalParticipantes = participantIds.length;
 
       if (totalParticipantes === 0) continue;
@@ -244,14 +244,14 @@ export async function POST(request: NextRequest) {
         isActive: true
       },
       include: {
-        members: {
+        SmallGroupMember: {
           where: { isActive: true },
           select: { userId: true }
         }
       }
     });
 
-    const participantIds = squads.flatMap(s => s.members.map(m => m.userId));
+    const participantIds = squads.flatMap(s => s.SmallGroupMember.map(m => m.userId));
     const totalParticipantes = participantIds.length;
 
     if (totalParticipantes === 0) {

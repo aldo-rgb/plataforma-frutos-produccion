@@ -47,10 +47,10 @@ export async function GET() {
             plWeekend3EndDate: true
           }
         },
-        members: {
+        SmallGroupMember: {
           where: { isActive: true },
           include: {
-            user: {
+            Usuario_SmallGroupMember_userIdToUsuario: {
               select: {
                 id: true,
                 nombre: true,
@@ -75,12 +75,12 @@ export async function GET() {
       level: squad.level,
       visionId: squad.visionId,
       maxSize: squad.maxSize,
-      membersCount: squad.members.length,
+      membersCount: squad.SmallGroupMember.length,
       vision: squad.vision,
-      members: squad.members.map(m => ({
+      members: squad.SmallGroupMember.map(m => ({
         id: m.id,
         userId: m.userId,
-        user: m.user,
+        user: m.Usuario_SmallGroupMember_userIdToUsuario,
         joinedAt: m.joinedAt
       }))
     }));

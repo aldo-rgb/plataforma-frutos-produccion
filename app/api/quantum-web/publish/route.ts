@@ -196,12 +196,13 @@ export async function POST(req: Request) {
           websiteId: website.id,
           name: product.name,
           description: product.description || '',
-          price: product.price,
-          originalPrice: product.originalPrice,
-          image: product.image,
-          category: product.category,
-          inStock: product.inStock,
-          featured: product.featured
+          price: product.price || 0,
+          originalPrice: product.originalPrice || null,
+          image: product.image || null,
+          category: product.category || null,
+          inStock: product.inStock ?? true,
+          featured: product.featured ?? false,
+          updatedAt: new Date()
         }))
       });
     }

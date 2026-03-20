@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, memo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -2034,8 +2034,9 @@ export default function QuantumBusinessBuilderPage() {
   // ============================================
   // PASO 2: IDENTIDAD VISUAL
   // ============================================
-  const IdentidadVisual = () => (
+  const IdentidadVisual = useMemo(() => (
     <motion.div
+      key="identidad-visual-container"
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
@@ -2102,10 +2103,13 @@ export default function QuantumBusinessBuilderPage() {
               <div className="relative">
                 <input
                   type="text"
-                  value={customName}
+                  key="custom-name-input"
+                  defaultValue={customName}
                   onChange={(e) => {
                     setCustomName(e.target.value);
-                    setSelectedName('');
+                    if (e.target.value) {
+                      setSelectedName('');
+                    }
                   }}
                   placeholder="O escribe tu propio nombre..."
                   className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
@@ -2190,7 +2194,8 @@ export default function QuantumBusinessBuilderPage() {
         </motion.button>
       </div>
     </motion.div>
-  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [selectedIdea, generatedNames, generatedLogos, selectedLogoIndex, selectedLogo, uploadingSelectedLogo, generatePitch]);
 
   // ============================================
   // PASO 3: PITCH Y OFERTA
@@ -3279,7 +3284,7 @@ export default function QuantumBusinessBuilderPage() {
         {step === 'selector' && <SelectorDeRealidad key="selector" />}
         {step === 'adn-talento' && <ADNTalento key="adn" />}
         {step === 'ideas-negocio' && <IdeasNegocio key="ideas" />}
-        {step === 'identidad-visual' && <IdentidadVisual key="visual" />}
+        {step === 'identidad-visual' && IdentidadVisual}
         {step === 'pitch-oferta' && PitchOferta()}
         {step === 'momento-verdad' && <MomentoDeLaVerdad key="verdad" />}
         {step === 'optimizador' && optimizadorContent}

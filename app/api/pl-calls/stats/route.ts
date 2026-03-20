@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         name: true,
-        members: {
+        SmallGroupMember: {
           where: { isActive: true },
           select: { userId: true }
         }
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       atomStats = {
         squadId: squad.id,
         squadName: squad.name,
-        memberCount: squad.members.length,
+        memberCount: squad.SmallGroupMember.length,
         totalCalls: atomCalls.length,
         completedCalls: completedAtomCalls.length,
         scheduledCalls: atomCalls.filter(c => c.status === 'SCHEDULED').length,

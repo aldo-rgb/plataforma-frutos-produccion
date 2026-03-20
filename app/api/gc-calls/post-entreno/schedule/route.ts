@@ -284,7 +284,7 @@ export async function GET(request: Request) {
             advancedEndDate: true
           }
         },
-        members: {
+        SmallGroupMember: {
           where: { isActive: true },
           select: { userId: true }
         }
@@ -371,7 +371,7 @@ export async function GET(request: Request) {
     }
 
     // Calcular estadísticas
-    const memberIds = squad.members.map(m => m.userId);
+    const memberIds = squad.SmallGroupMember.map(m => m.userId);
     const scheduledParticipantIds = Object.keys(participantCallsMap).map(Number);
     const pendingParticipants = memberIds.filter(id => !scheduledParticipantIds.includes(id));
 

@@ -41,9 +41,9 @@ export async function GET() {
             advancedEndDate: true,
           },
         },
-        members: {
+        SmallGroupMember: {
           include: {
-            user: {
+            Usuario_SmallGroupMember_userIdToUsuario: {
               select: {
                 id: true,
                 nombre: true,
@@ -56,7 +56,7 @@ export async function GET() {
           orderBy: { joinedAt: 'asc' },
         },
         _count: {
-          select: { members: true },
+          select: { SmallGroupMember: true },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -108,13 +108,13 @@ export async function GET() {
                 advancedEndDate: squad.vision.advancedEndDate?.toISOString() || null,
               }
             : null,
-          members: squad.members.map((m) => ({
+          members: squad.SmallGroupMember.map((m) => ({
             id: m.id,
             odId: m.id,
-            user: m.user,
+            user: m.Usuario_SmallGroupMember_userIdToUsuario,
             joinedAt: m.joinedAt.toISOString(),
           })),
-          membersCount: squad._count.members,
+          membersCount: squad._count.SmallGroupMember,
           stats: {
             totalCalls,
             completedCalls,
