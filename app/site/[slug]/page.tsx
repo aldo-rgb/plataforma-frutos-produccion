@@ -150,6 +150,16 @@ export default async function SitePage({ params }: PageProps) {
       aboutText: website.aboutText,
       servicesTitle: website.servicesTitle,
       services: website.services as { icon: string; title: string; description: string }[] | null,
+      siteType: website.siteType || 'catalog',
+      appointmentServices: website.appointmentServices as {
+        id: string;
+        name: string;
+        description: string;
+        duration: number;
+        price: number;
+        color: string;
+        active: boolean;
+      }[] | null,
       ctaText: website.ctaText,
       testimonials: realTestimonials, // Usar reseñas reales, null si no hay
       products: website.QuantumProduct.map(p => ({

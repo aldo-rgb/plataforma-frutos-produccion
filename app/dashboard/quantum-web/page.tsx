@@ -398,15 +398,21 @@ export default function QuantumWebEngine() {
   // Modal para editar/agregar servicios de citas
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [editingService, setEditingService] = useState<AppointmentService | null>(null);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(true);
   
   // Cargar datos del perfil existente o del localStorage (idea millonaria)
   useEffect(() => {
-    loadPrefillData();
-    loadBusinessProfile();
+    const initializeData = async () => {
+      setIsLoadingEdit(true);
+      await loadPrefillData();
+      await loadBusinessProfile();
+      setIsLoadingEdit(false);
+    };
+    initializeData();
   }, []);
   
   // Cargar datos precargados desde el flujo de "idea millonaria" o modo edición
-  const loadPrefillData = () => {
+  const loadPrefillData = async () => {
     try {
       const prefillData = localStorage.getItem('quantum_web_prefill');
       if (prefillData) {
@@ -453,17 +459,17 @@ export default function QuantumWebEngine() {
           discountOffer: data.discountOffer || prev.discountOffer
         }));
         
-        // Si es modo edición, cargar los datos completos del sitio
-        if (data.editMode && data.existingSlug) {
-          loadExistingSite(data.existingSlug);
-        }
-        
         // Limpiar localStorage después de usar
         localStorage.removeItem('quantum_web_prefill');
         
-        // Si tiene datos, ir al paso de selección de tipo de sitio (no saltar directo a info)
-        // El usuario necesita elegir si quiere página informativa o tienda, y el diseño
-        if (data.name && !data.editMode) {
+        // Si es modo edición, cargar los datos completos del sitio y esperar
+        if (data.editMode && data.existingSlug) {
+          await loadExistingSite(data.existingSlug);
+          return; // No ejecutar el código de abajo
+        }
+        
+        // Si tiene datos pero NO es modo edición, ir al paso de selección de tipo de sitio
+        if (data.name) {
           setStep('site-type');
         }
       }
@@ -531,9 +537,23 @@ export default function QuantumWebEngine() {
               inStock: p.inStock !== false,
               featured: p.featured || false
             })));
+          }
+          
+          // Cargar tipo de sitio y servicios de citas
+          if (site.siteType) {
+            setSiteType(site.siteType);
+          } else if (site.products && site.products.length > 0) {
             setSiteType('store');
           } else {
             setSiteType('landing');
+          }
+          
+          // Cargar servicios de citas si existen
+          if (site.appointmentServices && site.appointmentServices.length > 0) {
+            setAppointmentsConfig(prev => ({
+              ...prev,
+              services: site.appointmentServices
+            }));
           }
           
           // Ir directo a la preview para editar
@@ -733,7 +753,9 @@ export default function QuantumWebEngine() {
           template: selectedTemplate,
           content: webContent,
           products,
-          brandColors
+          brandColors,
+          siteType,
+          appointmentServices: appointmentsConfig.services
         })
       });
       
@@ -2832,6 +2854,19 @@ export default function QuantumWebEngine() {
   );
   
   // Main Render
+  if (isLoadingEdit && step === 'intro') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950/20 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 flex items-center justify-center animate-pulse">
+            <Globe className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-purple-300">Cargando tu sitio web...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <>
       {step === 'intro' && renderIntro()}
@@ -3564,6 +3599,72 @@ function WebsitePreview({
   const isDarkTheme = template.style === 'energetic' || template.style === 'tech';
   const heroImage = externalHeroImage || (content as any).heroImage || PREVIEW_HERO_IMAGES[business.category || 'otro'] || PREVIEW_HERO_IMAGES.otro;
   
+  // Estilos específicos por template
+  const templateStyles = {
+    // MINIMALISTA - Espacios amplios, bordes finos, sin sombras pesadas
+    minimal: {
+      heroHeight: 'min-h-[60vh]',
+      heroOverlay: `linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.7) 100%)`,
+      cardStyle: 'border border-gray-200 bg-white',
+      cardRadius: 'rounded-none',
+      buttonStyle: 'rounded-none border-2',
+      sectionPadding: 'py-24 md:py-36',
+      titleStyle: 'tracking-tight font-light',
+      pattern: 'none',
+      decorations: false,
+    },
+    // HIGH ENERGY - Gradientes fuertes, formas angulares, animaciones
+    energetic: {
+      heroHeight: 'min-h-[80vh]',
+      heroOverlay: `linear-gradient(135deg, ${colors.primary}f5 0%, ${colors.secondary}e5 50%, ${colors.accent}d0 100%)`,
+      cardStyle: 'bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg border border-white/20',
+      cardRadius: 'rounded-3xl',
+      buttonStyle: 'rounded-full shadow-lg shadow-current/30',
+      sectionPadding: 'py-16 md:py-24',
+      titleStyle: 'uppercase tracking-wider font-black',
+      pattern: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+      decorations: true,
+    },
+    // ARTESANAL - Texturas, bordes suaves, sensación orgánica
+    artisan: {
+      heroHeight: 'min-h-[55vh]',
+      heroOverlay: `linear-gradient(180deg, rgba(139,69,19,0.3) 0%, rgba(0,0,0,0.75) 100%)`,
+      cardStyle: 'bg-amber-50/80 border border-amber-200/50 shadow-sm',
+      cardRadius: 'rounded-2xl',
+      buttonStyle: 'rounded-xl',
+      sectionPadding: 'py-16 md:py-24',
+      titleStyle: 'font-serif italic',
+      pattern: `url("data:image/svg+xml,%3Csvg width='52' height='26' viewBox='0 0 52 26' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d97706' fill-opacity='0.08'%3E%3Cpath d='M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+      decorations: false,
+    },
+    // TECH FUTURISTA - Glassmorphism, neón, líneas tech
+    tech: {
+      heroHeight: 'min-h-[75vh]',
+      heroOverlay: `linear-gradient(135deg, ${colors.primary}f0 0%, rgba(0,0,0,0.9) 50%, ${colors.secondary}80 100%)`,
+      cardStyle: 'bg-slate-900/50 backdrop-blur-xl border border-cyan-500/20 shadow-lg shadow-cyan-500/10',
+      cardRadius: 'rounded-2xl',
+      buttonStyle: 'rounded-lg border border-cyan-400/50',
+      sectionPadding: 'py-20 md:py-32',
+      titleStyle: 'font-mono tracking-wide',
+      pattern: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%2306b6d4' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+      decorations: true,
+    },
+    // CORPORATIVO - Estructura sólida, líneas rectas, profesional
+    corporate: {
+      heroHeight: 'min-h-[65vh]',
+      heroOverlay: `linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.75) 100%)`,
+      cardStyle: 'bg-white shadow-md border-l-4',
+      cardRadius: 'rounded-lg',
+      buttonStyle: 'rounded-md',
+      sectionPadding: 'py-16 md:py-24',
+      titleStyle: 'font-semibold',
+      pattern: 'none',
+      decorations: false,
+    },
+  };
+  
+  const styles = templateStyles[template.style as keyof typeof templateStyles] || templateStyles.corporate;
+  
   // Función para subir imagen
   const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -3725,26 +3826,39 @@ function WebsitePreview({
         )}
       </AnimatePresence>
       
-      {/* ============ HERO SECTION - FULLSCREEN ============ */}
-      <section className="relative min-h-[55vh] md:min-h-[75vh] flex items-center justify-center overflow-hidden">
+      {/* ============ HERO SECTION - DIFERENCIADO POR TEMPLATE ============ */}
+      <section className={`relative ${styles.heroHeight} flex items-center justify-center overflow-hidden`}>
         {/* Background Image - con botón de editar */}
         <div className="absolute inset-0 group">
           <img 
             src={heroImage}
             alt="Hero background"
-            className="w-full h-full object-cover scale-105"
+            className={`w-full h-full object-cover ${template.style === 'energetic' ? 'scale-110' : 'scale-105'}`}
           />
-          {/* Overlay mejorado con gradiente múltiple */}
+          {/* Overlay según template */}
           <div 
             className="absolute inset-0"
-            style={{
-              background: isDarkTheme
-                ? `linear-gradient(135deg, ${colors.primary}f0 0%, ${colors.secondary}e0 50%, ${colors.accent}90 100%)`
-                : `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.85) 100%)`
-            }}
+            style={{ background: styles.heroOverlay }}
           />
-          {/* Patrón decorativo sutil */}
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+          {/* Patrón decorativo según template */}
+          {styles.pattern !== 'none' && (
+            <div className="absolute inset-0 opacity-100" style={{ backgroundImage: styles.pattern }} />
+          )}
+          {/* Decoraciones específicas */}
+          {styles.decorations && template.style === 'energetic' && (
+            <>
+              <div className="absolute top-20 left-10 w-32 h-32 rounded-full blur-3xl animate-pulse" style={{ backgroundColor: colors.accent, opacity: 0.3 }} />
+              <div className="absolute bottom-20 right-10 w-48 h-48 rounded-full blur-3xl animate-pulse" style={{ backgroundColor: colors.secondary, opacity: 0.2, animationDelay: '1s' }} />
+            </>
+          )}
+          {styles.decorations && template.style === 'tech' && (
+            <>
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
+              <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+              <div className="absolute top-1/4 right-20 w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+              <div className="absolute bottom-1/3 left-20 w-2 h-2 rounded-full bg-purple-400 animate-ping" style={{ animationDelay: '0.5s' }} />
+            </>
+          )}
           {/* Botón editar imagen */}
           {editMode && (
             <button
@@ -3757,31 +3871,53 @@ function WebsitePreview({
           )}
         </div>
         
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-6 text-center py-10 md:py-16">
-          {/* Logo con efecto glow */}
+        {/* Hero Content - Layout diferente por template */}
+        <div className={`relative z-10 w-full max-w-5xl mx-auto px-4 md:px-6 py-10 md:py-16 ${
+          template.style === 'minimal' ? 'text-left md:pl-12' : 
+          template.style === 'artisan' ? 'text-center' : 
+          'text-center'
+        }`}>
+          {/* Logo */}
           {business.logo && (
-            <div className="mb-5 md:mb-8">
+            <div className={`mb-5 md:mb-8 ${template.style === 'minimal' ? '' : 'flex justify-center'}`}>
               <div className="relative inline-block">
-                <div className="absolute inset-0 blur-2xl opacity-50" style={{ backgroundColor: colors.accent }} />
+                {template.style !== 'minimal' && (
+                  <div className="absolute inset-0 blur-2xl opacity-50" style={{ backgroundColor: colors.accent }} />
+                )}
                 <img
                   src={business.logo}
                   alt={business.name}
-                  className="relative w-20 h-20 md:w-28 md:h-28 mx-auto rounded-2xl md:rounded-3xl object-cover shadow-2xl ring-4 ring-white/30"
+                  className={`relative object-cover shadow-2xl ${
+                    template.style === 'minimal' ? 'w-16 h-16 rounded-none' :
+                    template.style === 'tech' ? 'w-20 h-20 md:w-24 md:h-24 rounded-xl ring-2 ring-cyan-500/30' :
+                    template.style === 'artisan' ? 'w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-white/50' :
+                    'w-20 h-20 md:w-28 md:h-28 rounded-2xl md:rounded-3xl ring-4 ring-white/30'
+                  }`}
                 />
               </div>
             </div>
           )}
           
-          {/* Badge de negocio */}
-          {business.category && (
-            <span className="inline-block px-4 py-1.5 rounded-full text-xs md:text-sm font-medium mb-4 md:mb-6 backdrop-blur-sm" style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.95)' }}>
-              ✨ {business.category}
+          {/* Badge de negocio - diferente por estilo */}
+          {business.category && template.style !== 'minimal' && (
+            <span className={`inline-block mb-4 md:mb-6 ${
+              template.style === 'energetic' ? 'px-6 py-2 rounded-full text-sm font-bold uppercase tracking-wider bg-white/20 backdrop-blur-sm border border-white/30' :
+              template.style === 'tech' ? 'px-4 py-1.5 rounded-lg text-xs font-mono bg-cyan-500/20 border border-cyan-500/30 text-cyan-200' :
+              template.style === 'artisan' ? 'px-5 py-2 rounded-full text-sm italic bg-amber-900/30 border border-amber-200/30' :
+              'px-4 py-1.5 rounded-full text-xs md:text-sm font-medium backdrop-blur-sm bg-white/15'
+            }`} style={{ color: 'rgba(255,255,255,0.95)' }}>
+              {template.style === 'tech' ? '// ' : template.style === 'artisan' ? '✦ ' : '✨ '}{business.category}
             </span>
           )}
           
-          {/* Título editable */}
-          <div className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 md:mb-6 leading-tight px-2">
+          {/* Título editable - estilo diferente */}
+          <div className={`mb-4 md:mb-6 leading-tight ${
+            template.style === 'minimal' ? 'text-4xl sm:text-5xl md:text-6xl lg:text-7xl max-w-2xl' :
+            template.style === 'energetic' ? 'text-4xl sm:text-5xl md:text-7xl lg:text-8xl' :
+            template.style === 'artisan' ? 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl' :
+            template.style === 'tech' ? 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl' :
+            'text-3xl sm:text-4xl md:text-5xl lg:text-7xl'
+          }`}>
             <EditableText
               value={content.heroTitle}
               onChange={(val) => handleContentChange('heroTitle', val)}
@@ -3789,29 +3925,51 @@ function WebsitePreview({
               style={{ 
                 fontFamily: template.fonts.heading,
                 color: '#fff',
-                textShadow: '0 4px 40px rgba(0,0,0,0.4), 0 2px 10px rgba(0,0,0,0.3)'
+                textShadow: template.style === 'tech' ? '0 0 40px rgba(6,182,212,0.3)' : '0 4px 40px rgba(0,0,0,0.4)',
+                ...(template.style === 'minimal' && { fontWeight: 300, letterSpacing: '-0.02em' }),
+                ...(template.style === 'energetic' && { fontWeight: 900, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }),
+                ...(template.style === 'artisan' && { fontStyle: 'italic' as const, fontWeight: 400 }),
+                ...(template.style === 'tech' && { fontFamily: 'monospace', letterSpacing: '0.1em' }),
               }}
             />
           </div>
           
           {/* Subtítulo editable */}
-          <div className="text-base sm:text-lg md:text-xl lg:text-2xl mb-8 md:mb-10 max-w-2xl mx-auto px-2 leading-relaxed">
+          <div className={`mb-8 md:mb-10 leading-relaxed ${
+            template.style === 'minimal' ? 'text-lg md:text-xl max-w-xl' :
+            template.style === 'energetic' ? 'text-lg md:text-2xl max-w-3xl mx-auto font-medium' :
+            'text-base sm:text-lg md:text-xl lg:text-2xl max-w-2xl mx-auto'
+          }`}>
             <EditableText
               value={content.heroSubtitle}
               onChange={(val) => handleContentChange('heroSubtitle', val)}
               editMode={editMode}
-              style={{ color: 'rgba(255,255,255,0.9)', textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
+              style={{ 
+                color: 'rgba(255,255,255,0.9)', 
+                textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                ...(template.style === 'tech' && { fontFamily: 'monospace', opacity: 0.8 }),
+              }}
               multiline
             />
           </div>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-5">
+          {/* Botones - estilo diferente por template */}
+          <div className={`flex gap-4 md:gap-5 ${
+            template.style === 'minimal' ? 'flex-col sm:flex-row' : 
+            'flex-col sm:flex-row items-center justify-center'
+          }`}>
             <button
-              className="group flex items-center gap-3 px-8 py-4 md:px-10 md:py-5 rounded-full font-bold text-base md:text-lg shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-3xl w-full sm:w-auto justify-center"
+              className={`group flex items-center gap-3 font-bold transition-all duration-300 hover:scale-105 ${
+                template.style === 'minimal' ? 'px-8 py-4 rounded-none border-2 border-white text-white hover:bg-white hover:text-black' :
+                template.style === 'energetic' ? 'px-10 py-5 rounded-full text-lg uppercase tracking-wider shadow-2xl' :
+                template.style === 'tech' ? 'px-8 py-4 rounded-lg border border-cyan-400/50 bg-cyan-500/20 backdrop-blur-sm text-white hover:bg-cyan-500/40' :
+                template.style === 'artisan' ? 'px-8 py-4 rounded-xl shadow-lg' :
+                'px-8 py-4 md:px-10 md:py-5 rounded-full text-base md:text-lg shadow-2xl'
+              } w-full sm:w-auto justify-center`}
               style={{ 
-                backgroundColor: colors.accent, 
+                backgroundColor: template.style === 'minimal' ? 'transparent' : template.style === 'tech' ? 'rgba(6,182,212,0.2)' : colors.accent, 
                 color: '#fff',
-                boxShadow: `0 10px 40px ${colors.accent}50`
+                boxShadow: template.style === 'energetic' ? `0 15px 50px ${colors.accent}60` : template.style === 'tech' ? `0 0 30px ${colors.accent}30` : `0 10px 40px ${colors.accent}50`
               }}
             >
               <MessageSquare className="w-5 h-5 md:w-6 md:h-6" />
@@ -3824,218 +3982,501 @@ function WebsitePreview({
             </button>
             
             {business.phone && (
-              <button className="flex items-center gap-2 px-6 py-3 md:px-7 md:py-4 rounded-full font-semibold bg-white/15 backdrop-blur-md text-white border border-white/30 text-sm md:text-base hover:bg-white/25 transition-all">
+              <button className={`flex items-center gap-2 font-semibold transition-all ${
+                template.style === 'minimal' ? 'px-6 py-3 border border-white/50 text-white hover:bg-white/10' :
+                template.style === 'energetic' ? 'px-8 py-4 rounded-full bg-white/20 backdrop-blur-md border-2 border-white/40 text-white' :
+                template.style === 'tech' ? 'px-6 py-3 rounded-lg border border-white/20 bg-white/5 backdrop-blur-sm text-white' :
+                'px-6 py-3 md:px-7 md:py-4 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/30 hover:bg-white/25'
+              }`}>
                 <Phone className="w-4 h-4 md:w-5 md:h-5" />
                 Llamar
               </button>
             )}
           </div>
           
-          {/* Scroll indicator */}
-          <div className="hidden md:flex flex-col items-center mt-12 animate-bounce opacity-60">
-            <span className="text-white/70 text-xs mb-2">Descubre más</span>
-            <ChevronDown className="w-5 h-5 text-white/70" />
-          </div>
+          {/* Scroll indicator - solo en algunos templates */}
+          {(template.style === 'energetic' || template.style === 'corporate') && (
+            <div className="hidden md:flex flex-col items-center mt-12 animate-bounce opacity-60">
+              <span className="text-white/70 text-xs mb-2">Descubre más</span>
+              <ChevronDown className="w-5 h-5 text-white/70" />
+            </div>
+          )}
         </div>
       </section>
 
       {/* ============ ABOUT SECTION ============ */}
-      <section className="py-16 md:py-28 px-4 md:px-6 relative overflow-hidden">
-        {/* Elementos decorativos de fondo */}
-        <div className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-5" style={{ backgroundColor: colors.primary, filter: 'blur(100px)' }} />
-        <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full opacity-5" style={{ backgroundColor: colors.accent, filter: 'blur(80px)' }} />
+      <section className={`px-4 md:px-6 relative overflow-hidden ${
+        template.style === 'minimal' ? 'py-20 md:py-32' :
+        template.style === 'energetic' ? 'py-12 md:py-20' :
+        template.style === 'artisan' ? 'py-16 md:py-24' :
+        template.style === 'tech' ? 'py-16 md:py-28' :
+        'py-16 md:py-28'
+      }`} style={{
+        backgroundColor: template.style === 'tech' ? '#0a0a0a' : 
+                        template.style === 'artisan' ? '#faf8f5' :
+                        template.style === 'minimal' ? '#fff' : 'transparent'
+      }}>
+        {/* Elementos decorativos según template */}
+        {template.style === 'energetic' && (
+          <>
+            <div className="absolute top-0 left-0 w-full h-2" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.accent})` }} />
+            <div className="absolute -left-20 top-1/2 -translate-y-1/2 w-40 h-40 rounded-full opacity-30" style={{ backgroundColor: colors.accent, filter: 'blur(60px)' }} />
+            <div className="absolute -right-20 top-1/3 w-60 h-60 rounded-full opacity-20" style={{ backgroundColor: colors.primary, filter: 'blur(80px)' }} />
+          </>
+        )}
+        {template.style === 'tech' && (
+          <>
+            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `radial-gradient(${colors.primary} 1px, transparent 1px)`, backgroundSize: '20px 20px' }} />
+            <div className="absolute top-10 right-10 w-32 h-32 border opacity-20" style={{ borderColor: colors.primary, transform: 'rotate(45deg)' }} />
+            <div className="absolute bottom-10 left-10 w-24 h-24 border opacity-20" style={{ borderColor: colors.accent, transform: 'rotate(12deg)' }} />
+          </>
+        )}
+        {template.style === 'artisan' && (
+          <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M30 0L60 30L30 60L0 30z" fill="none" stroke="%23000" stroke-width="0.5"/%3E%3C/svg%3E")' }} />
+        )}
+        {template.style === 'corporate' && (
+          <>
+            <div className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-5" style={{ backgroundColor: colors.primary, filter: 'blur(100px)' }} />
+            <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full opacity-5" style={{ backgroundColor: colors.accent, filter: 'blur(80px)' }} />
+          </>
+        )}
         
-        <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-16 items-center">
-            {/* Columna izquierda - Visual */}
-            <div className="relative order-2 md:order-1">
-              <div className="relative">
-                {/* Figura decorativa de fondo */}
-                <div className="absolute -inset-4 rounded-3xl opacity-20" style={{ background: `linear-gradient(135deg, ${colors.primary}40, ${colors.accent}40)` }} />
-                <div className="relative bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-8 md:p-12">
-                  {/* Icono o imagen central */}
-                  <div className="text-center">
-                    <div 
-                      className="inline-flex items-center justify-center w-20 h-20 md:w-28 md:h-28 rounded-2xl md:rounded-3xl mb-6"
-                      style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}
-                    >
-                      <Award className="w-10 h-10 md:w-14 md:h-14 text-white" />
-                    </div>
-                    
-                    {/* Stats editables */}
-                    <div className="grid grid-cols-2 gap-4 mt-6">
-                      <div className="text-center p-4 rounded-xl bg-white shadow-sm">
-                        <div className="text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>
-                          <EditableText
-                            value={content.stat1Value || '5+'}
-                            onChange={(val) => handleContentChange('stat1Value', val)}
-                            editMode={editMode}
-                          />
+        <div className={`mx-auto ${template.style === 'minimal' ? 'max-w-4xl' : 'max-w-5xl'}`}>
+          {/* Layout según template style */}
+          {template.style === 'minimal' ? (
+            /* MINIMAL: Diseño centrado, tipografía elegante, sin visual lateral */
+            <div className="text-center">
+              <div className="mb-12">
+                <div className="w-16 h-[2px] mx-auto mb-8" style={{ backgroundColor: colors.primary }} />
+                <div 
+                  className="text-4xl md:text-6xl font-light mb-8 tracking-tight"
+                  style={{ fontFamily: 'Georgia, serif', color: colors.primary }}
+                >
+                  <EditableText
+                    value={content.aboutTitle}
+                    onChange={(val) => handleContentChange('aboutTitle', val)}
+                    editMode={editMode}
+                  />
+                </div>
+                <div className="text-lg md:text-xl leading-relaxed max-w-2xl mx-auto" style={{ color: colors.secondary }}>
+                  <EditableText
+                    value={content.aboutText}
+                    onChange={(val) => handleContentChange('aboutText', val)}
+                    editMode={editMode}
+                    multiline
+                  />
+                </div>
+              </div>
+              <div className="flex justify-center gap-16 pt-8 border-t" style={{ borderColor: colors.primary + '20' }}>
+                <div className="text-center">
+                  <div className="text-4xl font-light" style={{ color: colors.primary }}>
+                    <EditableText value={content.stat1Value || '5+'} onChange={(val) => handleContentChange('stat1Value', val)} editMode={editMode} />
+                  </div>
+                  <div className="text-sm uppercase tracking-widest mt-2" style={{ color: colors.secondary }}>
+                    <EditableText value={content.stat1Label || 'Años de experiencia'} onChange={(val) => handleContentChange('stat1Label', val)} editMode={editMode} />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-light" style={{ color: colors.primary }}>
+                    <EditableText value={content.stat2Value || '100%'} onChange={(val) => handleContentChange('stat2Value', val)} editMode={editMode} />
+                  </div>
+                  <div className="text-sm uppercase tracking-widest mt-2" style={{ color: colors.secondary }}>
+                    <EditableText value={content.stat2Label || 'Compromiso'} onChange={(val) => handleContentChange('stat2Label', val)} editMode={editMode} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : template.style === 'energetic' ? (
+            /* ENERGETIC: Diseño diagonal, colores vibrantes, animado */
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 text-8xl font-black opacity-10" style={{ color: colors.primary }}>ABOUT</div>
+              <div className="grid md:grid-cols-12 gap-6 items-center">
+                <div className="md:col-span-5">
+                  <div className="relative p-1 rounded-2xl" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>
+                    <div className="bg-white rounded-xl p-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.primary + '10' }}>
+                          <div className="text-3xl md:text-4xl font-black" style={{ color: colors.primary }}>
+                            <EditableText value={content.stat1Value || '5+'} onChange={(val) => handleContentChange('stat1Value', val)} editMode={editMode} />
+                          </div>
+                          <div className="text-xs uppercase font-bold mt-1" style={{ color: colors.accent }}>
+                            <EditableText value={content.stat1Label || 'Años de experiencia'} onChange={(val) => handleContentChange('stat1Label', val)} editMode={editMode} />
+                          </div>
                         </div>
-                        <div className="text-xs md:text-sm text-gray-500">
-                          <EditableText
-                            value={content.stat1Label || 'Años de experiencia'}
-                            onChange={(val) => handleContentChange('stat1Label', val)}
-                            editMode={editMode}
-                          />
+                        <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.accent + '10' }}>
+                          <div className="text-3xl md:text-4xl font-black" style={{ color: colors.accent }}>
+                            <EditableText value={content.stat2Value || '100%'} onChange={(val) => handleContentChange('stat2Value', val)} editMode={editMode} />
+                          </div>
+                          <div className="text-xs uppercase font-bold mt-1" style={{ color: colors.primary }}>
+                            <EditableText value={content.stat2Label || 'Compromiso'} onChange={(val) => handleContentChange('stat2Label', val)} editMode={editMode} />
+                          </div>
                         </div>
                       </div>
-                      <div className="text-center p-4 rounded-xl bg-white shadow-sm">
-                        <div className="text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>
-                          <EditableText
-                            value={content.stat2Value || '100%'}
-                            onChange={(val) => handleContentChange('stat2Value', val)}
-                            editMode={editMode}
-                          />
+                    </div>
+                  </div>
+                </div>
+                <div className="md:col-span-7">
+                  <div className="uppercase text-sm font-bold tracking-widest mb-4" style={{ color: colors.accent }}>¿Quiénes somos?</div>
+                  <div className="text-3xl md:text-4xl font-black mb-4 uppercase" style={{ color: colors.primary }}>
+                    <EditableText value={content.aboutTitle} onChange={(val) => handleContentChange('aboutTitle', val)} editMode={editMode} />
+                  </div>
+                  <div className="text-base leading-relaxed" style={{ color: colors.secondary }}>
+                    <EditableText value={content.aboutText} onChange={(val) => handleContentChange('aboutText', val)} editMode={editMode} multiline />
+                  </div>
+                  <div className="flex flex-wrap gap-3 mt-6">
+                    {['Calidad', 'Compromiso', 'Resultados'].map((item, idx) => (
+                      <span key={idx} className="px-4 py-2 rounded-full text-sm font-bold uppercase" style={{ backgroundColor: idx === 1 ? colors.accent : colors.primary, color: 'white' }}>{item}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : template.style === 'artisan' ? (
+            /* ARTISAN: Diseño orgánico, formas naturales, tipografía clásica */
+            <div className="grid md:grid-cols-5 gap-12 items-center">
+              <div className="md:col-span-2 relative">
+                <div className="absolute -inset-6 rounded-full opacity-10" style={{ backgroundColor: colors.accent }} />
+                <div className="relative bg-white rounded-[40px] p-8 shadow-xl border-2" style={{ borderColor: colors.primary + '20' }}>
+                  <div className="text-center">
+                    <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${colors.primary}20, ${colors.accent}20)`, border: `2px solid ${colors.primary}` }}>
+                      <Award className="w-10 h-10" style={{ color: colors.primary }} />
+                    </div>
+                    <div className="space-y-4">
+                      <div className="py-3 border-b" style={{ borderColor: colors.primary + '20' }}>
+                        <div className="text-3xl font-serif" style={{ color: colors.primary }}>
+                          <EditableText value={content.stat1Value || '5+'} onChange={(val) => handleContentChange('stat1Value', val)} editMode={editMode} />
                         </div>
-                        <div className="text-xs md:text-sm text-gray-500">
-                          <EditableText
-                            value={content.stat2Label || 'Compromiso'}
-                            onChange={(val) => handleContentChange('stat2Label', val)}
-                            editMode={editMode}
-                          />
+                        <div className="text-sm italic" style={{ color: colors.secondary }}>
+                          <EditableText value={content.stat1Label || 'Años de experiencia'} onChange={(val) => handleContentChange('stat1Label', val)} editMode={editMode} />
+                        </div>
+                      </div>
+                      <div className="py-3">
+                        <div className="text-3xl font-serif" style={{ color: colors.primary }}>
+                          <EditableText value={content.stat2Value || '100%'} onChange={(val) => handleContentChange('stat2Value', val)} editMode={editMode} />
+                        </div>
+                        <div className="text-sm italic" style={{ color: colors.secondary }}>
+                          <EditableText value={content.stat2Label || 'Compromiso'} onChange={(val) => handleContentChange('stat2Label', val)} editMode={editMode} />
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            {/* Columna derecha - Texto */}
-            <div className="order-1 md:order-2">
-              <span 
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs md:text-sm font-semibold mb-6"
-                style={{ backgroundColor: colors.accent + '15', color: colors.accent }}
-              >
-                <Sparkles className="w-4 h-4" />
-                Conócenos
-              </span>
-              
-              {/* Título About editable */}
-              <div 
-                className="text-3xl md:text-5xl font-bold mb-6 leading-tight"
-                style={{ fontFamily: template.fonts.heading, color: colors.primary }}
-              >
-                <EditableText
-                  value={content.aboutTitle}
-                  onChange={(val) => handleContentChange('aboutTitle', val)}
-                  editMode={editMode}
-                />
-              </div>
-              
-              {/* Texto About editable */}
-              <div className="text-base md:text-lg leading-relaxed mb-8" style={{ color: colors.secondary }}>
-                <EditableText
-                  value={content.aboutText}
-                  onChange={(val) => handleContentChange('aboutText', val)}
-                  editMode={editMode}
-                  multiline
-                />
-              </div>
-              
-              {/* Lista de valores */}
-              <div className="space-y-3">
-                {['Calidad garantizada', 'Atención personalizada', 'Resultados comprobados'].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.accent + '20' }}>
-                      <Check className="w-4 h-4" style={{ color: colors.accent }} />
-                    </div>
-                    <span className="text-sm md:text-base" style={{ color: colors.primary }}>{item}</span>
+              <div className="md:col-span-3">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-[1px]" style={{ backgroundColor: colors.primary }} />
+                  <span className="text-sm italic" style={{ color: colors.accent }}>Nuestra Historia</span>
+                </div>
+                <div className="text-3xl md:text-4xl font-serif mb-6" style={{ color: colors.primary }}>
+                  <EditableText value={content.aboutTitle} onChange={(val) => handleContentChange('aboutTitle', val)} editMode={editMode} />
+                </div>
+                <div className="text-base leading-loose" style={{ color: colors.secondary, fontFamily: 'Georgia, serif' }}>
+                  <EditableText value={content.aboutText} onChange={(val) => handleContentChange('aboutText', val)} editMode={editMode} multiline />
+                </div>
+                <div className="flex items-center gap-4 mt-8 pt-6 border-t" style={{ borderColor: colors.primary + '20' }}>
+                  <div className="flex -space-x-3">
+                    {[1,2,3].map(i => <div key={i} className="w-10 h-10 rounded-full border-2 border-white" style={{ backgroundColor: i === 1 ? colors.primary : i === 2 ? colors.accent : colors.secondary }} />)}
                   </div>
-                ))}
+                  <span className="text-sm italic" style={{ color: colors.secondary }}>Creado con pasión y dedicación</span>
+                </div>
               </div>
             </div>
-          </div>
+          ) : template.style === 'tech' ? (
+            /* TECH: Diseño futurista, glassmorphism, elementos geométricos */
+            <div className="relative">
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-2xl opacity-20" style={{ background: `linear-gradient(135deg, ${colors.primary}, transparent)` }} />
+                  <div className="relative backdrop-blur-sm rounded-2xl p-8 border" style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: colors.primary + '30' }}>
+                    <div className="flex items-start gap-6">
+                      <div className="w-16 h-16 rounded-xl flex items-center justify-center relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>
+                        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)`, animation: 'shine 3s infinite' }} />
+                        <Zap className="w-8 h-8 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs uppercase tracking-widest mb-2" style={{ color: colors.accent }}>// STATS</div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-2xl font-mono font-bold" style={{ color: colors.primary }}>
+                              <EditableText value={content.stat1Value || '5+'} onChange={(val) => handleContentChange('stat1Value', val)} editMode={editMode} />
+                            </div>
+                            <div className="text-xs opacity-60 text-white">
+                              <EditableText value={content.stat1Label || 'Años de experiencia'} onChange={(val) => handleContentChange('stat1Label', val)} editMode={editMode} />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-mono font-bold" style={{ color: colors.accent }}>
+                              <EditableText value={content.stat2Value || '100%'} onChange={(val) => handleContentChange('stat2Value', val)} editMode={editMode} />
+                            </div>
+                            <div className="text-xs opacity-60 text-white">
+                              <EditableText value={content.stat2Label || 'Compromiso'} onChange={(val) => handleContentChange('stat2Label', val)} editMode={editMode} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-6 pt-6 border-t" style={{ borderColor: colors.primary + '20' }}>
+                      <div className="flex items-center gap-2 text-xs" style={{ color: colors.primary }}>
+                        <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: colors.accent }} />
+                        <span className="font-mono">STATUS: ACTIVE</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xs font-mono px-2 py-1 rounded" style={{ backgroundColor: colors.primary + '20', color: colors.primary }}>&lt;about&gt;</span>
+                  </div>
+                  <div className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'white' }}>
+                    <EditableText value={content.aboutTitle} onChange={(val) => handleContentChange('aboutTitle', val)} editMode={editMode} />
+                  </div>
+                  <div className="text-base leading-relaxed opacity-70 text-white">
+                    <EditableText value={content.aboutText} onChange={(val) => handleContentChange('aboutText', val)} editMode={editMode} multiline />
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-6">
+                    {['innovation', 'technology', 'future'].map((tag, idx) => (
+                      <span key={idx} className="px-3 py-1 text-xs font-mono rounded border" style={{ borderColor: colors.accent + '50', color: colors.accent }}>#{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* CORPORATE: Diseño profesional, estructura clara, elegante */
+            <div className="grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+              <div className="relative order-2 md:order-1">
+                <div className="relative">
+                  <div className="absolute -inset-4 rounded-3xl opacity-20" style={{ background: `linear-gradient(135deg, ${colors.primary}40, ${colors.accent}40)` }} />
+                  <div className="relative bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-8 md:p-12">
+                    <div className="text-center">
+                      <div className="inline-flex items-center justify-center w-20 h-20 md:w-28 md:h-28 rounded-2xl md:rounded-3xl mb-6" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>
+                        <Award className="w-10 h-10 md:w-14 md:h-14 text-white" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 mt-6">
+                        <div className="text-center p-4 rounded-xl bg-white shadow-sm">
+                          <div className="text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>
+                            <EditableText value={content.stat1Value || '5+'} onChange={(val) => handleContentChange('stat1Value', val)} editMode={editMode} />
+                          </div>
+                          <div className="text-xs md:text-sm text-gray-500">
+                            <EditableText value={content.stat1Label || 'Años de experiencia'} onChange={(val) => handleContentChange('stat1Label', val)} editMode={editMode} />
+                          </div>
+                        </div>
+                        <div className="text-center p-4 rounded-xl bg-white shadow-sm">
+                          <div className="text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>
+                            <EditableText value={content.stat2Value || '100%'} onChange={(val) => handleContentChange('stat2Value', val)} editMode={editMode} />
+                          </div>
+                          <div className="text-xs md:text-sm text-gray-500">
+                            <EditableText value={content.stat2Label || 'Compromiso'} onChange={(val) => handleContentChange('stat2Label', val)} editMode={editMode} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="order-1 md:order-2">
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs md:text-sm font-semibold mb-6" style={{ backgroundColor: colors.accent + '15', color: colors.accent }}>
+                  <Sparkles className="w-4 h-4" />
+                  Conócenos
+                </span>
+                <div className="text-3xl md:text-5xl font-bold mb-6 leading-tight" style={{ fontFamily: template.fonts.heading, color: colors.primary }}>
+                  <EditableText value={content.aboutTitle} onChange={(val) => handleContentChange('aboutTitle', val)} editMode={editMode} />
+                </div>
+                <div className="text-base md:text-lg leading-relaxed mb-8" style={{ color: colors.secondary }}>
+                  <EditableText value={content.aboutText} onChange={(val) => handleContentChange('aboutText', val)} editMode={editMode} multiline />
+                </div>
+                <div className="space-y-3">
+                  {['Calidad garantizada', 'Atención personalizada', 'Resultados comprobados'].map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.accent + '20' }}>
+                        <Check className="w-4 h-4" style={{ color: colors.accent }} />
+                      </div>
+                      <span className="text-sm md:text-base" style={{ color: colors.primary }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
       
       {/* ============ SERVICES/FEATURES SECTION ============ */}
       {content.services && content.services.length > 0 && (
-        <section className="py-16 md:py-28 px-4 md:px-6 relative overflow-hidden" style={{ backgroundColor: colors.background }}>
-          {/* Patrón de fondo decorativo */}
-          <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: `radial-gradient(${colors.primary} 1px, transparent 1px)`, backgroundSize: '30px 30px' }} />
+        <section className={`px-4 md:px-6 relative overflow-hidden ${
+          template.style === 'minimal' ? 'py-20 md:py-32' :
+          template.style === 'energetic' ? 'py-12 md:py-20' :
+          template.style === 'artisan' ? 'py-16 md:py-24' :
+          template.style === 'tech' ? 'py-16 md:py-28' :
+          'py-16 md:py-28'
+        }`} style={{ 
+          backgroundColor: template.style === 'tech' ? '#0a0a0a' : 
+                          template.style === 'artisan' ? '#faf8f5' :
+                          template.style === 'energetic' ? colors.primary :
+                          colors.background 
+        }}>
+          {/* Patrones de fondo según template */}
+          {template.style === 'energetic' && (
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.1) 20px, rgba(255,255,255,0.1) 40px)` }} />
+          )}
+          {template.style === 'tech' && (
+            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `linear-gradient(${colors.primary} 1px, transparent 1px), linear-gradient(90deg, ${colors.primary} 1px, transparent 1px)`, backgroundSize: '50px 50px' }} />
+          )}
+          {template.style === 'corporate' && (
+            <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: `radial-gradient(${colors.primary} 1px, transparent 1px)`, backgroundSize: '30px 30px' }} />
+          )}
           
-          <div className="max-w-6xl mx-auto relative">
-            <div className="text-center mb-12 md:mb-16">
-              <span 
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs md:text-sm font-semibold mb-6"
-                style={{ backgroundColor: colors.accent + '15', color: colors.accent }}
-              >
-                <Zap className="w-4 h-4" />
-                Beneficios
-              </span>
-              
-              {/* Título servicios editable */}
-              <div 
-                className="text-3xl md:text-5xl font-bold mb-4"
-                style={{ fontFamily: template.fonts.heading, color: colors.primary }}
-              >
-                <EditableText
-                  value={content.servicesTitle || '¿Por qué elegirnos?'}
-                  onChange={(val) => handleContentChange('servicesTitle', val)}
-                  editMode={editMode}
-                />
+          <div className={`mx-auto relative ${template.style === 'minimal' ? 'max-w-4xl' : 'max-w-6xl'}`}>
+            {/* Header según template */}
+            {template.style === 'minimal' ? (
+              <div className="text-center mb-16">
+                <div className="w-16 h-[1px] mx-auto mb-8" style={{ backgroundColor: colors.primary }} />
+                <div className="text-3xl md:text-5xl font-light tracking-tight" style={{ fontFamily: 'Georgia, serif', color: colors.primary }}>
+                  <EditableText value={content.servicesTitle || '¿Por qué elegirnos?'} onChange={(val) => handleContentChange('servicesTitle', val)} editMode={editMode} />
+                </div>
               </div>
-              <p className="text-base md:text-lg max-w-2xl mx-auto" style={{ color: colors.secondary }}>
-                Descubre todo lo que podemos hacer por ti
-              </p>
-            </div>
+            ) : template.style === 'energetic' ? (
+              <div className="text-center mb-10">
+                <div className="text-3xl md:text-5xl font-black uppercase text-white mb-2">
+                  <EditableText value={content.servicesTitle || '¿Por qué elegirnos?'} onChange={(val) => handleContentChange('servicesTitle', val)} editMode={editMode} />
+                </div>
+                <div className="w-24 h-1 mx-auto rounded-full" style={{ backgroundColor: colors.accent }} />
+              </div>
+            ) : template.style === 'artisan' ? (
+              <div className="text-center mb-12">
+                <div className="flex items-center justify-center gap-4 mb-6">
+                  <div className="w-12 h-[1px]" style={{ backgroundColor: colors.primary }} />
+                  <Sparkles className="w-6 h-6" style={{ color: colors.accent }} />
+                  <div className="w-12 h-[1px]" style={{ backgroundColor: colors.primary }} />
+                </div>
+                <div className="text-3xl md:text-4xl font-serif" style={{ color: colors.primary }}>
+                  <EditableText value={content.servicesTitle || '¿Por qué elegirnos?'} onChange={(val) => handleContentChange('servicesTitle', val)} editMode={editMode} />
+                </div>
+              </div>
+            ) : template.style === 'tech' ? (
+              <div className="mb-12">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xs font-mono px-2 py-1 rounded" style={{ backgroundColor: colors.primary + '20', color: colors.primary }}>&lt;features&gt;</span>
+                </div>
+                <div className="text-3xl md:text-5xl font-bold text-white">
+                  <EditableText value={content.servicesTitle || '¿Por qué elegirnos?'} onChange={(val) => handleContentChange('servicesTitle', val)} editMode={editMode} />
+                </div>
+              </div>
+            ) : (
+              <div className="text-center mb-12 md:mb-16">
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs md:text-sm font-semibold mb-6" style={{ backgroundColor: colors.accent + '15', color: colors.accent }}>
+                  <Zap className="w-4 h-4" />
+                  Beneficios
+                </span>
+                <div className="text-3xl md:text-5xl font-bold mb-4" style={{ fontFamily: template.fonts.heading, color: colors.primary }}>
+                  <EditableText value={content.servicesTitle || '¿Por qué elegirnos?'} onChange={(val) => handleContentChange('servicesTitle', val)} editMode={editMode} />
+                </div>
+                <p className="text-base md:text-lg max-w-2xl mx-auto" style={{ color: colors.secondary }}>Descubre todo lo que podemos hacer por ti</p>
+              </div>
+            )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Cards según template */}
+            <div className={`grid gap-6 ${
+              template.style === 'minimal' ? 'grid-cols-1 md:grid-cols-2 gap-8' :
+              template.style === 'energetic' ? 'grid-cols-2 lg:grid-cols-4 gap-4' :
+              template.style === 'artisan' ? 'grid-cols-1 md:grid-cols-2 gap-8' :
+              template.style === 'tech' ? 'grid-cols-1 md:grid-cols-2 gap-6' :
+              'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'
+            }`}>
               {content.services.slice(0, 4).map((service, index) => {
                 const ServiceIcon = [Target, Lightbulb, Shield, TrendingUp][index] || Star;
+                
+                if (template.style === 'minimal') {
+                  return (
+                    <div key={index} className="group flex gap-6 p-6 border-b" style={{ borderColor: colors.primary + '10' }}>
+                      <div className="flex-shrink-0">
+                        <span className="text-4xl font-light" style={{ color: colors.primary }}>0{index + 1}</span>
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-medium mb-3" style={{ color: colors.primary }}>
+                          <EditableText value={service.title} onChange={(val) => { if (onContentChange) { const newServices = [...content.services]; newServices[index] = { ...newServices[index], title: val }; onContentChange('services', JSON.stringify(newServices)); } }} editMode={editMode} />
+                        </h3>
+                        <p className="text-base leading-relaxed" style={{ color: colors.secondary }}>
+                          <EditableText value={service.description} onChange={(val) => { if (onContentChange) { const newServices = [...content.services]; newServices[index] = { ...newServices[index], description: val }; onContentChange('services', JSON.stringify(newServices)); } }} editMode={editMode} multiline />
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                if (template.style === 'energetic') {
+                  return (
+                    <div key={index} className="group p-5 rounded-2xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                      <div className="w-12 h-12 rounded-xl mb-4 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>
+                        <ServiceIcon className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="text-base font-bold uppercase mb-2" style={{ color: colors.primary }}>
+                        <EditableText value={service.title} onChange={(val) => { if (onContentChange) { const newServices = [...content.services]; newServices[index] = { ...newServices[index], title: val }; onContentChange('services', JSON.stringify(newServices)); } }} editMode={editMode} />
+                      </h3>
+                      <p className="text-sm leading-relaxed" style={{ color: colors.secondary }}>
+                        <EditableText value={service.description} onChange={(val) => { if (onContentChange) { const newServices = [...content.services]; newServices[index] = { ...newServices[index], description: val }; onContentChange('services', JSON.stringify(newServices)); } }} editMode={editMode} multiline />
+                      </p>
+                    </div>
+                  );
+                }
+                
+                if (template.style === 'artisan') {
+                  return (
+                    <div key={index} className="group p-8 rounded-[30px] bg-white border-2 hover:shadow-xl transition-all duration-300" style={{ borderColor: colors.primary + '10' }}>
+                      <div className="flex items-start gap-5">
+                        <div className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: colors.primary + '10' }}>
+                          <ServiceIcon className="w-7 h-7" style={{ color: colors.primary }} />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-serif mb-3" style={{ color: colors.primary }}>
+                            <EditableText value={service.title} onChange={(val) => { if (onContentChange) { const newServices = [...content.services]; newServices[index] = { ...newServices[index], title: val }; onContentChange('services', JSON.stringify(newServices)); } }} editMode={editMode} />
+                          </h3>
+                          <p className="text-base leading-loose italic" style={{ color: colors.secondary }}>
+                            <EditableText value={service.description} onChange={(val) => { if (onContentChange) { const newServices = [...content.services]; newServices[index] = { ...newServices[index], description: val }; onContentChange('services', JSON.stringify(newServices)); } }} editMode={editMode} multiline />
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                if (template.style === 'tech') {
+                  return (
+                    <div key={index} className="group p-6 rounded-xl border backdrop-blur-sm transition-all duration-300 hover:border-opacity-100" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: colors.primary + '30' }}>
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${colors.primary}30, ${colors.accent}30)` }}>
+                          <ServiceIcon className="w-6 h-6" style={{ color: colors.primary }} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.accent }} />
+                            <h3 className="text-lg font-bold text-white">
+                              <EditableText value={service.title} onChange={(val) => { if (onContentChange) { const newServices = [...content.services]; newServices[index] = { ...newServices[index], title: val }; onContentChange('services', JSON.stringify(newServices)); } }} editMode={editMode} />
+                            </h3>
+                          </div>
+                          <p className="text-sm leading-relaxed text-white opacity-60">
+                            <EditableText value={service.description} onChange={(val) => { if (onContentChange) { const newServices = [...content.services]; newServices[index] = { ...newServices[index], description: val }; onContentChange('services', JSON.stringify(newServices)); } }} editMode={editMode} multiline />
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // CORPORATE (default)
                 return (
-                  <div
-                    key={index}
-                    className="group relative p-6 md:p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:border-transparent transition-all duration-300 hover:-translate-y-1"
-                  >
-                    {/* Gradiente de hover */}
-                    <div 
-                      className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      style={{ background: `linear-gradient(135deg, ${colors.primary}08, ${colors.accent}08)` }}
-                    />
-                    
+                  <div key={index} className="group relative p-6 md:p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:border-transparent transition-all duration-300 hover:-translate-y-1">
+                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `linear-gradient(135deg, ${colors.primary}08, ${colors.accent}08)` }} />
                     <div className="relative">
-                      {/* Icono */}
-                      <div 
-                        className="w-14 h-14 md:w-16 md:h-16 mb-5 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                        style={{ background: `linear-gradient(135deg, ${colors.primary}15, ${colors.accent}15)` }}
-                      >
+                      <div className="w-14 h-14 md:w-16 md:h-16 mb-5 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${colors.primary}15, ${colors.accent}15)` }}>
                         <ServiceIcon className="w-7 h-7 md:w-8 md:h-8" style={{ color: colors.primary }} />
                       </div>
-                      
-                      {/* Número de índice decorativo */}
-                      <span className="absolute top-0 right-0 text-5xl font-bold opacity-5" style={{ color: colors.primary }}>
-                        0{index + 1}
-                      </span>
-                      
+                      <span className="absolute top-0 right-0 text-5xl font-bold opacity-5" style={{ color: colors.primary }}>0{index + 1}</span>
                       <h3 className="text-lg md:text-xl font-bold mb-3" style={{ color: colors.primary }}>
-                        <EditableText
-                          value={service.title}
-                          onChange={(val) => {
-                            if (onContentChange) {
-                              const newServices = [...content.services];
-                              newServices[index] = { ...newServices[index], title: val };
-                              onContentChange('services', JSON.stringify(newServices));
-                            }
-                          }}
-                          editMode={editMode}
-                        />
+                        <EditableText value={service.title} onChange={(val) => { if (onContentChange) { const newServices = [...content.services]; newServices[index] = { ...newServices[index], title: val }; onContentChange('services', JSON.stringify(newServices)); } }} editMode={editMode} />
                       </h3>
                       <p className="text-sm md:text-base leading-relaxed" style={{ color: colors.secondary }}>
-                        <EditableText
-                          value={service.description}
-                          onChange={(val) => {
-                            if (onContentChange) {
-                              const newServices = [...content.services];
-                              newServices[index] = { ...newServices[index], description: val };
-                              onContentChange('services', JSON.stringify(newServices));
-                            }
-                          }}
-                          editMode={editMode}
-                          multiline
-                        />
+                        <EditableText value={service.description} onChange={(val) => { if (onContentChange) { const newServices = [...content.services]; newServices[index] = { ...newServices[index], description: val }; onContentChange('services', JSON.stringify(newServices)); } }} editMode={editMode} multiline />
                       </p>
                     </div>
                   </div>
@@ -4048,81 +4489,117 @@ function WebsitePreview({
 
       {/* ============ PRODUCTS SECTION ============ */}
       {products.length > 0 && (
-        <section className="py-12 md:py-20 px-4 md:px-6">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-6 md:mb-12">
-              <span 
-                className="inline-block px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold mb-4 md:mb-6"
-                style={{ backgroundColor: colors.accent + '20', color: colors.accent }}
-              >
-                Catálogo
-              </span>
-              
-              <h2 
-                className="text-2xl md:text-4xl font-bold"
-                style={{ fontFamily: template.fonts.heading, color: colors.primary }}
-              >
-                Nuestros Productos
-              </h2>
+        <section className={`px-4 md:px-6 ${
+          template.style === 'minimal' ? 'py-20 md:py-32' :
+          template.style === 'energetic' ? 'py-12 md:py-20' :
+          template.style === 'artisan' ? 'py-16 md:py-24' :
+          template.style === 'tech' ? 'py-16 md:py-28' :
+          'py-12 md:py-20'
+        }`} style={{
+          backgroundColor: template.style === 'tech' ? '#111' :
+                          template.style === 'energetic' ? colors.accent + '10' :
+                          template.style === 'artisan' ? '#fdfcfa' : 'transparent'
+        }}>
+          <div className={`mx-auto ${template.style === 'minimal' ? 'max-w-4xl' : 'max-w-5xl'}`}>
+            {/* Header según template */}
+            <div className={`mb-6 md:mb-12 ${template.style === 'minimal' ? 'text-left' : 'text-center'}`}>
+              {template.style === 'minimal' ? (
+                <>
+                  <div className="w-12 h-[1px] mb-6" style={{ backgroundColor: colors.primary }} />
+                  <h2 className="text-3xl md:text-4xl font-light tracking-tight" style={{ fontFamily: 'Georgia, serif', color: colors.primary }}>Productos</h2>
+                </>
+              ) : template.style === 'energetic' ? (
+                <>
+                  <span className="inline-block px-4 py-2 rounded-full text-xs font-bold uppercase text-white mb-4" style={{ backgroundColor: colors.primary }}>🔥 Catálogo</span>
+                  <h2 className="text-2xl md:text-4xl font-black uppercase" style={{ color: colors.primary }}>Nuestros Productos</h2>
+                </>
+              ) : template.style === 'artisan' ? (
+                <>
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <Package className="w-5 h-5" style={{ color: colors.accent }} />
+                  </div>
+                  <h2 className="text-2xl md:text-4xl font-serif" style={{ color: colors.primary }}>Nuestros Productos</h2>
+                </>
+              ) : template.style === 'tech' ? (
+                <>
+                  <span className="inline-block text-xs font-mono px-2 py-1 rounded mb-4" style={{ backgroundColor: colors.primary + '20', color: colors.primary }}>&lt;products/&gt;</span>
+                  <h2 className="text-2xl md:text-4xl font-bold text-white">Nuestros Productos</h2>
+                </>
+              ) : (
+                <>
+                  <span className="inline-block px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold mb-4 md:mb-6" style={{ backgroundColor: colors.accent + '20', color: colors.accent }}>Catálogo</span>
+                  <h2 className="text-2xl md:text-4xl font-bold" style={{ fontFamily: template.fonts.heading, color: colors.primary }}>Nuestros Productos</h2>
+                </>
+              )}
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+            {/* Grid según template */}
+            <div className={`grid gap-3 md:gap-6 ${
+              template.style === 'minimal' ? 'grid-cols-1 md:grid-cols-2 gap-8' :
+              template.style === 'energetic' ? 'grid-cols-2 md:grid-cols-4 gap-3' :
+              template.style === 'artisan' ? 'grid-cols-1 md:grid-cols-3 gap-6' :
+              template.style === 'tech' ? 'grid-cols-2 md:grid-cols-3 gap-4' :
+              'grid-cols-2 md:grid-cols-3 gap-3 md:gap-6'
+            }`}>
               {products.map((product) => (
-                <div 
-                  key={product.id} 
-                  className="bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-lg group"
-                >
-                  <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative overflow-hidden">
-                    {product.image ? (
-                      <img 
-                        src={product.image} 
-                        alt={product.name} 
-                        className="w-full h-full object-cover" 
-                      />
-                    ) : (
-                      <Package className="w-10 h-10 md:w-16 md:h-16 text-gray-300" />
-                    )}
-                    
-                    {product.featured && (
-                      <div 
-                        className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold text-white flex items-center gap-1"
-                        style={{ backgroundColor: colors.accent }}
-                      >
-                        <Star className="w-2.5 h-2.5 md:w-3 md:h-3 fill-current" />
-                        <span className="hidden sm:inline">Destacado</span>
-                        <span className="sm:hidden">★</span>
+                <div key={product.id} className={`group ${
+                  template.style === 'minimal' ? 'flex gap-6 items-start pb-6 border-b' :
+                  template.style === 'energetic' ? 'bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all' :
+                  template.style === 'artisan' ? 'bg-white rounded-[24px] overflow-hidden border-2 hover:shadow-xl transition-all' :
+                  template.style === 'tech' ? 'rounded-xl overflow-hidden border backdrop-blur-sm hover:border-opacity-100 transition-all' :
+                  'bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-lg'
+                }`} style={{
+                  borderColor: template.style === 'artisan' ? colors.primary + '10' : template.style === 'tech' ? colors.primary + '30' : undefined,
+                  backgroundColor: template.style === 'tech' ? 'rgba(255,255,255,0.03)' : undefined
+                }}>
+                  {template.style === 'minimal' ? (
+                    <>
+                      <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                        {product.image ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" /> : <Package className="w-8 h-8 text-gray-300 m-auto mt-6" />}
                       </div>
-                    )}
-                    
-                    {product.originalPrice && (
-                      <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[10px] md:text-xs font-bold text-white bg-red-500">
-                        -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                      <div className="flex-1">
+                        <h3 className="font-medium text-lg mb-1" style={{ color: colors.primary }}>{product.name}</h3>
+                        {product.description && <p className="text-sm text-gray-500 mb-2 line-clamp-2">{product.description}</p>}
+                        <span className="font-light text-xl" style={{ color: colors.accent }}>${product.price.toLocaleString()}</span>
                       </div>
-                    )}
-                  </div>
-                  
-                  <div className="p-2.5 md:p-4">
-                    <h3 className="font-semibold text-sm md:text-base mb-0.5 line-clamp-1 md:line-clamp-2" style={{ color: colors.primary }}>
-                      {product.name}
-                    </h3>
-                    
-                    {product.description && (
-                      <p className="text-[11px] md:text-xs text-gray-500 mb-1.5 line-clamp-1 md:line-clamp-2 hidden sm:block">
-                        {product.description}
-                      </p>
-                    )}
-                    
-                    <div className="flex items-center gap-1 md:gap-2 flex-wrap">
-                      <span className="font-bold text-base md:text-xl" style={{ color: colors.accent }}>
-                        ${product.price.toLocaleString()}
-                      </span>
-                      {product.originalPrice && (
-                        <span className="text-[10px] md:text-sm line-through text-gray-400">
-                          ${product.originalPrice.toLocaleString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className={`relative overflow-hidden ${
+                        template.style === 'energetic' ? 'aspect-square' :
+                        template.style === 'artisan' ? 'aspect-[4/3]' :
+                        template.style === 'tech' ? 'aspect-video' :
+                        'aspect-square'
+                      } bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center`}>
+                        {product.image ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" /> : <Package className={`${template.style === 'tech' ? 'w-8 h-8' : 'w-10 h-10 md:w-16 md:h-16'} text-gray-300`} />}
+                        {product.featured && (
+                          <div className={`absolute top-2 left-2 px-2 py-0.5 text-[10px] md:text-xs font-bold text-white flex items-center gap-1 ${template.style === 'artisan' ? 'rounded-full' : template.style === 'tech' ? 'rounded font-mono' : 'rounded-full'}`} style={{ backgroundColor: colors.accent }}>
+                            <Star className="w-2.5 h-2.5 md:w-3 md:h-3 fill-current" />
+                            <span className="hidden sm:inline">{template.style === 'tech' ? 'FEATURED' : 'Destacado'}</span>
+                          </div>
+                        )}
+                        {product.originalPrice && <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[10px] md:text-xs font-bold text-white bg-red-500">-{Math.round((1 - product.price / product.originalPrice) * 100)}%</div>}
+                      </div>
+                      <div className={`${
+                        template.style === 'energetic' ? 'p-3' :
+                        template.style === 'artisan' ? 'p-5' :
+                        template.style === 'tech' ? 'p-3' :
+                        'p-2.5 md:p-4'
+                      }`}>
+                        <h3 className={`mb-0.5 line-clamp-1 md:line-clamp-2 ${
+                          template.style === 'energetic' ? 'font-bold text-sm uppercase' :
+                          template.style === 'artisan' ? 'font-serif text-lg' :
+                          template.style === 'tech' ? 'font-mono text-sm text-white' :
+                          'font-semibold text-sm md:text-base'
+                        }`} style={{ color: template.style === 'tech' ? 'white' : colors.primary }}>{product.name}</h3>
+                        {product.description && <p className={`mb-1.5 line-clamp-1 md:line-clamp-2 hidden sm:block ${template.style === 'tech' ? 'text-white opacity-50 text-xs' : 'text-[11px] md:text-xs text-gray-500'}`}>{product.description}</p>}
+                        <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                          <span className={`font-bold ${template.style === 'tech' ? 'font-mono text-base' : 'text-base md:text-xl'}`} style={{ color: colors.accent }}>${product.price.toLocaleString()}</span>
+                          {product.originalPrice && <span className="text-[10px] md:text-sm line-through text-gray-400">${product.originalPrice.toLocaleString()}</span>}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -4358,119 +4835,220 @@ function WebsitePreview({
       )}
 
       {/* ============ CONTACT/CTA SECTION ============ */}
-      <section 
-        className="py-16 md:py-28 px-4 md:px-6 relative overflow-hidden"
-        style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary || colors.primary}dd 50%, ${colors.primary}ee 100%)` }}
-      >
-        {/* Elementos decorativos de fondo */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-0 w-72 h-72 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '50px 50px' }} />
-        </div>
+      <section className={`px-4 md:px-6 relative overflow-hidden ${
+        template.style === 'minimal' ? 'py-20 md:py-32' :
+        template.style === 'energetic' ? 'py-12 md:py-20' :
+        template.style === 'artisan' ? 'py-16 md:py-24' :
+        template.style === 'tech' ? 'py-16 md:py-28' :
+        'py-16 md:py-28'
+      }`} style={{ 
+        background: template.style === 'minimal' ? '#fff' :
+                   template.style === 'energetic' ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.primary} 100%)` :
+                   template.style === 'artisan' ? '#faf8f5' :
+                   template.style === 'tech' ? '#000' :
+                   `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary || colors.primary}dd 50%, ${colors.primary}ee 100%)`
+      }}>
+        {/* Elementos decorativos según template */}
+        {template.style === 'energetic' && (
+          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `repeating-linear-gradient(-45deg, transparent, transparent 30px, rgba(255,255,255,0.1) 30px, rgba(255,255,255,0.1) 60px)` }} />
+        )}
+        {template.style === 'tech' && (
+          <>
+            <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: `radial-gradient(${colors.primary} 1px, transparent 1px)`, backgroundSize: '30px 30px' }} />
+            <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${colors.primary}, transparent)` }} />
+          </>
+        )}
+        {template.style === 'corporate' && (
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-0 left-0 w-72 h-72 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl" />
+          </div>
+        )}
         
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          {/* Icono decorativo */}
-          <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/10 backdrop-blur mb-6 md:mb-8">
-            <Rocket className="w-8 h-8 md:w-10 md:h-10 text-white" />
-          </div>
-          
-          <h2 
-            className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-white leading-tight"
-            style={{ fontFamily: template.fonts.heading }}
-          >
-            ¿Listo para comenzar?
-          </h2>
-          
-          <p className="text-base md:text-xl text-white/80 mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed">
-            Estamos aquí para ayudarte. Contáctanos y descubre cómo podemos hacer realidad lo que necesitas.
-          </p>
-          
-          {/* Contact Info Cards - más visual */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10 md:mb-12 max-w-3xl mx-auto">
-            {business.phone && (
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
-                <Phone className="w-5 h-5 text-white/80 mx-auto mb-2" />
-                <span className="text-white text-sm md:text-base">{business.phone}</span>
+        <div className={`mx-auto relative z-10 ${template.style === 'minimal' ? 'max-w-3xl' : 'max-w-4xl'}`}>
+          {template.style === 'minimal' ? (
+            /* MINIMAL CTA */
+            <div className="text-center">
+              <div className="w-16 h-[1px] mx-auto mb-10" style={{ backgroundColor: colors.primary }} />
+              <h2 className="text-3xl md:text-5xl font-light tracking-tight mb-6" style={{ fontFamily: 'Georgia, serif', color: colors.primary }}>¿Listo para comenzar?</h2>
+              <p className="text-lg text-gray-500 mb-10 max-w-xl mx-auto leading-relaxed">Contáctanos y descubre cómo podemos ayudarte.</p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-10">
+                {business.phone && <span className="flex items-center gap-2 text-sm" style={{ color: colors.primary }}><Phone className="w-4 h-4" /> {business.phone}</span>}
+                {business.email && <span className="flex items-center gap-2 text-sm" style={{ color: colors.primary }}><MessageSquare className="w-4 h-4" /> {business.email}</span>}
               </div>
-            )}
-            
-            {business.email && (
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
-                <MessageSquare className="w-5 h-5 text-white/80 mx-auto mb-2" />
-                <span className="text-white text-sm md:text-base line-clamp-1">{business.email}</span>
+              {business.whatsapp && (
+                <button className="inline-flex items-center gap-3 px-8 py-4 rounded-none border-2 font-medium transition-all hover:bg-gray-900 hover:text-white hover:border-gray-900" style={{ borderColor: colors.primary, color: colors.primary }}>
+                  <MessageSquare className="w-5 h-5" />
+                  Escríbenos
+                </button>
+              )}
+            </div>
+          ) : template.style === 'energetic' ? (
+            /* ENERGETIC CTA */
+            <div className="text-center">
+              <div className="inline-block px-4 py-2 rounded-full bg-white/20 text-white text-sm font-bold uppercase mb-6">🚀 ¡Contáctanos!</div>
+              <h2 className="text-3xl md:text-5xl font-black uppercase text-white mb-4">¿Listo para comenzar?</h2>
+              <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto">¡No esperes más! Escríbenos y hagamos realidad tu proyecto.</p>
+              <div className="flex flex-wrap justify-center gap-4 mb-8">
+                {business.phone && <span className="px-4 py-2 rounded-full bg-white/10 text-white text-sm font-bold">{business.phone}</span>}
+                {business.email && <span className="px-4 py-2 rounded-full bg-white/10 text-white text-sm font-bold">{business.email}</span>}
               </div>
-            )}
-            
-            {business.address && (
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
-                <MapPin className="w-5 h-5 text-white/80 mx-auto mb-2" />
-                <span className="text-white text-sm md:text-base line-clamp-1">{business.address}</span>
+              {business.whatsapp && (
+                <button className="inline-flex items-center gap-3 px-10 py-5 rounded-full bg-white font-black text-lg uppercase shadow-2xl hover:scale-110 transition-transform" style={{ color: colors.primary }}>
+                  <MessageSquare className="w-6 h-6" />
+                  ESCRÍBENOS YA
+                  <ArrowRight className="w-6 h-6" />
+                </button>
+              )}
+            </div>
+          ) : template.style === 'artisan' ? (
+            /* ARTISAN CTA */
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-4 mb-8">
+                <div className="w-12 h-[1px]" style={{ backgroundColor: colors.primary }} />
+                <MessageSquare className="w-6 h-6" style={{ color: colors.accent }} />
+                <div className="w-12 h-[1px]" style={{ backgroundColor: colors.primary }} />
               </div>
-            )}
-          </div>
-          
-          {/* Social Links */}
-          <div className="flex items-center justify-center gap-4 mb-8 md:mb-10">
-            {business.instagram && (
-              <a href={`https://instagram.com/${business.instagram}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all hover:scale-110">
-                <Instagram className="w-5 h-5 md:w-6 md:h-6" />
-              </a>
-            )}
-            {business.facebook && (
-              <a href={business.facebook} target="_blank" rel="noopener noreferrer" className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all hover:scale-110">
-                <Facebook className="w-5 h-5 md:w-6 md:h-6" />
-              </a>
-            )}
-          </div>
-          
-          {/* Main CTA */}
-          {business.whatsapp && (
-            <button
-              className="group inline-flex items-center gap-3 md:gap-4 px-8 py-4 md:px-12 md:py-5 rounded-full font-bold text-base md:text-xl shadow-2xl transition-all duration-300 hover:scale-105"
-              style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 20px 50px rgba(37, 211, 102, 0.3)' }}
-            >
-              <MessageSquare className="w-5 h-5 md:w-6 md:h-6" />
-              Escríbenos por WhatsApp
-              <ArrowRight className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-1" />
-            </button>
+              <h2 className="text-3xl md:text-4xl font-serif mb-6" style={{ color: colors.primary }}>¿Listo para comenzar?</h2>
+              <p className="text-lg italic mb-8 max-w-xl mx-auto leading-loose" style={{ color: colors.secondary }}>Estamos aquí para ayudarte. Contáctanos y hagamos realidad tu visión.</p>
+              <div className="inline-block bg-white rounded-[30px] p-8 shadow-xl border-2 mb-8" style={{ borderColor: colors.primary + '20' }}>
+                <div className="flex flex-col gap-4">
+                  {business.phone && <span className="flex items-center gap-3 text-base" style={{ color: colors.primary }}><Phone className="w-5 h-5" style={{ color: colors.accent }} /> {business.phone}</span>}
+                  {business.email && <span className="flex items-center gap-3 text-base" style={{ color: colors.primary }}><MessageSquare className="w-5 h-5" style={{ color: colors.accent }} /> {business.email}</span>}
+                </div>
+              </div>
+              {business.whatsapp && (
+                <div>
+                  <button className="inline-flex items-center gap-3 px-8 py-4 rounded-full font-serif text-lg text-white shadow-lg transition-all hover:scale-105" style={{ backgroundColor: '#25D366' }}>
+                    Escríbenos por WhatsApp
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : template.style === 'tech' ? (
+            /* TECH CTA */
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div>
+                <span className="inline-block text-xs font-mono px-2 py-1 rounded mb-4" style={{ backgroundColor: colors.primary + '20', color: colors.primary }}>&lt;contact/&gt;</span>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">¿Listo para comenzar?</h2>
+                <p className="text-base text-white/60 mb-6">Inicia tu proyecto con nosotros. Estamos listos para ayudarte.</p>
+                <div className="space-y-3 mb-6">
+                  {business.phone && <div className="flex items-center gap-3"><span className="w-8 h-8 rounded flex items-center justify-center" style={{ backgroundColor: colors.primary + '20' }}><Phone className="w-4 h-4" style={{ color: colors.primary }} /></span><span className="text-white font-mono text-sm">{business.phone}</span></div>}
+                  {business.email && <div className="flex items-center gap-3"><span className="w-8 h-8 rounded flex items-center justify-center" style={{ backgroundColor: colors.primary + '20' }}><MessageSquare className="w-4 h-4" style={{ color: colors.primary }} /></span><span className="text-white font-mono text-sm">{business.email}</span></div>}
+                </div>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-0 rounded-2xl opacity-20" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }} />
+                <div className="relative backdrop-blur-sm rounded-2xl p-8 border text-center" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: colors.primary + '30' }}>
+                  {business.whatsapp && (
+                    <button className="w-full py-4 rounded-lg font-mono font-bold text-white transition-all hover:scale-105" style={{ backgroundColor: '#25D366' }}>
+                      $ connect --whatsapp
+                    </button>
+                  )}
+                  <div className="mt-4 flex items-center justify-center gap-2 text-xs text-white/40">
+                    <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: colors.accent }} />
+                    <span className="font-mono">STATUS: ONLINE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* CORPORATE CTA (default) */
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/10 backdrop-blur mb-6 md:mb-8">
+                <Rocket className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              </div>
+              <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-white leading-tight" style={{ fontFamily: template.fonts.heading }}>¿Listo para comenzar?</h2>
+              <p className="text-base md:text-xl text-white/80 mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed">Estamos aquí para ayudarte. Contáctanos y descubre cómo podemos hacer realidad lo que necesitas.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10 md:mb-12 max-w-3xl mx-auto">
+                {business.phone && <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10"><Phone className="w-5 h-5 text-white/80 mx-auto mb-2" /><span className="text-white text-sm md:text-base">{business.phone}</span></div>}
+                {business.email && <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10"><MessageSquare className="w-5 h-5 text-white/80 mx-auto mb-2" /><span className="text-white text-sm md:text-base line-clamp-1">{business.email}</span></div>}
+                {business.address && <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10"><MapPin className="w-5 h-5 text-white/80 mx-auto mb-2" /><span className="text-white text-sm md:text-base line-clamp-1">{business.address}</span></div>}
+              </div>
+              <div className="flex items-center justify-center gap-4 mb-8 md:mb-10">
+                {business.instagram && <a href={`https://instagram.com/${business.instagram}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all hover:scale-110"><Instagram className="w-5 h-5 md:w-6 md:h-6" /></a>}
+                {business.facebook && <a href={business.facebook} target="_blank" rel="noopener noreferrer" className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all hover:scale-110"><Facebook className="w-5 h-5 md:w-6 md:h-6" /></a>}
+              </div>
+              {business.whatsapp && (
+                <button className="group inline-flex items-center gap-3 md:gap-4 px-8 py-4 md:px-12 md:py-5 rounded-full font-bold text-base md:text-xl shadow-2xl transition-all duration-300 hover:scale-105" style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 20px 50px rgba(37, 211, 102, 0.3)' }}>
+                  <MessageSquare className="w-5 h-5 md:w-6 md:h-6" />
+                  Escríbenos por WhatsApp
+                  <ArrowRight className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-1" />
+                </button>
+              )}
+            </div>
           )}
         </div>
       </section>
       
       {/* ============ FOOTER ============ */}
-      <footer className="py-8 md:py-12 px-6" style={{ backgroundColor: colors.primary }}>
-        <div className="max-w-5xl mx-auto">
-          {/* Footer content */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10">
-            {/* Logo o nombre */}
-            <div className="flex items-center gap-3">
-              {business.logo ? (
-                <img src={business.logo} alt={business.name} className="w-10 h-10 rounded-lg object-cover" />
-              ) : (
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold" style={{ backgroundColor: colors.accent }}>
-                  {business.name.charAt(0)}
+      <footer className={`px-6 ${
+        template.style === 'minimal' ? 'py-12 md:py-16' :
+        template.style === 'energetic' ? 'py-6 md:py-8' :
+        template.style === 'artisan' ? 'py-10 md:py-14' :
+        template.style === 'tech' ? 'py-8 md:py-12' :
+        'py-8 md:py-12'
+      }`} style={{ 
+        backgroundColor: template.style === 'minimal' ? '#fff' :
+                        template.style === 'artisan' ? '#faf8f5' :
+                        template.style === 'tech' ? '#000' :
+                        colors.primary 
+      }}>
+        <div className={`mx-auto ${template.style === 'minimal' ? 'max-w-3xl' : 'max-w-5xl'}`}>
+          {template.style === 'minimal' ? (
+            <div className="text-center">
+              <div className="w-12 h-[1px] mx-auto mb-6" style={{ backgroundColor: colors.primary + '30' }} />
+              <p className="text-sm" style={{ color: colors.secondary }}>© {new Date().getFullYear()} {business.name}</p>
+              <p className="text-xs mt-2" style={{ color: colors.secondary + '80' }}>Hecho con Quantum AI Web Engine</p>
+            </div>
+          ) : template.style === 'energetic' ? (
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+              <div className="flex items-center gap-3">
+                {business.logo ? <img src={business.logo} alt={business.name} className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-black" style={{ backgroundColor: colors.accent }}>{business.name.charAt(0)}</div>}
+                <span className="text-white font-black uppercase">{business.name}</span>
+              </div>
+              <p className="text-white/60 text-sm">© {new Date().getFullYear()} • Quantum AI Web Engine</p>
+            </div>
+          ) : template.style === 'artisan' ? (
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <div className="w-8 h-[1px]" style={{ backgroundColor: colors.primary + '30' }} />
+                <span className="text-sm italic" style={{ color: colors.secondary }}>{business.name}</span>
+                <div className="w-8 h-[1px]" style={{ backgroundColor: colors.primary + '30' }} />
+              </div>
+              <p className="text-sm" style={{ color: colors.secondary }}>© {new Date().getFullYear()} Todos los derechos reservados</p>
+              <p className="text-xs mt-2 italic" style={{ color: colors.secondary + '80' }}>Hecho con Quantum AI Web Engine</p>
+            </div>
+          ) : template.style === 'tech' ? (
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: colors.primary }} />
+                <span className="text-white font-mono text-sm">{business.name}</span>
+              </div>
+              <div className="flex items-center gap-4 text-xs font-mono text-white/50">
+                <span>© {new Date().getFullYear()}</span>
+                <span>|</span>
+                <span>Quantum AI Web Engine</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  {business.logo ? <img src={business.logo} alt={business.name} className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold" style={{ backgroundColor: colors.accent }}>{business.name.charAt(0)}</div>}
+                  <span className="text-white font-bold text-lg">{business.name}</span>
                 </div>
-              )}
-              <span className="text-white font-bold text-lg">{business.name}</span>
-            </div>
-            
-            {/* Links rápidos */}
-            <div className="flex items-center gap-6 text-sm text-white/70">
-              {business.phone && <span className="flex items-center gap-2"><Phone className="w-4 h-4" /> {business.phone}</span>}
-              {business.email && <span className="flex items-center gap-2 hidden md:flex"><MessageSquare className="w-4 h-4" /> {business.email}</span>}
-            </div>
-          </div>
-          
-          {/* Copyright */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-center md:text-left">
-            <p className="text-white/60 text-sm">
-              © {new Date().getFullYear()} {business.name}. Todos los derechos reservados.
-            </p>
-            <p className="text-white/50 text-xs">
-              Hecho con <span className="text-white/70 font-medium">Quantum AI Web Engine</span>
-            </p>
-          </div>
+                <div className="flex items-center gap-6 text-sm text-white/70">
+                  {business.phone && <span className="flex items-center gap-2"><Phone className="w-4 h-4" /> {business.phone}</span>}
+                  {business.email && <span className="flex items-center gap-2 hidden md:flex"><MessageSquare className="w-4 h-4" /> {business.email}</span>}
+                </div>
+              </div>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-center md:text-left">
+                <p className="text-white/60 text-sm">© {new Date().getFullYear()} {business.name}. Todos los derechos reservados.</p>
+                <p className="text-white/50 text-xs">Hecho con <span className="text-white/70 font-medium">Quantum AI Web Engine</span></p>
+              </div>
+            </>
+          )}
         </div>
       </footer>
     </div>

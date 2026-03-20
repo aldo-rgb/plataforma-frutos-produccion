@@ -35,6 +35,16 @@ interface Product {
   featured: boolean;
 }
 
+interface AppointmentService {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  price: number;
+  color: string;
+  active: boolean;
+}
+
 interface Testimonial {
   name: string;
   text: string;
@@ -77,6 +87,8 @@ interface WebsiteData {
   aboutText: string | null;
   servicesTitle: string | null;
   services: { icon: string; title: string; description: string }[] | null;
+  siteType: string;
+  appointmentServices: AppointmentService[] | null;
   ctaText: string | null;
   testimonials: Testimonial[] | null;
   products: Product[];
@@ -519,6 +531,105 @@ export default function PublicWebsite({ website }: { website: WebsiteData }) {
                           </span>
                         )}
                       </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ============ APPOINTMENT SERVICES SECTION ============ */}
+      {website.siteType === 'appointments' && website.appointmentServices && website.appointmentServices.filter(s => s.active).length > 0 && (
+        <section 
+          className="py-24 px-6"
+          style={{ backgroundColor: colors.primary + '05' }}
+        >
+          <div className="max-w-5xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-16"
+            >
+              <span 
+                className="inline-block px-4 py-2 rounded-full text-sm font-semibold mb-6"
+                style={{ backgroundColor: colors.accent + '20', color: colors.accent }}
+              >
+                📅 Agenda tu cita
+              </span>
+              
+              <h2 
+                className="text-3xl md:text-5xl font-bold"
+                style={{ fontFamily: fonts.heading, color: colors.primary }}
+              >
+                Nuestros Servicios
+              </h2>
+              <p className="text-gray-500 mt-4 max-w-2xl mx-auto">
+                Elige el servicio que necesitas y agenda tu cita en línea
+              </p>
+            </motion.div>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              {website.appointmentServices.filter(s => s.active).map((service, index) => (
+                <motion.div
+                  key={service.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  {/* Color bar */}
+                  <div 
+                    className="h-2"
+                    style={{ backgroundColor: service.color }}
+                  />
+                  
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 
+                        className="font-bold text-xl"
+                        style={{ color: colors.primary }}
+                      >
+                        {service.name}
+                      </h3>
+                      <div className="flex gap-2">
+                        <span 
+                          className="px-3 py-1 rounded-full text-xs font-medium"
+                          style={{ backgroundColor: colors.primary + '10', color: colors.primary }}
+                        >
+                          {service.duration} min
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-500 mb-4 line-clamp-2">
+                      {service.description}
+                    </p>
+                    
+                    <div className="flex items-center justify-between">
+                      <span 
+                        className="font-bold text-2xl"
+                        style={{ color: colors.accent }}
+                      >
+                        ${service.price.toLocaleString()} MXN
+                      </span>
+                      
+                      {website.whatsapp && (
+                        <motion.a
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          href={`https://wa.me/${website.whatsapp.replace(/\D/g, '')}?text=Hola, me gustaría agendar una cita para el servicio: ${service.name}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-5 py-2.5 rounded-full font-semibold text-white text-sm transition-all"
+                          style={{ backgroundColor: '#25D366' }}
+                        >
+                          Agendar
+                        </motion.a>
+                      )}
                     </div>
                   </div>
                 </motion.div>

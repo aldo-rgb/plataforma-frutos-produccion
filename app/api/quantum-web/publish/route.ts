@@ -58,6 +58,16 @@ interface Product {
   featured: boolean;
 }
 
+interface AppointmentService {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  price: number;
+  color: string;
+  active: boolean;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -65,12 +75,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { businessInfo, template, content, products, brandColors } = await req.json() as {
+    const { businessInfo, template, content, products, brandColors, siteType, appointmentServices } = await req.json() as {
       businessInfo: BusinessInfo;
       template: QuantumTemplate;
       content: WebContent;
       products: Product[];
       brandColors?: [string, string, string];
+      siteType?: string;
+      appointmentServices?: AppointmentService[];
     };
 
     if (!businessInfo?.name || !template || !content) {
@@ -137,6 +149,7 @@ export async function POST(req: Request) {
         businessName: businessInfo.name,
         businessDescription: businessInfo.description,
         businessCategory: businessInfo.category,
+        siteType: siteType || 'catalog',
         logoUrl: businessInfo.logo || null,
         phone: businessInfo.phone,
         whatsapp: businessInfo.whatsapp,
@@ -155,6 +168,7 @@ export async function POST(req: Request) {
         aboutText: content.aboutText,
         servicesTitle: content.servicesTitle,
         services: content.services,
+        appointmentServices: appointmentServices || null,
         ctaText: content.ctaText,
         testimonials: content.testimonials,
         isPublished: true,
@@ -166,6 +180,7 @@ export async function POST(req: Request) {
         businessName: businessInfo.name,
         businessDescription: businessInfo.description,
         businessCategory: businessInfo.category,
+        siteType: siteType || 'catalog',
         logoUrl: businessInfo.logo || undefined,
         phone: businessInfo.phone,
         whatsapp: businessInfo.whatsapp,
@@ -184,6 +199,7 @@ export async function POST(req: Request) {
         aboutText: content.aboutText,
         servicesTitle: content.servicesTitle,
         services: content.services,
+        appointmentServices: appointmentServices || null,
         ctaText: content.ctaText,
         testimonials: content.testimonials,
         isPublished: true,

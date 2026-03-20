@@ -3275,6 +3275,7 @@ model QuantumWebsite {
   businessName        String            @db.VarChar(200)
   businessDescription String?
   businessCategory    String?           @db.VarChar(100)
+  siteType            String?           @db.VarChar(50) @default("catalog")
   phone               String?           @db.VarChar(20)
   whatsapp            String?           @db.VarChar(20)
   email               String?           @db.VarChar(200)
@@ -3295,6 +3296,7 @@ model QuantumWebsite {
   aboutText           String?
   servicesTitle       String?           @db.VarChar(200)
   services            Json?
+  appointmentServices Json?
   ctaText             String?           @db.VarChar(100)
   testimonials        Json?
   customSections      Json?
