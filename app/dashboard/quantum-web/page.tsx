@@ -64,7 +64,9 @@ import {
   Sparkle,
   Brain,
   User,
-  Layers
+  Layers,
+  Lightbulb,
+  Shield
 } from 'lucide-react';
 
 // Tipos
@@ -3707,22 +3709,25 @@ function WebsitePreview({
       </AnimatePresence>
       
       {/* ============ HERO SECTION - FULLSCREEN ============ */}
-      <section className="relative min-h-[50vh] md:min-h-[70vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[55vh] md:min-h-[75vh] flex items-center justify-center overflow-hidden">
         {/* Background Image - con botón de editar */}
         <div className="absolute inset-0 group">
           <img 
             src={heroImage}
             alt="Hero background"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover scale-105"
           />
+          {/* Overlay mejorado con gradiente múltiple */}
           <div 
             className="absolute inset-0"
             style={{
               background: isDarkTheme
-                ? `linear-gradient(135deg, ${colors.primary}ee, ${colors.secondary}dd)`
-                : `linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.75))`
+                ? `linear-gradient(135deg, ${colors.primary}f0 0%, ${colors.secondary}e0 50%, ${colors.accent}90 100%)`
+                : `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.85) 100%)`
             }}
           />
+          {/* Patrón decorativo sutil */}
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
           {/* Botón editar imagen */}
           {editMode && (
             <button
@@ -3737,19 +3742,29 @@ function WebsitePreview({
         
         {/* Hero Content */}
         <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-6 text-center py-10 md:py-16">
-          {/* Logo */}
+          {/* Logo con efecto glow */}
           {business.logo && (
-            <div className="mb-4 md:mb-6">
-              <img
-                src={business.logo}
-                alt={business.name}
-                className="w-16 h-16 md:w-24 md:h-24 mx-auto rounded-xl md:rounded-2xl object-cover shadow-2xl ring-2 md:ring-4 ring-white/20"
-              />
+            <div className="mb-5 md:mb-8">
+              <div className="relative inline-block">
+                <div className="absolute inset-0 blur-2xl opacity-50" style={{ backgroundColor: colors.accent }} />
+                <img
+                  src={business.logo}
+                  alt={business.name}
+                  className="relative w-20 h-20 md:w-28 md:h-28 mx-auto rounded-2xl md:rounded-3xl object-cover shadow-2xl ring-4 ring-white/30"
+                />
+              </div>
             </div>
           )}
           
+          {/* Badge de negocio */}
+          {business.category && (
+            <span className="inline-block px-4 py-1.5 rounded-full text-xs md:text-sm font-medium mb-4 md:mb-6 backdrop-blur-sm" style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.95)' }}>
+              ✨ {business.category}
+            </span>
+          )}
+          
           {/* Título editable */}
-          <div className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-4 leading-tight px-2">
+          <div className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 md:mb-6 leading-tight px-2">
             <EditableText
               value={content.heroTitle}
               onChange={(val) => handleContentChange('heroTitle', val)}
@@ -3757,95 +3772,162 @@ function WebsitePreview({
               style={{ 
                 fontFamily: template.fonts.heading,
                 color: '#fff',
-                textShadow: '0 4px 30px rgba(0,0,0,0.3)'
+                textShadow: '0 4px 40px rgba(0,0,0,0.4), 0 2px 10px rgba(0,0,0,0.3)'
               }}
             />
           </div>
           
           {/* Subtítulo editable */}
-          <div className="text-base sm:text-lg md:text-2xl mb-6 md:mb-8 max-w-2xl mx-auto px-2">
+          <div className="text-base sm:text-lg md:text-xl lg:text-2xl mb-8 md:mb-10 max-w-2xl mx-auto px-2 leading-relaxed">
             <EditableText
               value={content.heroSubtitle}
               onChange={(val) => handleContentChange('heroSubtitle', val)}
               editMode={editMode}
-              style={{ color: 'rgba(255,255,255,0.9)' }}
+              style={{ color: 'rgba(255,255,255,0.9)', textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
               multiline
             />
           </div>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-5">
             <button
-              className="flex items-center gap-2 px-6 py-3 md:px-8 md:py-4 rounded-full font-bold text-sm md:text-lg shadow-2xl transition hover:scale-105 w-full sm:w-auto justify-center"
-              style={{ backgroundColor: colors.accent, color: '#fff' }}
+              className="group flex items-center gap-3 px-8 py-4 md:px-10 md:py-5 rounded-full font-bold text-base md:text-lg shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-3xl w-full sm:w-auto justify-center"
+              style={{ 
+                backgroundColor: colors.accent, 
+                color: '#fff',
+                boxShadow: `0 10px 40px ${colors.accent}50`
+              }}
             >
-              <MessageSquare className="w-4 h-4 md:w-5 md:h-5" />
+              <MessageSquare className="w-5 h-5 md:w-6 md:h-6" />
               <EditableText
                 value={content.ctaText}
                 onChange={(val) => handleContentChange('ctaText', val)}
                 editMode={editMode}
               />
-              <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
+              <ArrowRight className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-1" />
             </button>
             
             {business.phone && (
-              <button className="flex items-center gap-2 px-5 py-2.5 md:px-6 md:py-3 rounded-full font-semibold bg-white/20 backdrop-blur text-white border border-white/30 text-sm md:text-base">
+              <button className="flex items-center gap-2 px-6 py-3 md:px-7 md:py-4 rounded-full font-semibold bg-white/15 backdrop-blur-md text-white border border-white/30 text-sm md:text-base hover:bg-white/25 transition-all">
                 <Phone className="w-4 h-4 md:w-5 md:h-5" />
                 Llamar
               </button>
             )}
           </div>
+          
+          {/* Scroll indicator */}
+          <div className="hidden md:flex flex-col items-center mt-12 animate-bounce opacity-60">
+            <span className="text-white/70 text-xs mb-2">Descubre más</span>
+            <ChevronDown className="w-5 h-5 text-white/70" />
+          </div>
         </div>
       </section>
 
       {/* ============ ABOUT SECTION ============ */}
-      <section className="py-12 md:py-20 px-4 md:px-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <span 
-            className="inline-block px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold mb-4 md:mb-6"
-            style={{ backgroundColor: colors.accent + '20', color: colors.accent }}
-          >
-            Conócenos
-          </span>
-          
-          {/* Título About editable */}
-          <div 
-            className="text-2xl md:text-4xl font-bold mb-4 md:mb-6"
-            style={{ fontFamily: template.fonts.heading, color: colors.primary }}
-          >
-            <EditableText
-              value={content.aboutTitle}
-              onChange={(val) => handleContentChange('aboutTitle', val)}
-              editMode={editMode}
-            />
-          </div>
-          
-          {/* Texto About editable */}
-          <div className="text-base md:text-lg leading-relaxed" style={{ color: colors.secondary }}>
-            <EditableText
-              value={content.aboutText}
-              onChange={(val) => handleContentChange('aboutText', val)}
-              editMode={editMode}
-              multiline
-            />
+      <section className="py-16 md:py-28 px-4 md:px-6 relative overflow-hidden">
+        {/* Elementos decorativos de fondo */}
+        <div className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-5" style={{ backgroundColor: colors.primary, filter: 'blur(100px)' }} />
+        <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full opacity-5" style={{ backgroundColor: colors.accent, filter: 'blur(80px)' }} />
+        
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+            {/* Columna izquierda - Visual */}
+            <div className="relative order-2 md:order-1">
+              <div className="relative">
+                {/* Figura decorativa de fondo */}
+                <div className="absolute -inset-4 rounded-3xl opacity-20" style={{ background: `linear-gradient(135deg, ${colors.primary}40, ${colors.accent}40)` }} />
+                <div className="relative bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-8 md:p-12">
+                  {/* Icono o imagen central */}
+                  <div className="text-center">
+                    <div 
+                      className="inline-flex items-center justify-center w-20 h-20 md:w-28 md:h-28 rounded-2xl md:rounded-3xl mb-6"
+                      style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}
+                    >
+                      <Award className="w-10 h-10 md:w-14 md:h-14 text-white" />
+                    </div>
+                    
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-4 mt-6">
+                      <div className="text-center p-4 rounded-xl bg-white shadow-sm">
+                        <div className="text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>5+</div>
+                        <div className="text-xs md:text-sm text-gray-500">Años de experiencia</div>
+                      </div>
+                      <div className="text-center p-4 rounded-xl bg-white shadow-sm">
+                        <div className="text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>100%</div>
+                        <div className="text-xs md:text-sm text-gray-500">Compromiso</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Columna derecha - Texto */}
+            <div className="order-1 md:order-2">
+              <span 
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs md:text-sm font-semibold mb-6"
+                style={{ backgroundColor: colors.accent + '15', color: colors.accent }}
+              >
+                <Sparkles className="w-4 h-4" />
+                Conócenos
+              </span>
+              
+              {/* Título About editable */}
+              <div 
+                className="text-3xl md:text-5xl font-bold mb-6 leading-tight"
+                style={{ fontFamily: template.fonts.heading, color: colors.primary }}
+              >
+                <EditableText
+                  value={content.aboutTitle}
+                  onChange={(val) => handleContentChange('aboutTitle', val)}
+                  editMode={editMode}
+                />
+              </div>
+              
+              {/* Texto About editable */}
+              <div className="text-base md:text-lg leading-relaxed mb-8" style={{ color: colors.secondary }}>
+                <EditableText
+                  value={content.aboutText}
+                  onChange={(val) => handleContentChange('aboutText', val)}
+                  editMode={editMode}
+                  multiline
+                />
+              </div>
+              
+              {/* Lista de valores */}
+              <div className="space-y-3">
+                {['Calidad garantizada', 'Atención personalizada', 'Resultados comprobados'].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.accent + '20' }}>
+                      <Check className="w-4 h-4" style={{ color: colors.accent }} />
+                    </div>
+                    <span className="text-sm md:text-base" style={{ color: colors.primary }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
       
       {/* ============ SERVICES/FEATURES SECTION ============ */}
       {content.services && content.services.length > 0 && (
-        <section className="py-12 md:py-20 px-4 md:px-6" style={{ backgroundColor: colors.primary + '08' }}>
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-8 md:mb-12">
+        <section className="py-16 md:py-28 px-4 md:px-6 relative overflow-hidden" style={{ backgroundColor: colors.background }}>
+          {/* Patrón de fondo decorativo */}
+          <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: `radial-gradient(${colors.primary} 1px, transparent 1px)`, backgroundSize: '30px 30px' }} />
+          
+          <div className="max-w-6xl mx-auto relative">
+            <div className="text-center mb-12 md:mb-16">
               <span 
-                className="inline-block px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold mb-4 md:mb-6"
-                style={{ backgroundColor: colors.accent + '20', color: colors.accent }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs md:text-sm font-semibold mb-6"
+                style={{ backgroundColor: colors.accent + '15', color: colors.accent }}
               >
+                <Zap className="w-4 h-4" />
                 Beneficios
               </span>
               
               {/* Título servicios editable */}
               <div 
-                className="text-2xl md:text-4xl font-bold"
+                className="text-3xl md:text-5xl font-bold mb-4"
                 style={{ fontFamily: template.fonts.heading, color: colors.primary }}
               >
                 <EditableText
@@ -3854,28 +3936,49 @@ function WebsitePreview({
                   editMode={editMode}
                 />
               </div>
+              <p className="text-base md:text-lg max-w-2xl mx-auto" style={{ color: colors.secondary }}>
+                Descubre todo lo que podemos hacer por ti
+              </p>
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
-              {content.services.slice(0, 4).map((service, index) => (
-                <div
-                  key={index}
-                  className="p-4 rounded-xl bg-white shadow-md text-center"
-                >
-                  <div 
-                    className="w-10 h-10 mx-auto mb-2 rounded-lg flex items-center justify-center"
-                    style={{ background: `linear-gradient(135deg, ${colors.accent}20, ${colors.primary}20)` }}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {content.services.slice(0, 4).map((service, index) => {
+                const ServiceIcon = [Target, Lightbulb, Shield, TrendingUp][index] || Star;
+                return (
+                  <div
+                    key={index}
+                    className="group relative p-6 md:p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:border-transparent transition-all duration-300 hover:-translate-y-1"
                   >
-                    <Star className="w-5 h-5" style={{ color: colors.accent }} />
+                    {/* Gradiente de hover */}
+                    <div 
+                      className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      style={{ background: `linear-gradient(135deg, ${colors.primary}08, ${colors.accent}08)` }}
+                    />
+                    
+                    <div className="relative">
+                      {/* Icono */}
+                      <div 
+                        className="w-14 h-14 md:w-16 md:h-16 mb-5 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
+                        style={{ background: `linear-gradient(135deg, ${colors.primary}15, ${colors.accent}15)` }}
+                      >
+                        <ServiceIcon className="w-7 h-7 md:w-8 md:h-8" style={{ color: colors.primary }} />
+                      </div>
+                      
+                      {/* Número de índice decorativo */}
+                      <span className="absolute top-0 right-0 text-5xl font-bold opacity-5" style={{ color: colors.primary }}>
+                        0{index + 1}
+                      </span>
+                      
+                      <h3 className="text-lg md:text-xl font-bold mb-3" style={{ color: colors.primary }}>
+                        {service.title}
+                      </h3>
+                      <p className="text-sm md:text-base leading-relaxed" style={{ color: colors.secondary }}>
+                        {service.description}
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-sm font-bold mb-1 line-clamp-1" style={{ color: colors.primary }}>
-                    {service.title}
-                  </h3>
-                  <p className="text-xs leading-relaxed line-clamp-2" style={{ color: colors.secondary }}>
-                    {service.description}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -4172,86 +4275,120 @@ function WebsitePreview({
 
       {/* ============ CONTACT/CTA SECTION ============ */}
       <section 
-        className="py-12 md:py-20 px-4 md:px-6 relative overflow-hidden"
-        style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary || colors.primary}dd)` }}
+        className="py-16 md:py-28 px-4 md:px-6 relative overflow-hidden"
+        style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary || colors.primary}dd 50%, ${colors.primary}ee 100%)` }}
       >
-        {/* Decorative elements - hidden on mobile */}
-        <div className="hidden md:block absolute top-0 left-0 w-48 h-48 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
-        <div className="hidden md:block absolute bottom-0 right-0 w-64 h-64 bg-white/5 rounded-full translate-x-1/2 translate-y-1/2" />
+        {/* Elementos decorativos de fondo */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-0 left-0 w-72 h-72 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '50px 50px' }} />
+        </div>
         
-        <div className="max-w-3xl mx-auto text-center relative z-10">
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          {/* Icono decorativo */}
+          <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/10 backdrop-blur mb-6 md:mb-8">
+            <Rocket className="w-8 h-8 md:w-10 md:h-10 text-white" />
+          </div>
+          
           <h2 
-            className="text-2xl md:text-4xl font-bold mb-3 md:mb-4 text-white"
+            className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-white leading-tight"
             style={{ fontFamily: template.fonts.heading }}
           >
             ¿Listo para comenzar?
           </h2>
           
-          <p className="text-sm md:text-lg text-white/80 mb-6 md:mb-8 max-w-xl mx-auto px-2">
+          <p className="text-base md:text-xl text-white/80 mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed">
             Estamos aquí para ayudarte. Contáctanos y descubre cómo podemos hacer realidad lo que necesitas.
           </p>
           
-          {/* Contact Info - Stack on mobile */}
-          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-2 sm:gap-4 mb-6 md:mb-8 text-xs md:text-sm">
+          {/* Contact Info Cards - más visual */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10 md:mb-12 max-w-3xl mx-auto">
             {business.phone && (
-              <span className="flex items-center gap-2 text-white/90">
-                <Phone className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                {business.phone}
-              </span>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
+                <Phone className="w-5 h-5 text-white/80 mx-auto mb-2" />
+                <span className="text-white text-sm md:text-base">{business.phone}</span>
+              </div>
+            )}
+            
+            {business.email && (
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
+                <MessageSquare className="w-5 h-5 text-white/80 mx-auto mb-2" />
+                <span className="text-white text-sm md:text-base line-clamp-1">{business.email}</span>
+              </div>
             )}
             
             {business.address && (
-              <span className="flex items-center gap-2 text-white/90 text-center">
-                <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
-                <span className="line-clamp-1">{business.address}</span>
-              </span>
-            )}
-            
-            {business.schedule && (
-              <span className="flex items-center gap-2 text-white/90">
-                <Clock className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                {business.schedule}
-              </span>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
+                <MapPin className="w-5 h-5 text-white/80 mx-auto mb-2" />
+                <span className="text-white text-sm md:text-base line-clamp-1">{business.address}</span>
+              </div>
             )}
           </div>
           
           {/* Social Links */}
-          <div className="flex items-center justify-center gap-3 mb-6 md:mb-8">
+          <div className="flex items-center justify-center gap-4 mb-8 md:mb-10">
             {business.instagram && (
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center text-white">
-                <Instagram className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
+              <a href={`https://instagram.com/${business.instagram}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all hover:scale-110">
+                <Instagram className="w-5 h-5 md:w-6 md:h-6" />
+              </a>
             )}
             {business.facebook && (
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center text-white">
-                <Facebook className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
+              <a href={business.facebook} target="_blank" rel="noopener noreferrer" className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all hover:scale-110">
+                <Facebook className="w-5 h-5 md:w-6 md:h-6" />
+              </a>
             )}
           </div>
           
           {/* Main CTA */}
           {business.whatsapp && (
             <button
-              className="inline-flex items-center gap-2 md:gap-3 px-6 py-3 md:px-8 md:py-4 rounded-full font-bold text-sm md:text-lg shadow-2xl transition hover:scale-105"
-              style={{ backgroundColor: '#25D366', color: '#fff' }}
+              className="group inline-flex items-center gap-3 md:gap-4 px-8 py-4 md:px-12 md:py-5 rounded-full font-bold text-base md:text-xl shadow-2xl transition-all duration-300 hover:scale-105"
+              style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 20px 50px rgba(37, 211, 102, 0.3)' }}
             >
-              <MessageSquare className="w-4 h-4 md:w-5 md:h-5" />
+              <MessageSquare className="w-5 h-5 md:w-6 md:h-6" />
               Escríbenos por WhatsApp
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-1" />
             </button>
           )}
         </div>
       </section>
       
       {/* ============ FOOTER ============ */}
-      <footer className="py-6 px-6 text-center" style={{ backgroundColor: colors.background }}>
-        <p style={{ color: colors.secondary }}>
-          © {new Date().getFullYear()} {business.name}. Todos los derechos reservados.
-        </p>
-        <p className="mt-2 text-sm" style={{ color: colors.secondary + '80' }}>
-          Hecho con 💜 usando{' '}
-          <span style={{ color: colors.accent }}>Quantum AI Web Engine</span>
-        </p>
+      <footer className="py-8 md:py-12 px-6" style={{ backgroundColor: colors.primary }}>
+        <div className="max-w-5xl mx-auto">
+          {/* Footer content */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10">
+            {/* Logo o nombre */}
+            <div className="flex items-center gap-3">
+              {business.logo ? (
+                <img src={business.logo} alt={business.name} className="w-10 h-10 rounded-lg object-cover" />
+              ) : (
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold" style={{ backgroundColor: colors.accent }}>
+                  {business.name.charAt(0)}
+                </div>
+              )}
+              <span className="text-white font-bold text-lg">{business.name}</span>
+            </div>
+            
+            {/* Links rápidos */}
+            <div className="flex items-center gap-6 text-sm text-white/70">
+              {business.phone && <span className="flex items-center gap-2"><Phone className="w-4 h-4" /> {business.phone}</span>}
+              {business.email && <span className="flex items-center gap-2 hidden md:flex"><MessageSquare className="w-4 h-4" /> {business.email}</span>}
+            </div>
+          </div>
+          
+          {/* Copyright */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-center md:text-left">
+            <p className="text-white/60 text-sm">
+              © {new Date().getFullYear()} {business.name}. Todos los derechos reservados.
+            </p>
+            <p className="text-white/40 text-xs flex items-center gap-1">
+              Hecho con <Heart className="w-3 h-3 text-red-400 fill-red-400" /> usando{' '}
+              <span className="text-white/60">Quantum AI Web Engine</span>
+            </p>
+          </div>
+        </div>
       </footer>
     </div>
   );
