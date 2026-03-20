@@ -38,7 +38,7 @@ export async function GET() {
         paymentStatus: true,
         costAtPurchase: true,
         amountPaid: true,
-        vision: {
+        Vision: {
           select: {
             nombre: true,
           },
@@ -58,7 +58,7 @@ export async function GET() {
       costAtPurchase: ticket.costAtPurchase || 0,
       amountPaid: ticket.amountPaid || 0,
       vision: {
-        nombre: ticket.vision?.nombre || 'Sin visión',
+        nombre: ticket.Vision?.nombre || 'Sin visión',
       },
     }));
 
