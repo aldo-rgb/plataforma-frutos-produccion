@@ -32,7 +32,7 @@ export async function GET() {
             imagen: true
           }
         },
-        CallBookings: {
+        CallBooking: {
           select: {
             id: true,
             scheduledAt: true,
@@ -48,12 +48,12 @@ export async function GET() {
 
     for (const programa of programas) {
       // Contar sesiones completadas
-      const sesionesCompletadas = programa.CallBookings.filter((call: any) => 
+      const sesionesCompletadas = programa.CallBooking.filter((call: any) => 
         call.attendanceStatus === 'PRESENT' || call.status === 'COMPLETED'
       ).length;
 
       // Contar sesiones futuras
-      const sesionesFuturas = programa.CallBookings.filter((call: any) => 
+      const sesionesFuturas = programa.CallBooking.filter((call: any) => 
         new Date(call.scheduledAt) > ahora &&
         (call.status === 'PENDING' || call.status === 'CONFIRMED')
       ).length;

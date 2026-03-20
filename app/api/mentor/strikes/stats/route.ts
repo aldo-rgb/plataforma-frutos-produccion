@@ -50,7 +50,7 @@ export async function GET() {
             email: true
           }
         },
-        CallBookings: {
+        CallBooking: {
           where: {
             type: 'DISCIPLINE',
             status: 'COMPLETED'
@@ -86,7 +86,7 @@ export async function GET() {
       }
 
       // Calcular asistencia
-      const sesionesParticipante = enrollment.CallBookings || [];
+      const sesionesParticipante = enrollment.CallBooking || [];
       totalSesiones += sesionesParticipante.length;
       sesionesAsistidas += sesionesParticipante.filter((s: any) => s.attendanceStatus === 'PRESENT').length;
 

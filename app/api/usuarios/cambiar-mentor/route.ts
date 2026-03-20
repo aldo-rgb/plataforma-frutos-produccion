@@ -66,7 +66,7 @@ export async function POST(request: Request) {
         status: 'ACTIVE'
       },
       include: {
-        CallBookings: {
+        CallBooking: {
           select: {
             id: true,
             scheduledAt: true,
@@ -86,13 +86,13 @@ export async function POST(request: Request) {
       const ahora = new Date();
 
       // Contar sesiones completadas
-      const completadas = programa.CallBookings.filter((call: any) => 
+      const completadas = programa.CallBooking.filter((call: any) => 
         call.attendanceStatus === 'PRESENT' || call.status === 'COMPLETED'
       );
       sesionesCompletadas += completadas.length;
 
       // Cancelar sesiones futuras
-      const futuras = programa.CallBookings.filter((call: any) => 
+      const futuras = programa.CallBooking.filter((call: any) => 
         new Date(call.scheduledAt) > ahora &&
         (call.status === 'PENDING' || call.status === 'CONFIRMED')
       );

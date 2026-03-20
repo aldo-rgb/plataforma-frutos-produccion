@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const programa: any = await (prisma as any).programEnrollment.findUnique({
       where: { id: parseInt(programId) },
       include: {
-        CallBookings: {
+        CallBooking: {
           select: {
             id: true,
             scheduledAt: true,
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     }
 
     // 2. Calcular sesiones ya realizadas
-    const sesionesCompletadas = programa.CallBookings.filter((call: any) => 
+    const sesionesCompletadas = programa.CallBooking.filter((call: any) => 
       call.attendanceStatus === 'PRESENT' || call.status === 'COMPLETED'
     ).length;
 
