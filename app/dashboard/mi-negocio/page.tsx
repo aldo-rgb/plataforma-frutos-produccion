@@ -842,9 +842,12 @@ export default function QuantumBusinessBuilderPage() {
     }
   }, [loading]);
   
-  // Inicializar preview cuando se carga el perfil existente
+  // Flag para evitar re-inicialización después de la primera carga
+  const [profileInitialized, setProfileInitialized] = useState(false);
+  
+  // Inicializar preview cuando se carga el perfil existente (SOLO UNA VEZ)
   useEffect(() => {
-    if (existingProfile && step === 'optimizador') {
+    if (existingProfile && step === 'optimizador' && !profileInitialized) {
       setPreviewNombre(existingProfile.headline || '');
       setPreviewDescripcion(existingProfile.description || '');
       setPreviewOferta(existingProfile.discountOffer || '');
@@ -876,8 +879,11 @@ export default function QuantumBusinessBuilderPage() {
         setPreviewLatitud(20.6597);
         setPreviewLongitud(-103.3496);
       }
+      
+      // Marcar como inicializado para no sobrescribir cambios del usuario
+      setProfileInitialized(true);
     }
-  }, [existingProfile, step]);
+  }, [existingProfile, step, profileInitialized]);
   
   // Cargar datos del quantum-web (URL, horarios, etc)
   // PRIORIDAD: Si hay existingWebsite, precargar TODOS los datos del sitio web
