@@ -150,7 +150,9 @@ export default function SaltosCuanticosWidget() {
       {/* Areas Grid */}
       <div className="p-4 sm:p-6">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {data.areas.map((area, idx) => (
+          {data.areas
+            .filter(area => area.key !== 'servicioTrans') // Ocultar meta transformacional
+            .map((area, idx) => (
             <motion.div
               key={area.key}
               initial={{ opacity: 0, y: 20 }}
