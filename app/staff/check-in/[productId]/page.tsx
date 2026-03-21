@@ -444,60 +444,68 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
       {/* Header */}
-      <div className="bg-slate-900/50 border-b border-slate-800 px-6 py-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-slate-400 hover:text-white">
-              <ArrowLeft size={24} />
+      <div className="bg-slate-900/50 border-b border-slate-800 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="flex flex-col gap-3 max-w-7xl mx-auto">
+          {/* Primera fila: Logo y título */}
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard" className="text-slate-400 hover:text-white flex-shrink-0">
+              <ArrowLeft size={20} />
             </Link>
             {productInfo?.logoUrl && (
-              <img src={productInfo.logoUrl} alt="Logo" className="h-10 w-auto" />
+              <img src={productInfo.logoUrl} alt="Logo" className="h-8 sm:h-10 w-auto flex-shrink-0" />
             )}
-            <div>
-              <h1 className="text-xl font-bold">Quantum Check-In Station</h1>
-              <p className="text-slate-400 text-sm">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-base sm:text-xl font-bold truncate">Quantum Check-In Station</h1>
+              <p className="text-slate-400 text-xs sm:text-sm truncate">
                 {productInfo?.visionName} • {productInfo?.levelType === 'BASIC' ? 'Básico' : productInfo?.levelType === 'ADVANCED' ? 'Avanzado' : productInfo?.levelType}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Contador de inscritos */}
-            <div className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-center min-w-[70px]">
-              <div className="text-white font-bold text-lg">{stats.enrolled}</div>
-              <div className="text-slate-500 text-xs">Inscritos</div>
+          {/* Segunda fila: Contadores y controles */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Contadores */}
+            <div className="flex items-center gap-2">
+              {/* Contador de inscritos */}
+              <div className="bg-slate-800 border border-slate-700 rounded-lg sm:rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-center min-w-[55px] sm:min-w-[70px]">
+                <div className="text-white font-bold text-sm sm:text-lg">{stats.enrolled}</div>
+                <div className="text-slate-500 text-[10px] sm:text-xs">Inscritos</div>
+              </div>
+
+              {/* Contador de asistencias */}
+              <div className="bg-green-500/20 border border-green-500/50 rounded-lg sm:rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-center min-w-[55px] sm:min-w-[70px]">
+                <div className="text-green-400 font-bold text-sm sm:text-lg">{stats.checkedIn}</div>
+                <div className="text-green-400/70 text-[10px] sm:text-xs">Asistencias</div>
+              </div>
+
+              {/* Contador de pendientes */}
+              <div className="bg-amber-500/20 border border-amber-500/50 rounded-lg sm:rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-center min-w-[55px] sm:min-w-[70px]">
+                <div className="text-amber-400 font-bold text-sm sm:text-lg">{stats.pending}</div>
+                <div className="text-amber-400/70 text-[10px] sm:text-xs">Pendientes</div>
+              </div>
             </div>
 
-            {/* Contador de asistencias */}
-            <div className="bg-green-500/20 border border-green-500/50 rounded-xl px-3 py-2 text-center min-w-[70px]">
-              <div className="text-green-400 font-bold text-lg">{stats.checkedIn}</div>
-              <div className="text-green-400/70 text-xs">Asistencias</div>
-            </div>
+            {/* Controles */}
+            <div className="flex items-center gap-2">
+              {/* Status de conexión */}
+              <div className={`flex items-center gap-1 px-2 py-1.5 rounded-lg ${isOnline ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                {isOnline ? <Wifi size={16} /> : <WifiOff size={16} />}
+              </div>
 
-            {/* Contador de pendientes */}
-            <div className="bg-amber-500/20 border border-amber-500/50 rounded-xl px-3 py-2 text-center min-w-[70px]">
-              <div className="text-amber-400 font-bold text-lg">{stats.pending}</div>
-              <div className="text-amber-400/70 text-xs">Pendientes</div>
+              {/* Toggle sonido */}
+              <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className={`p-1.5 rounded-lg transition-colors ${soundEnabled ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-800 text-slate-500'}`}
+              >
+                <Volume2 size={18} />
+              </button>
             </div>
-
-            {/* Status de conexión */}
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isOnline ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-              {isOnline ? <Wifi size={18} /> : <WifiOff size={18} />}
-            </div>
-
-            {/* Toggle sonido */}
-            <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className={`p-2 rounded-lg transition-colors ${soundEnabled ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-800 text-slate-500'}`}
-            >
-              <Volume2 size={20} />
-            </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-4 sm:p-6">
         <div className="max-w-4xl mx-auto">
           
           {/* Estado: IDLE - Esperando escaneo */}
