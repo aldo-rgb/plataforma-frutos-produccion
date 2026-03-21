@@ -10,7 +10,7 @@ console.log('URL:', supabaseUrl);
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function uploadFile() {
-  const filePath = './Personaje.png';
+  const filePath = './LOGO MOV.mp4';
   const fileBuffer = fs.readFileSync(filePath);
   
   // Primero listar buckets disponibles
@@ -26,8 +26,8 @@ async function uploadFile() {
   // Intentar subir a mentor-assets
   const { data, error } = await supabase.storage
     .from('mentor-assets')
-    .upload('images/Personaje.png', fileBuffer, {
-      contentType: 'image/png',
+    .upload('videos/logo-loading.mp4', fileBuffer, {
+      contentType: 'video/mp4',
       upsert: true
     });
     
@@ -38,7 +38,7 @@ async function uploadFile() {
   
   console.log('Subido correctamente');
   
-  const { data: urlData } = supabase.storage.from('mentor-assets').getPublicUrl('images/Personaje.png');
+  const { data: urlData } = supabase.storage.from('mentor-assets').getPublicUrl('videos/logo-loading.mp4');
   console.log('URL:', urlData.publicUrl);
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function CartaPage() {
   const router = useRouter();
@@ -43,10 +43,7 @@ export default function CartaPage() {
 
   return (
     <div className="min-h-screen bg-[#0f1015] flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
-        <p className="text-gray-400">Cargando tu carta...</p>
-      </div>
+      <LoadingSpinner message="Cargando tu carta..." size="lg" />
     </div>
   );
 }
