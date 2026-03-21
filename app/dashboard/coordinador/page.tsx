@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Target, BarChart3, Zap,
   AlertTriangle, GraduationCap, Star, Activity,
-  FileText, Shield, Heart
+  FileText, Shield, Heart, Calendar, Clock, Scan, QrCode
 } from 'lucide-react';
 import Link from 'next/link';
 import VisionesWidget from '@/components/dashboard/VisionesWidget';
@@ -57,6 +57,9 @@ export default function CoordinadorDashboard() {
   const [visiones, setVisiones] = useState<any[]>([]);
   const [loadingVisiones, setLoadingVisiones] = useState(true);
   const [medicalAlertsCount, setMedicalAlertsCount] = useState(0);
+  const [productos, setProductos] = useState<any[]>([]);
+  const [loadingProductos, setLoadingProductos] = useState(true);
+  const [countdown, setCountdown] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (status === 'loading') {
@@ -74,6 +77,7 @@ export default function CoordinadorDashboard() {
       fetchConsejoQuantum();
       fetchVisiones();
       fetchMedicalAlerts();
+      fetchProductos();
     }
   }, [status, session]);
 
@@ -144,6 +148,53 @@ export default function CoordinadorDashboard() {
     }
   };
 
+  const fetchProductos = async () => {
+    try {
+      const res = await fetch('/api/coordinador/productos-activos');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setProductos(result.productos || []);
+      }
+    } catch (error) {
+      console.error('Error fetching productos:', error);
+    } finally {
+      setLoadingProductos(false);
+    }
+  };
+
+  // Countdown para productos activos
+  useEffect(() => {
+    const updateCountdowns = () => {
+      const now = new Date();
+      const newCountdowns: Record<number, string> = {};
+
+      productos.forEach(producto => {
+        if (producto.startDate) {
+          const startDate = new Date(producto.startDate);
+          const training9AM = new Date(startDate);
+          training9AM.setHours(9, 0, 0, 0);
+
+          const before24h = new Date(training9AM);
+          before24h.setHours(before24h.getHours() - 24);
+
+          if (now >= before24h && now < training9AM) {
+            const diff = training9AM.getTime() - now.getTime();
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            newCountdowns[producto.id] = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+          }
+        }
+      });
+
+      setCountdown(newCountdowns);
+    };
+
+    updateCountdowns();
+    const interval = setInterval(updateCountdowns, 1000);
+    return () => clearInterval(interval);
+  }, [productos]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
@@ -197,13 +248,190 @@ export default function CoordinadorDashboard() {
           <CartaPrellenadaWidget />
         </div>
 
-        {/* Widget de Visiones */}
+        {/* Widget de Entrenamientos Activos */}
         <div className="mt-8">
-          <VisionesWidget 
-            visiones={visiones} 
-            userRole="COORDINADOR" 
-            loading={loadingVisiones}
-          />
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-slate-700">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-cyan-500/20 rounded-lg">
+                  <Calendar className="text-cyan-400" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-white">Entrenamientos Activos</h2>
+                  <p className="text-xs sm:text-sm text-slate-400">Ordenados por fecha de inicio</p>
+                </div>
+              </div>
+              <div className="text-cyan-400 font-bold text-lg">{productos.length}</div>
+            </div>
+
+            {loadingProductos ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto"></div>
+                <p className="text-slate-400 mt-4">Cargando entrenamientos...</p>
+              </div>
+            ) : productos.length === 0 ? (
+              <div className="text-center py-12">
+                <Activity className="mx-auto text-slate-600 mb-4" size={48} />
+                <p className="text-slate-400">No hay entrenamientos activos</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {productos.map((producto: any) => {
+                  const startDate = producto.startDate ? new Date(producto.startDate) : null;
+                  const now = new Date();
+                  
+                  let showCheckInButton = false;
+                  let showInProgress = false;
+                  
+                  if (startDate) {
+                    const trainingStart9AM = new Date(startDate);
+                    trainingStart9AM.setHours(9, 0, 0, 0);
+                    
+                    const checkInDeadline8PM = new Date(startDate);
+                    checkInDeadline8PM.setHours(20, 0, 0, 0);
+                    
+                    showCheckInButton = now >= trainingStart9AM && now <= checkInDeadline8PM;
+                    showInProgress = now > checkInDeadline8PM;
+                  }
+                  
+                  const isCompleted = producto.trainingStatus === 'COMPLETED';
+                  const showCountdown = countdown[producto.id];
+
+                  return (
+                    <Link
+                      key={producto.id}
+                      href={`/dashboard/school-admin/vision/${producto.visionId}/manage`}
+                      className="block"
+                    >
+                      <div className={`rounded-xl p-4 sm:p-5 transition-all cursor-pointer group hover:scale-[1.01] ${
+                        isCompleted
+                          ? 'bg-gradient-to-br from-slate-800/60 via-slate-800/40 to-slate-900 border-2 border-slate-600/50'
+                          : (showCheckInButton || showInProgress)
+                          ? 'bg-gradient-to-br from-green-900/40 via-emerald-900/30 to-slate-900 border-2 border-green-500/50 shadow-lg shadow-green-500/10'
+                          : 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-slate-700/50 hover:border-cyan-500/50'
+                      }`}>
+                        {/* Header con nombre y badges */}
+                        <div className="flex flex-col gap-3 mb-3">
+                          <div className="flex-1">
+                            <h3 className="text-white font-bold text-base sm:text-lg mb-1 group-hover:text-cyan-400 transition-colors">
+                              {producto.name}
+                            </h3>
+                            {producto.description && (
+                              <p className="text-slate-400 text-xs sm:text-sm line-clamp-1">
+                                {producto.description}
+                              </p>
+                            )}
+                          </div>
+                          {/* Badges en fila que hace wrap */}
+                          <div className="flex flex-wrap gap-2">
+                            {producto.type && (
+                              <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
+                                producto.type === 'WORKSHOP' 
+                                  ? 'bg-purple-500/20 text-purple-400 border-purple-500/50'
+                                  : producto.type === 'EXTRA_WORKSHOP'
+                                  ? 'bg-pink-500/20 text-pink-400 border-pink-500/50'
+                                  : 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+                              }`}>
+                                {producto.type === 'WORKSHOP' ? '🎯 Taller' : 
+                                 producto.type === 'EXTRA_WORKSHOP' ? '✨ Extra' : 
+                                 '📚 Entrenamiento'}
+                              </div>
+                            )}
+                            {producto.levelType && producto.levelType !== 'NONE' && (
+                              <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
+                                producto.levelType === 'BASIC' 
+                                  ? 'bg-green-500/20 text-green-400 border-green-500/50'
+                                  : producto.levelType === 'ADVANCED'
+                                  ? 'bg-red-500/20 text-red-400 border-red-500/50'
+                                  : producto.levelType === 'PL' || producto.levelType === 'LEADERSHIP'
+                                  ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50'
+                                  : 'bg-slate-500/20 text-slate-400 border-slate-500/50'
+                              }`}>
+                                {producto.levelType === 'BASIC' ? 'Básico' : 
+                                 producto.levelType === 'ADVANCED' ? 'Avanzado' :
+                                 producto.levelType === 'PL' || producto.levelType === 'LEADERSHIP' ? 'Liderato' :
+                                 producto.levelType}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Info y botones */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={14} className="text-slate-400" />
+                              <span className="text-slate-300">
+                                {startDate ? new Date(startDate).toLocaleDateString('es-ES', { 
+                                  day: 'numeric', 
+                                  month: 'short',
+                                  year: 'numeric'
+                                }) : 'Sin fecha'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Users size={14} className="text-slate-400" />
+                              <span className="text-slate-300">
+                                {producto.currentEnrollment || 0}/{producto.maxCapacity || 100}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Countdown */}
+                          {showCountdown && !isCompleted && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.location.href = `/staff/check-in/${producto.id}`;
+                              }}
+                              className="flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 hover:from-orange-500/30 hover:to-red-500/30 border border-orange-500/50 px-3 sm:px-4 py-2 rounded-lg animate-pulse cursor-pointer transition-all"
+                            >
+                              <Clock size={16} className="text-orange-400" />
+                              <span className="text-orange-400 font-bold font-mono text-xs sm:text-sm">
+                                {countdown[producto.id]}
+                              </span>
+                            </button>
+                          )}
+
+                          {/* Completado */}
+                          {isCompleted && (
+                            <div className="flex items-center gap-2 text-slate-400 text-xs sm:text-sm font-semibold">
+                              <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+                              Completado
+                            </div>
+                          )}
+
+                          {/* Botón Check-In */}
+                          {showCheckInButton && !isCompleted && !showCountdown && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.location.href = `/staff/check-in/${producto.id}`;
+                              }}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-500/50 rounded-lg text-cyan-400 hover:text-cyan-300 text-xs sm:text-sm font-semibold transition-all"
+                            >
+                              <QrCode size={14} />
+                              Check-In
+                            </button>
+                          )}
+
+                          {/* En curso */}
+                          {showInProgress && !isCompleted && (
+                            <div className="flex items-center gap-2 text-green-400 text-xs sm:text-sm font-semibold">
+                              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                              En curso
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Widget de Registros Médicos - Acceso Rápido */}
