@@ -1652,9 +1652,9 @@ export default function QuantumBusinessBuilderPage() {
           }}
           className="w-24 h-24 mx-auto mb-8"
         >
-          <div className="w-full h-full rounded-full bg-gradient-to-r from-blue-500 via-blue-500 to-yellow-500 p-1">
+          <div className="w-full h-full rounded-full bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 p-1">
             <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
-              <Sparkles className="w-12 h-12 text-yellow-400" />
+              <Sparkles className="w-12 h-12 text-cyan-400" />
             </div>
           </div>
         </motion.div>
