@@ -5354,7 +5354,7 @@ function WebsitePreview({
                 <div className="relative backdrop-blur-sm rounded-2xl p-8 border text-center" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: colors.primary + '30' }}>
                   {business.whatsapp && (
                     <button className="w-full py-4 rounded-lg font-mono font-bold text-white transition-all hover:scale-105" style={{ backgroundColor: '#25D366' }}>
-                      $ connect --whatsapp
+                      Enviar WhatsApp
                     </button>
                   )}
                   <div className="mt-4 flex items-center justify-center gap-2 text-xs text-white/40">
