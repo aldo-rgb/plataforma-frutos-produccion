@@ -547,7 +547,7 @@ export default function LegacyVisionBuilderPage() {
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
-        <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     );
   }
@@ -557,8 +557,8 @@ export default function LegacyVisionBuilderPage() {
       <div className="min-h-screen bg-black flex items-center justify-center p-6">
         <div className="max-w-md w-full">
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 border border-slate-700/50 text-center">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
-              <Crown className="w-10 h-10 text-amber-400" />
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+              <Crown className="w-10 h-10 text-cyan-400" />
             </div>
             
             <h1 className="text-2xl font-bold text-white mb-3">
@@ -566,8 +566,8 @@ export default function LegacyVisionBuilderPage() {
             </h1>
             
             <div className="flex items-center justify-center gap-2 mb-4">
-              <Crown className="w-5 h-5 text-amber-400" />
-              <span className="text-amber-400 font-semibold">Programa de Liderato</span>
+              <Crown className="w-5 h-5 text-cyan-400" />
+              <span className="text-cyan-400 font-semibold">Programa de Liderato</span>
             </div>
             
             <p className="text-slate-400 mb-6">
@@ -576,7 +576,7 @@ export default function LegacyVisionBuilderPage() {
             
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold hover:shadow-lg hover:shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
             >
               <ChevronLeft className="w-4 h-4" />
               Volver al Dashboard
@@ -596,7 +596,7 @@ export default function LegacyVisionBuilderPage() {
             toast.type === 'success' 
               ? 'bg-gradient-to-r from-green-600 to-emerald-600 border-green-400/30' 
               : toast.type === 'error'
-                ? 'bg-gradient-to-r from-red-600 to-rose-600 border-red-400/30'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 border-blue-400/30'
                 : 'bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-400/30'
           } text-white`}>
             {toast.type === 'success' ? (
@@ -623,15 +623,15 @@ export default function LegacyVisionBuilderPage() {
           {data.pendingNotifications.map((notif) => (
             <div
               key={notif.id}
-              className="bg-gradient-to-r from-yellow-600 to-amber-600 rounded-xl p-4 shadow-lg border border-yellow-400/30"
+              className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl p-4 shadow-lg border border-cyan-400/30"
             >
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-yellow-500/30 rounded-lg">
-                  <Crown className="w-5 h-5 text-yellow-200" />
+                <div className="p-2 bg-cyan-500/30 rounded-lg">
+                  <Crown className="w-5 h-5 text-cyan-200" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-white text-sm">{notif.title}</h4>
-                  <p className="text-yellow-100/80 text-xs mt-1 line-clamp-2">{notif.message}</p>
+                  <p className="text-cyan-100/80 text-xs mt-1 line-clamp-2">{notif.message}</p>
                   <button
                     onClick={() => setNominationModal({ show: true, notification: notif })}
                     className="mt-3 w-full px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
@@ -649,9 +649,9 @@ export default function LegacyVisionBuilderPage() {
       {/* Modal de Detalles de Nominación */}
       {nominationModal.show && nominationModal.notification && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-2xl border border-yellow-600/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-gray-900 rounded-2xl border border-blue-600/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             {/* Header del Modal */}
-            <div className="bg-gradient-to-r from-yellow-600 to-amber-600 p-6 rounded-t-2xl">
+            <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-white/20 rounded-xl">
@@ -659,7 +659,7 @@ export default function LegacyVisionBuilderPage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white">¡Has sido nominado!</h2>
-                    <p className="text-yellow-200 text-sm">Capitanía de la Tribu</p>
+                    <p className="text-cyan-200 text-sm">Capitanía de la Tribu</p>
                   </div>
                 </div>
                 <button
@@ -675,7 +675,7 @@ export default function LegacyVisionBuilderPage() {
             <div className="p-6 space-y-6">
               {/* Rol asignado */}
               <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-                <h3 className="text-lg font-bold text-yellow-400 mb-2">
+                <h3 className="text-lg font-bold text-cyan-400 mb-2">
                   {(() => {
                     const cap = data.captaincies.find(c => c.roleType === nominationModal.notification?.roleType);
                     return cap ? `${cap.icon} ${cap.name}` : nominationModal.notification?.roleType;
@@ -692,7 +692,7 @@ export default function LegacyVisionBuilderPage() {
               {/* Descripción detallada */}
               <div>
                 <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-yellow-400" />
+                  <BookOpen className="w-4 h-4 text-cyan-400" />
                   ¿Qué implica este rol?
                 </h4>
                 <p className="text-gray-400 text-sm leading-relaxed">
@@ -706,7 +706,7 @@ export default function LegacyVisionBuilderPage() {
               {/* Responsabilidades */}
               <div>
                 <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-yellow-400" />
+                  <Shield className="w-4 h-4 text-cyan-400" />
                   Tu Compromiso
                 </h4>
                 <ul className="space-y-2 text-sm text-gray-400">
@@ -726,8 +726,8 @@ export default function LegacyVisionBuilderPage() {
               </div>
 
               {/* Pregunta */}
-              <div className="bg-yellow-900/30 border border-yellow-600/30 rounded-xl p-4 text-center">
-                <p className="text-yellow-200 font-medium">
+              <div className="bg-blue-900/30 border border-blue-600/30 rounded-xl p-4 text-center">
+                <p className="text-cyan-200 font-medium">
                   ¿Aceptas la responsabilidad ineludible de este cargo?
                 </p>
               </div>
@@ -770,9 +770,9 @@ export default function LegacyVisionBuilderPage() {
       {/* Modal para Capturar Misión de la Tribu */}
       {missionModal.show && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-2xl border border-amber-600/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-gray-900 rounded-2xl border border-blue-600/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             {/* Header del Modal */}
-            <div className="bg-gradient-to-r from-amber-600 to-yellow-600 p-6 rounded-t-2xl">
+            <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-white/20 rounded-xl">
@@ -780,7 +780,7 @@ export default function LegacyVisionBuilderPage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white">¡Estás a punto de ser Capitán!</h2>
-                    <p className="text-amber-200 text-sm">Define la misión de tu tribu</p>
+                    <p className="text-cyan-200 text-sm">Define la misión de tu tribu</p>
                   </div>
                 </div>
                 <button
@@ -798,8 +798,8 @@ export default function LegacyVisionBuilderPage() {
             {/* Contenido */}
             <div className="p-6 space-y-6">
               {/* Contexto */}
-              <div className="bg-amber-900/30 border border-amber-600/30 rounded-xl p-4">
-                <p className="text-amber-200 text-sm flex items-center gap-2">
+              <div className="bg-blue-900/30 border border-blue-600/30 rounded-xl p-4">
+                <p className="text-cyan-200 text-sm flex items-center gap-2">
                   <Sparkles className="w-4 h-4 flex-shrink-0" />
                   <span>
                     La misión de la tribu es el propósito que los unirá durante todo el programa. 
@@ -819,7 +819,7 @@ export default function LegacyVisionBuilderPage() {
                   placeholder="Ej: Ser la tribu más unida y comprometida, generando un impacto positivo en nuestra comunidad..."
                   rows={4}
                   maxLength={500}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-none"
                 />
                 <p className="text-gray-500 text-xs mt-1 text-right">
                   {tribeMission.length}/500 caracteres
@@ -841,7 +841,7 @@ export default function LegacyVisionBuilderPage() {
                 <button
                   onClick={handleConfirmClaimWithMission}
                   disabled={missionModal.loading || !tribeMission.trim()}
-                  className="flex-1 px-6 py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 px-6 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-black font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {missionModal.loading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -871,9 +871,9 @@ export default function LegacyVisionBuilderPage() {
       {/* Modal para Crear/Ver Campaña de Legacy Builder */}
       {campaignModal.show && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-2xl border border-pink-600/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-gray-900 rounded-2xl border border-blue-600/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Header del Modal */}
-            <div className="bg-gradient-to-r from-pink-600 to-rose-600 p-6 rounded-t-2xl">
+            <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-white/20 rounded-xl">
@@ -883,7 +883,7 @@ export default function LegacyVisionBuilderPage() {
                     <h2 className="text-xl font-bold text-white">
                       {campaignModal.existingCampaign ? 'Tu Campaña de Servicio' : 'Crear Campaña Comunitaria'}
                     </h2>
-                    <p className="text-pink-200 text-sm">Legacy Builder - Crowdfunding</p>
+                    <p className="text-cyan-200 text-sm">Legacy Builder - Crowdfunding</p>
                   </div>
                 </div>
                 <button
@@ -899,7 +899,7 @@ export default function LegacyVisionBuilderPage() {
             <div className="p-6">
               {campaignModal.loading ? (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="w-10 h-10 animate-spin text-pink-500 mb-4" />
+                  <Loader2 className="w-10 h-10 animate-spin text-cyan-500 mb-4" />
                   <p className="text-gray-400">Cargando...</p>
                 </div>
               ) : campaignModal.existingCampaign ? (
@@ -914,7 +914,7 @@ export default function LegacyVisionBuilderPage() {
                         campaignModal.existingCampaign.status === 'ACTIVE' 
                           ? 'bg-green-900/50 text-green-400 border border-green-600/30'
                           : campaignModal.existingCampaign.status === 'DRAFT'
-                          ? 'bg-yellow-900/50 text-yellow-400 border border-yellow-600/30'
+                          ? 'bg-blue-900/50 text-cyan-400 border border-blue-600/30'
                           : 'bg-gray-800 text-gray-400 border border-gray-600'
                       }`}>
                         {campaignModal.existingCampaign.status === 'ACTIVE' ? '🟢 Activa' : 
@@ -933,7 +933,7 @@ export default function LegacyVisionBuilderPage() {
                       </div>
                       <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
                         <div 
-                          className="bg-gradient-to-r from-pink-500 to-rose-500 h-full rounded-full transition-all"
+                          className="bg-gradient-to-r from-blue-500 to-cyan-500 h-full rounded-full transition-all"
                           style={{ 
                             width: `${Math.min(100, (Number(campaignModal.existingCampaign.raisedAmount || 0) / Number(campaignModal.existingCampaign.goalAmount)) * 100)}%` 
                           }}
@@ -952,7 +952,7 @@ export default function LegacyVisionBuilderPage() {
                     {/* Estadísticas */}
                     <div className="grid grid-cols-3 gap-3">
                       <div className="bg-gray-900 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-bold text-pink-400">
+                        <p className="text-2xl font-bold text-cyan-400">
                           {campaignModal.existingCampaign._count?.donations || 0}
                         </p>
                         <p className="text-xs text-gray-500">Donaciones</p>
@@ -964,7 +964,7 @@ export default function LegacyVisionBuilderPage() {
                         <p className="text-xs text-gray-500">Miembros</p>
                       </div>
                       <div className="bg-gray-900 rounded-lg p-3 text-center">
-                        <p className="text-2xl font-bold text-purple-400">
+                        <p className="text-2xl font-bold text-cyan-400">
                           {campaignModal.existingCampaign._count?.expenses || 0}
                         </p>
                         <p className="text-xs text-gray-500">Gastos</p>
@@ -972,8 +972,8 @@ export default function LegacyVisionBuilderPage() {
                     </div>
                   </div>
 
-                  <div className="bg-pink-900/20 border border-pink-600/30 rounded-xl p-4 text-center">
-                    <p className="text-pink-200 text-sm">
+                  <div className="bg-blue-900/20 border border-blue-600/30 rounded-xl p-4 text-center">
+                    <p className="text-cyan-200 text-sm">
                       🚀 Para gestionar tu campaña completa, visita el panel de Legacy Builder
                     </p>
                   </div>
@@ -981,8 +981,8 @@ export default function LegacyVisionBuilderPage() {
               ) : (
                 /* Formulario para Crear Nueva Campaña */
                 <div className="space-y-6">
-                  <div className="bg-pink-900/20 border border-pink-600/30 rounded-xl p-4">
-                    <p className="text-pink-200 text-sm flex items-center gap-2">
+                  <div className="bg-blue-900/20 border border-blue-600/30 rounded-xl p-4">
+                    <p className="text-cyan-200 text-sm flex items-center gap-2">
                       <Heart className="w-4 h-4" />
                       Como Capitán de Comunitaria Grupal, puedes crear una campaña de crowdfunding para tu visión.
                     </p>
@@ -1002,7 +1002,7 @@ export default function LegacyVisionBuilderPage() {
                           formData: { ...prev.formData, title: e.target.value }
                         }))}
                         placeholder="Ej: Apoyo a Casa Hogar San José"
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                       />
                     </div>
 
@@ -1019,7 +1019,7 @@ export default function LegacyVisionBuilderPage() {
                         }))}
                         placeholder="¿Cuál es el propósito de esta campaña?"
                         rows={3}
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 resize-none"
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-none"
                       />
                     </div>
 
@@ -1036,7 +1036,7 @@ export default function LegacyVisionBuilderPage() {
                         }))}
                         placeholder="Cuenta la historia detrás de este proyecto..."
                         rows={4}
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 resize-none"
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-none"
                       />
                     </div>
 
@@ -1056,7 +1056,7 @@ export default function LegacyVisionBuilderPage() {
                           }))}
                           placeholder="50000"
                           min="1000"
-                          className="w-full px-4 py-3 pl-8 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+                          className="w-full px-4 py-3 pl-8 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                         />
                       </div>
                       <p className="text-gray-500 text-xs mt-1">Mínimo $1,000 MXN</p>
@@ -1075,7 +1075,7 @@ export default function LegacyVisionBuilderPage() {
                           formData: { ...prev.formData, videoUrl: e.target.value }
                         }))}
                         placeholder="https://youtube.com/watch?v=..."
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                       />
                     </div>
                   </div>
@@ -1084,7 +1084,7 @@ export default function LegacyVisionBuilderPage() {
                   <button
                     onClick={handleCreateCampaign}
                     disabled={campaignModal.loading}
-                    className="w-full py-4 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {campaignModal.loading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -1108,14 +1108,14 @@ export default function LegacyVisionBuilderPage() {
 
       <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 rounded-2xl p-6 text-white relative overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-600 rounded-2xl p-6 text-white relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('/patterns/tribal.svg')] opacity-10" />
           <div className="relative">
             <div className="flex items-center gap-3 mb-2">
               <Crown className="w-8 h-8" />
               <h1 className="text-2xl font-bold">Legacy Vision Builder</h1>
             </div>
-            <p className="text-yellow-200">
+            <p className="text-cyan-200">
               {data.visionName} • Sistema de Capitanías de la Tribu
             </p>
           </div>
@@ -1143,7 +1143,7 @@ export default function LegacyVisionBuilderPage() {
                   disabled={step.phase > 1 && !data.oathSigned}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                     isActive
-                      ? 'bg-yellow-600 text-white'
+                      ? 'bg-blue-600 text-white'
                       : isCompleted
                         ? 'bg-green-600/20 text-green-400 border border-green-600/50'
                         : 'bg-gray-800 text-gray-400 border border-gray-700'
@@ -1167,14 +1167,14 @@ export default function LegacyVisionBuilderPage() {
         {/* FASE 1: EL JURAMENTO */}
         {currentPhase === 1 && (
           <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-900/50 to-indigo-900/50 p-6 border-b border-gray-800">
+            <div className="bg-gradient-to-r from-blue-900/50 to-slate-900/50 p-6 border-b border-gray-800">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-purple-600/30 rounded-xl">
-                  <Shield className="w-6 h-6 text-purple-400" />
+                <div className="p-3 bg-blue-600/30 rounded-xl">
+                  <Shield className="w-6 h-6 text-cyan-400" />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-white">El Juramento de la Tribu</h2>
-                  <p className="text-purple-300/80 text-sm">
+                  <p className="text-cyan-300/80 text-sm">
                     Las 16 Promesas de Sostenibilidad
                   </p>
                 </div>
@@ -1200,7 +1200,7 @@ export default function LegacyVisionBuilderPage() {
                 </p>
                 <button
                   onClick={() => setCurrentPhase(2)}
-                  className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold rounded-xl transition-colors"
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors"
                 >
                   Continuar a La Elección
                   <ChevronRight className="w-5 h-5 inline ml-2" />
@@ -1218,8 +1218,8 @@ export default function LegacyVisionBuilderPage() {
                       key={promise.id}
                       className="flex items-start gap-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700/50"
                     >
-                      <div className="w-10 h-10 bg-purple-600/30 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-purple-400 font-bold">{idx + 1}</span>
+                      <div className="w-10 h-10 bg-blue-600/30 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-cyan-400 font-bold">{idx + 1}</span>
                       </div>
                       <div>
                         <h4 className="font-semibold text-white">{promise.title}</h4>
@@ -1240,17 +1240,17 @@ export default function LegacyVisionBuilderPage() {
                       onChange={(e) => setSignatureText(e.target.value)}
                       disabled={!scrolledToBottom}
                       placeholder="Tu nombre completo..."
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
+                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50"
                     />
                     {!scrolledToBottom && (
-                      <p className="text-yellow-500 text-sm mt-2">
+                      <p className="text-cyan-500 text-sm mt-2">
                         ⚠️ Debes leer todas las promesas antes de firmar
                       </p>
                     )}
                     <button
                       onClick={handleSignOath}
                       disabled={!scrolledToBottom || signing || signatureText.trim().length < 3}
-                      className="w-full mt-4 px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full mt-4 px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {signing ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -1288,22 +1288,22 @@ export default function LegacyVisionBuilderPage() {
                 <>
                   {/* Banner de Reclamar Capitanía (si no hay capitán) */}
                   {!hasTribeCaptain && !data.isStaff && (
-                    <div className="bg-gradient-to-r from-yellow-900/80 to-amber-900/80 rounded-2xl border-2 border-yellow-500/50 overflow-hidden animate-pulse-slow">
+                    <div className="bg-gradient-to-r from-blue-900/80 to-slate-900/80 rounded-2xl border-2 border-cyan-500/50 overflow-hidden animate-pulse-slow">
                       <div className="p-8 text-center">
-                        <div className="w-20 h-20 bg-yellow-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Crown className="w-10 h-10 text-yellow-400" />
+                        <div className="w-20 h-20 bg-cyan-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Crown className="w-10 h-10 text-cyan-400" />
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">
                           ¡La Tribu Necesita un Líder!
                         </h2>
-                        <p className="text-yellow-200/80 mb-6 max-w-md mx-auto">
+                        <p className="text-cyan-200/80 mb-6 max-w-md mx-auto">
                           Sé el primero en tomar el mando. Como Capitán de Tribu serás responsable de 
                           asignar las demás capitanías y liderar a tu equipo.
                         </p>
                         <button
                           onClick={() => handleClaimTribeCaptain()}
                           disabled={nominating}
-                          className="px-8 py-4 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-bold text-lg rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none flex items-center gap-3 mx-auto"
+                          className="px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-black font-bold text-lg rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none flex items-center gap-3 mx-auto"
                         >
                           {nominating ? (
                             <Loader2 className="w-6 h-6 animate-spin" />
@@ -1320,16 +1320,16 @@ export default function LegacyVisionBuilderPage() {
 
                   {/* Sección de Misión de la Tribu (visible cuando hay capitán) */}
                   {hasTribeCaptain && (
-                    <div className="bg-gradient-to-r from-amber-900/30 to-yellow-900/20 rounded-2xl border border-yellow-500/30 overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-900/30 to-slate-900/20 rounded-2xl border border-cyan-500/30 overflow-hidden">
                       <div className="p-6">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-4 flex-1">
-                            <div className="p-3 bg-yellow-500/20 rounded-xl flex-shrink-0">
-                              <Target className="w-6 h-6 text-yellow-400" />
+                            <div className="p-3 bg-cyan-500/20 rounded-xl flex-shrink-0">
+                              <Target className="w-6 h-6 text-cyan-400" />
                             </div>
                             <div className="flex-1">
                               <h3 className="text-lg font-bold text-white mb-1">Misión de la Tribu</h3>
-                              <p className="text-yellow-200/60 text-sm mb-3">Tu legado transformacional</p>
+                              <p className="text-cyan-200/60 text-sm mb-3">Tu legado transformacional</p>
                               
                               {editingMission ? (
                                 <div className="space-y-3">
@@ -1339,7 +1339,7 @@ export default function LegacyVisionBuilderPage() {
                                     placeholder="Escribe la misión de tu tribu..."
                                     rows={3}
                                     maxLength={500}
-                                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-none"
+                                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-none"
                                   />
                                   <div className="flex items-center justify-between">
                                     <span className="text-gray-500 text-xs">{editMissionText.length}/500</span>
@@ -1357,7 +1357,7 @@ export default function LegacyVisionBuilderPage() {
                                       <button
                                         onClick={handleSaveMission}
                                         disabled={savingMission || editMissionText.trim().length < 10}
-                                        className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
                                       >
                                         {savingMission ? (
                                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -1392,7 +1392,7 @@ export default function LegacyVisionBuilderPage() {
                                 setEditMissionText(data.tribeMission || '');
                                 setEditingMission(true);
                               }}
-                              className="p-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors"
+                              className="p-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-lg transition-colors"
                               title="Editar misión"
                             >
                               <Pencil className="w-5 h-5" />
@@ -1405,15 +1405,15 @@ export default function LegacyVisionBuilderPage() {
 
                   {/* Panel de Asignación (Staff o Capitán de Tribu) */}
                   {canAssign && (
-                    <div className="bg-gray-900 rounded-2xl border border-yellow-600/30 overflow-hidden">
-                      <div className="bg-gradient-to-r from-yellow-900/50 to-amber-900/50 p-6 border-b border-yellow-600/30">
+                    <div className="bg-gray-900 rounded-2xl border border-blue-600/30 overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-900/50 to-slate-900/50 p-6 border-b border-blue-600/30">
                         <div className="flex items-center gap-3">
-                          <div className="p-3 bg-yellow-600/30 rounded-xl">
-                            <UserPlus className="w-6 h-6 text-yellow-400" />
+                          <div className="p-3 bg-blue-600/30 rounded-xl">
+                            <UserPlus className="w-6 h-6 text-cyan-400" />
                           </div>
                           <div>
                             <h2 className="text-xl font-bold text-white">Panel de Asignación</h2>
-                            <p className="text-yellow-300/80 text-sm">
+                            <p className="text-cyan-300/80 text-sm">
                               {currentUserIsCaptain 
                                 ? 'Como Capitán de Tribu, asigna los roles a tu equipo'
                                 : 'Asigna capitanes a cada rol de la tribu'}
@@ -1444,11 +1444,11 @@ export default function LegacyVisionBuilderPage() {
                                     disabled={isFull}
                                     className={`p-3 rounded-xl border transition-all text-left ${
                                       selectedRole === cap.roleType
-                                        ? 'bg-yellow-600/20 border-yellow-500 text-yellow-400'
+                                        ? 'bg-blue-600/20 border-cyan-500 text-cyan-400'
                                         : isFull
                                           ? hasConfirmed 
                                             ? 'bg-green-900/20 border-green-700 text-green-400 cursor-not-allowed'
-                                            : 'bg-yellow-900/20 border-yellow-700 text-yellow-400 cursor-not-allowed'
+                                            : 'bg-blue-900/20 border-blue-700 text-cyan-400 cursor-not-allowed'
                                           : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
                                     }`}
                                   >
@@ -1462,7 +1462,7 @@ export default function LegacyVisionBuilderPage() {
                                       </div>
                                     )}
                                     {hasPending && !hasConfirmed && (
-                                      <div className="text-xs mt-1 text-yellow-400 flex items-center gap-1">
+                                      <div className="text-xs mt-1 text-cyan-400 flex items-center gap-1">
                                         <Clock className="w-3 h-3" /> Pendiente
                                       </div>
                                     )}
@@ -1482,7 +1482,7 @@ export default function LegacyVisionBuilderPage() {
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Buscar miembro de la tribu..."
-                                className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-yellow-500"
+                                className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-cyan-500"
                               />
                             </div>
 
@@ -1502,7 +1502,7 @@ export default function LegacyVisionBuilderPage() {
                                     className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
                                       isAssigned
                                         ? 'bg-gray-800/50 border border-gray-700 cursor-not-allowed'
-                                        : 'bg-gray-800 border border-gray-700 hover:border-yellow-600 hover:bg-gray-800/80'
+                                        : 'bg-gray-800 border border-gray-700 hover:border-blue-600 hover:bg-gray-800/80'
                                     }`}
                                   >
                                     <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
@@ -1519,7 +1519,7 @@ export default function LegacyVisionBuilderPage() {
                                     {isAssigned ? (
                                       <span className="text-xs text-gray-500">Ya asignado</span>
                                     ) : nominating ? (
-                                      <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
+                                      <Loader2 className="w-5 h-5 animate-spin text-cyan-500" />
                                     ) : (
                                       <ChevronRight className="w-5 h-5 text-gray-600" />
                                     )}
@@ -1552,14 +1552,14 @@ export default function LegacyVisionBuilderPage() {
 
             {/* Tabla de Capitanías */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
-              <div className="bg-gradient-to-r from-amber-900/50 to-orange-900/50 p-6 border-b border-gray-800">
+              <div className="bg-gradient-to-r from-blue-900/50 to-cyan-900/50 p-6 border-b border-gray-800">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-amber-600/30 rounded-xl">
-                    <Crown className="w-6 h-6 text-amber-400" />
+                  <div className="p-3 bg-blue-600/30 rounded-xl">
+                    <Crown className="w-6 h-6 text-cyan-400" />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white">Capitanías de la Tribu</h2>
-                    <p className="text-amber-300/80 text-sm">
+                    <p className="text-cyan-300/80 text-sm">
                       Estado actual de los roles asignados
                     </p>
                   </div>
@@ -1575,8 +1575,8 @@ export default function LegacyVisionBuilderPage() {
                       <div className="flex flex-col md:flex-row md:items-center gap-4">
                         {/* Info del Rol */}
                         <div className="flex items-center gap-4 flex-1">
-                          <div className="w-12 h-12 bg-gradient-to-br from-yellow-600/30 to-amber-600/30 rounded-xl flex items-center justify-center">
-                            <RoleIcon className="w-6 h-6 text-yellow-400" />
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-600/30 to-cyan-600/30 rounded-xl flex items-center justify-center">
+                            <RoleIcon className="w-6 h-6 text-cyan-400" />
                           </div>
                           <div>
                             <h3 className="font-semibold text-white flex items-center gap-2">
@@ -1616,7 +1616,7 @@ export default function LegacyVisionBuilderPage() {
                                     {assignment.userName}
                                   </span>
                                   {assignment.status === 'PENDING' && (
-                                    <Clock className="w-4 h-4 text-yellow-500" />
+                                    <Clock className="w-4 h-4 text-cyan-500" />
                                   )}
                                   {assignment.status === 'ACCEPTED' && (
                                     <CheckCircle className="w-4 h-4 text-green-500" />
@@ -1650,14 +1650,14 @@ export default function LegacyVisionBuilderPage() {
         {/* FASE 3: PODERES ACTIVADOS */}
         {currentPhase === 3 && (
           <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 p-6 border-b border-gray-800">
+            <div className="bg-gradient-to-r from-blue-900/50 to-slate-900/50 p-6 border-b border-gray-800">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-purple-600/30 rounded-xl">
-                  <Sparkles className="w-6 h-6 text-purple-400" />
+                <div className="p-3 bg-blue-600/30 rounded-xl">
+                  <Sparkles className="w-6 h-6 text-cyan-400" />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-white">Poderes Activados</h2>
-                  <p className="text-purple-300/80 text-sm">
+                  <p className="text-cyan-300/80 text-sm">
                     Tus widgets y herramientas especiales
                   </p>
                 </div>
@@ -1703,15 +1703,15 @@ export default function LegacyVisionBuilderPage() {
                       return (
                         <div
                           key={cap.roleType}
-                          className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 rounded-xl p-6 border border-purple-600/30"
+                          className="bg-gradient-to-br from-blue-900/30 to-slate-900/30 rounded-xl p-6 border border-blue-600/30"
                         >
                           <div className="flex items-center gap-4 mb-4">
-                            <div className="w-14 h-14 bg-purple-600/30 rounded-xl flex items-center justify-center">
-                              <RoleIcon className="w-7 h-7 text-purple-400" />
+                            <div className="w-14 h-14 bg-blue-600/30 rounded-xl flex items-center justify-center">
+                              <RoleIcon className="w-7 h-7 text-cyan-400" />
                             </div>
                             <div>
                               <h3 className="font-bold text-white">{cap.name}</h3>
-                              <p className="text-purple-400 text-sm">{cap.widgetName}</p>
+                              <p className="text-cyan-400 text-sm">{cap.widgetName}</p>
                             </div>
                           </div>
                           
@@ -1720,7 +1720,7 @@ export default function LegacyVisionBuilderPage() {
                           </p>
 
                           <button
-                            className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
                             onClick={() => {
                               if (cap.roleType === 'COMMUNITY_SERVICE') {
                                 // Redirigir a Legacy Forge - Democracia Cuántica
