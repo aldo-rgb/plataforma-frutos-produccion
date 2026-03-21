@@ -497,27 +497,27 @@ function CalificarContent() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4" />
-          <p className="text-purple-300">Cargando plataforma...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4" />
+          <p className="text-cyan-300">Cargando plataforma...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-lg border-b border-purple-500/30 px-4 py-3">
+      <div className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-lg border-b border-blue-500/30 px-4 py-3">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
               <p className="text-white font-medium text-sm">¡Hola, {visitorName}!</p>
-              <p className="text-purple-300 text-xs">{ratedExhibitors.length} calificaciones</p>
+              <p className="text-cyan-300 text-xs">{ratedExhibitors.length} calificaciones</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -542,7 +542,7 @@ function CalificarContent() {
                 <h1 className="text-2xl font-bold text-white mb-2">
                   Plataforma de Calificaciones
                 </h1>
-                <p className="text-purple-300 text-sm">
+                <p className="text-cyan-300 text-sm">
                   Escanea el QR de un expositor o búscalo manualmente
                 </p>
               </div>
@@ -554,11 +554,11 @@ function CalificarContent() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={startScanner}
-                  className="bg-gradient-to-br from-purple-600 to-purple-700 p-6 rounded-2xl border border-purple-500/30 text-center"
+                  className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-2xl border border-blue-500/30 text-center"
                 >
                   <Camera className="w-10 h-10 text-white mx-auto mb-2" />
                   <p className="text-white font-medium">Escanear QR</p>
-                  <p className="text-purple-200 text-xs mt-1">Del gafete</p>
+                  <p className="text-cyan-200 text-xs mt-1">Del gafete</p>
                 </motion.button>
 
                 {/* Buscar */}
@@ -572,11 +572,11 @@ function CalificarContent() {
                       setTimeout(() => searchInput.focus(), 300);
                     }
                   }}
-                  className="bg-gradient-to-br from-pink-600 to-pink-700 p-6 rounded-2xl border border-pink-500/30 text-center"
+                  className="bg-gradient-to-br from-cyan-600 to-cyan-700 p-6 rounded-2xl border border-cyan-500/30 text-center"
                 >
                   <Search className="w-10 h-10 text-white mx-auto mb-2" />
                   <p className="text-white font-medium">Buscar</p>
-                  <p className="text-pink-200 text-xs mt-1">Por nombre</p>
+                  <p className="text-cyan-200 text-xs mt-1">Por nombre</p>
                 </motion.button>
               </div>
 
@@ -593,10 +593,10 @@ function CalificarContent() {
                       searchExhibitors(e.target.value);
                     }}
                     placeholder="Buscar expositor por nombre..."
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-800 border border-slate-600 text-white placeholder-slate-500 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/30 focus:outline-none transition-all"
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-800 border border-slate-600 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30 focus:outline-none transition-all"
                   />
                   {searching && (
-                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-pink-400 animate-spin" />
+                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400 animate-spin" />
                   )}
                 </div>
 
@@ -710,13 +710,13 @@ function CalificarContent() {
                     setMode('hub');
                     setSelectedOrgId(null);
                   }}
-                  className="p-2 rounded-xl bg-slate-800 text-purple-400 hover:bg-slate-700"
+                  className="p-2 rounded-xl bg-slate-800 text-cyan-400 hover:bg-slate-700"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div>
                   <h1 className="text-xl font-bold text-white">Selecciona una Visión</h1>
-                  <p className="text-purple-300 text-sm">
+                  <p className="text-cyan-300 text-sm">
                     Elige la expo que deseas explorar
                   </p>
                 </div>
@@ -724,7 +724,7 @@ function CalificarContent() {
 
               {loadingOrgs ? (
                 <div className="text-center py-12">
-                  <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-4" />
+                  <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto mb-4" />
                   <p className="text-slate-400">Cargando visiones...</p>
                 </div>
               ) : organizations.length === 0 ? (
@@ -738,18 +738,18 @@ function CalificarContent() {
                       {/* Nombre de la organización */}
                       <button
                         onClick={() => setSelectedOrgId(selectedOrgId === org.id ? null : org.id)}
-                        className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl border border-purple-500/20 hover:border-purple-500/40 transition-all"
+                        className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl border border-blue-500/20 hover:border-blue-500/40 transition-all"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center">
-                            <Rocket className="w-5 h-5 text-purple-400" />
+                          <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center">
+                            <Rocket className="w-5 h-5 text-cyan-400" />
                           </div>
                           <div className="text-left">
                             <p className="text-white font-medium">{org.name}</p>
                             <p className="text-slate-400 text-sm">{org.visions.length} visiones activas</p>
                           </div>
                         </div>
-                        <ChevronRight className={`w-5 h-5 text-purple-400 transition-transform ${selectedOrgId === org.id ? 'rotate-90' : ''}`} />
+                        <ChevronRight className={`w-5 h-5 text-cyan-400 transition-transform ${selectedOrgId === org.id ? 'rotate-90' : ''}`} />
                       </button>
 
                       {/* Lista de visiones (expandible) */}
@@ -802,13 +802,13 @@ function CalificarContent() {
                     setMode('hub');
                     setSelectedCategory(null);
                   }}
-                  className="p-2 rounded-xl bg-slate-800 text-purple-400 hover:bg-slate-700"
+                  className="p-2 rounded-xl bg-slate-800 text-cyan-400 hover:bg-slate-700"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div>
                   <h1 className="text-xl font-bold text-white">Catálogo de Expositores</h1>
-                  <p className="text-purple-300 text-sm">
+                  <p className="text-cyan-300 text-sm">
                     {catalogExhibitors.length} negocios disponibles
                     {currentVisionName && (
                       <span className="ml-1">• {currentVisionName}</span>
@@ -819,7 +819,7 @@ function CalificarContent() {
 
               {loadingCatalog ? (
                 <div className="text-center py-12">
-                  <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-4" />
+                  <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto mb-4" />
                   <p className="text-slate-400">Cargando catálogo...</p>
                 </div>
               ) : (
@@ -827,7 +827,7 @@ function CalificarContent() {
                   {/* Filtros por categoría */}
                   {categories.length > 0 && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-purple-300 text-sm">
+                      <div className="flex items-center gap-2 text-cyan-300 text-sm">
                         <Filter className="w-4 h-4" />
                         <span>Filtrar por área:</span>
                       </div>
@@ -836,7 +836,7 @@ function CalificarContent() {
                           onClick={() => setSelectedCategory(null)}
                           className={`px-3 py-2 rounded-full text-sm font-medium transition-all ${
                             selectedCategory === null
-                              ? 'bg-purple-600 text-white'
+                              ? 'bg-blue-600 text-white'
                               : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                           }`}
                         >
@@ -848,7 +848,7 @@ function CalificarContent() {
                             onClick={() => setSelectedCategory(cat.id)}
                             className={`px-3 py-2 rounded-full text-sm font-medium transition-all ${
                               selectedCategory === cat.id
-                                ? 'bg-purple-600 text-white'
+                                ? 'bg-blue-600 text-white'
                                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                             }`}
                           >
@@ -880,13 +880,13 @@ function CalificarContent() {
                               <img
                                 src={exhibitor.logoUrl || exhibitor.userImage || '/default-avatar.png'}
                                 alt={exhibitor.headline}
-                                className="w-16 h-16 rounded-xl object-cover border-2 border-purple-500/30"
+                                className="w-16 h-16 rounded-xl object-cover border-2 border-blue-500/30"
                               />
                               <div className="flex-1 min-w-0">
                                 <h3 className="text-white font-bold truncate">{exhibitor.headline}</h3>
-                                <p className="text-purple-300 text-sm">{exhibitor.userName}</p>
+                                <p className="text-cyan-300 text-sm">{exhibitor.userName}</p>
                                 <div className="flex items-center gap-2 mt-1">
-                                  <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-xs">
+                                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-cyan-300 text-xs">
                                     {exhibitor.categoryIcon} {exhibitor.categoryName}
                                   </span>
                                   {exhibitor.avgRating > 0 && (
@@ -956,7 +956,7 @@ function CalificarContent() {
                                 className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                                   alreadyRated
                                     ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                                    : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg hover:shadow-purple-500/25'
+                                    : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:shadow-lg hover:shadow-blue-500/25'
                                 }`}
                               >
                                 {alreadyRated ? (
@@ -997,14 +997,14 @@ function CalificarContent() {
                   setSearchQuery('');
                   setSearchResults([]);
                 }}
-                className="text-purple-400 text-sm flex items-center gap-1 hover:text-purple-300"
+                className="text-cyan-400 text-sm flex items-center gap-1 hover:text-cyan-300"
               >
                 ← Volver al inicio
               </button>
 
               {loadingExhibitor ? (
                 <div className="text-center py-12">
-                  <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-4" />
+                  <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto mb-4" />
                   <p className="text-slate-400">Cargando expositor...</p>
                 </div>
               ) : currentExhibitor && (
@@ -1015,9 +1015,9 @@ function CalificarContent() {
                       <img
                         src={currentExhibitor.imagen || '/default-avatar.png'}
                         alt={currentExhibitor.nombre}
-                        className="w-full h-full rounded-full object-cover border-4 border-purple-500/50 shadow-2xl shadow-purple-500/30"
+                        className="w-full h-full rounded-full object-cover border-4 border-blue-500/50 shadow-2xl shadow-blue-500/30"
                       />
-                      <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                         <Rocket className="w-4 h-4 text-white" />
                       </div>
                     </div>
@@ -1025,7 +1025,7 @@ function CalificarContent() {
                       {currentExhibitor.nombre}
                     </h2>
                     {currentExhibitor.headline && (
-                      <p className="text-purple-300 text-sm">{currentExhibitor.headline}</p>
+                      <p className="text-cyan-300 text-sm">{currentExhibitor.headline}</p>
                     )}
                   </div>
 
@@ -1143,7 +1143,7 @@ function CalificarContent() {
                       {/* Comentario opcional */}
                       <div>
                         <label className="text-white font-medium mb-2 block flex items-center gap-2">
-                          <MessageSquare className="w-4 h-4 text-purple-400" />
+                          <MessageSquare className="w-4 h-4 text-cyan-400" />
                           Comentario (opcional)
                         </label>
                         <textarea
@@ -1151,7 +1151,7 @@ function CalificarContent() {
                           onChange={(e) => setFeedback(e.target.value)}
                           placeholder="Deja un mensaje para el expositor..."
                           rows={3}
-                          className="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-white placeholder-slate-500 focus:border-purple-500 focus:outline-none resize-none"
+                          className="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none resize-none"
                         />
                       </div>
 
@@ -1172,7 +1172,7 @@ function CalificarContent() {
                         whileTap={{ scale: 0.98 }}
                         onClick={submitRating}
                         disabled={submitting || rating === 0 || !hiringIntent}
-                        className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         {submitting ? (
                           <>
@@ -1227,14 +1227,14 @@ function CalificarContent() {
                       setScannerError(null);
                       startScanner();
                     }}
-                    className="mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm"
+                    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm"
                   >
                     Reintentar
                   </button>
                 </div>
               )}
 
-              <p className="text-purple-300 text-sm mt-4 text-center">
+              <p className="text-cyan-300 text-sm mt-4 text-center">
                 Apunta la cámara al código QR del gafete del expositor
               </p>
             </div>
@@ -1253,10 +1253,10 @@ function CalificarContent() {
       </AnimatePresence>
 
       {/* Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-lg border-t border-purple-500/30 px-4 py-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-lg border-t border-blue-500/30 px-4 py-3">
         <div className="max-w-md mx-auto text-center">
           <p className="text-slate-600 text-xs">
-            Powered by <span className="text-purple-400">Quantum AI</span>
+            Powered by <span className="text-cyan-400">Quantum AI</span>
           </p>
         </div>
       </div>
@@ -1267,10 +1267,10 @@ function CalificarContent() {
 export default function CalificarPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4" />
-          <p className="text-purple-300">Cargando...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4" />
+          <p className="text-cyan-300">Cargando...</p>
         </div>
       </div>
     }>
