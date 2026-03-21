@@ -833,7 +833,7 @@ export default function PublicWebsite({ website }: { website: WebsiteData }) {
           © {new Date().getFullYear()} {website.businessName}. Todos los derechos reservados.
         </p>
         <p className="mt-2 text-sm" style={{ color: colors.secondary + '80' }}>
-          Hecho con 💜 usando{' '}
+          Hecho con{' '}
           <a 
             href="https://frutos.app" 
             target="_blank" 

@@ -2937,9 +2937,9 @@ export default function QuantumBusinessBuilderPage() {
                     
                     {/* Oferta para crear web con IA si no tiene */}
                     {!previewWebsite && (
-                      <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-xl p-4 border border-cyan-500/30">
+                      <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 rounded-xl p-4 border border-cyan-500/30">
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
                             <Sparkles className="w-5 h-5 text-white" />
                           </div>
                           <div className="flex-1">
@@ -2967,7 +2967,7 @@ export default function QuantumBusinessBuilderPage() {
                                 console.log('Datos guardados para Quantum Web:', quantumData);
                                 router.push('/dashboard/quantum-web');
                               }}
-                              className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-pink-600 text-white font-medium text-sm hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
+                              className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium text-sm hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
                             >
                               <Wand2 className="w-4 h-4" />
                               <span>Crear mi Web con IA</span>
@@ -3251,7 +3251,7 @@ export default function QuantumBusinessBuilderPage() {
                 onClick={() => setEsIrrazonable(!esIrrazonable)}
                 className={`relative w-20 h-10 rounded-full transition-all duration-300 ${
                   esIrrazonable 
-                    ? 'bg-gradient-to-r from-blue-600 to-pink-600' 
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-500' 
                     : 'bg-slate-700'
                 }`}
               >
@@ -3334,7 +3334,7 @@ export default function QuantumBusinessBuilderPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => saveProfile(true)}
-              className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-pink-600 text-white font-bold hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center gap-2"
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center gap-2"
             >
               <Rocket className="w-5 h-5" />
               <span>🚀 Publicar en Directorio</span>
@@ -3435,10 +3435,10 @@ export default function QuantumBusinessBuilderPage() {
               className="bg-slate-900 rounded-2xl border border-slate-700/50 w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl"
             >
               {/* Header */}
-              <div className="p-5 border-b border-slate-700/50 bg-gradient-to-r from-purple-900/30 to-pink-900/30">
+              <div className="p-5 border-b border-slate-700/50 bg-gradient-to-r from-blue-900/30 to-cyan-900/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-pink-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                       <Wand2 className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -3537,21 +3537,21 @@ export default function QuantumBusinessBuilderPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm"
             onClick={() => setShowHorarioModal(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-lg bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden shadow-2xl"
+              className="w-full max-w-lg bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="p-5 border-b border-slate-700/50 bg-gradient-to-r from-purple-900/30 to-pink-900/30">
+              <div className="p-4 sm:p-5 border-b border-slate-700/50 bg-gradient-to-r from-blue-900/30 to-cyan-900/30 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-pink-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                       <Clock className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -3569,7 +3569,7 @@ export default function QuantumBusinessBuilderPage() {
               </div>
 
               {/* Contenido - Lista de días */}
-              <div className="p-5 max-h-[60vh] overflow-y-auto">
+              <div className="p-4 sm:p-5 overflow-y-auto flex-1">
                 <div className="space-y-3">
                   {Object.entries(horarioConfig).map(([dia, config]) => (
                     <div 
@@ -3718,7 +3718,7 @@ export default function QuantumBusinessBuilderPage() {
                       setPreviewHorario(horarioStr || 'Sin horario definido');
                       setShowHorarioModal(false);
                     }}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-pink-600 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
                   >
                     <Check className="w-4 h-4" />
                     Guardar Horario
