@@ -180,19 +180,13 @@ export default function VisionesWidget({ visiones, userRole, loading }: Visiones
                   {vision.activeProducts && vision.activeProducts.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-amber-500/30">
                       {vision.activeProducts
-                        // COORDINADOR solo ve Check-In Liderato
-                        .filter((product) => {
-                          if (userRole === 'COORDINADOR') {
-                            return product.levelType === 'LEADERSHIP';
-                          }
-                          return true; // Otros roles ven todos los productos
-                        })
+                        // COORDINADOR ve todos los check-ins (Básico, Avanzado, Liderato)
                         .map((product) => (
                         <Link
                           key={product.id}
                           href={`/staff/check-in/${product.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-lg font-semibold text-sm transition-all shadow-lg shadow-amber-500/20"
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2 mb-2 last:mb-0 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-lg font-semibold text-sm transition-all shadow-lg shadow-amber-500/20"
                         >
                           <QrCode size={16} />
                           Check-In {product.levelType === 'BASIC' ? 'Básico' : product.levelType === 'ADVANCED' ? 'Avanzado' : 'Liderato'}
