@@ -1833,17 +1833,17 @@ export default function QuantumWebEngine() {
               {appointmentsConfig.availability.weeklySchedule.map((day, index) => (
                 <div 
                   key={day.day}
-                  className={`p-4 rounded-2xl border transition-all ${
+                  className={`p-3 sm:p-4 rounded-2xl border transition-all ${
                     day.enabled 
                       ? 'bg-slate-800/70 border-slate-700' 
                       : 'bg-slate-900/50 border-slate-800'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
                       <button
                         onClick={() => toggleDayEnabled(index)}
-                        className={`w-12 h-6 rounded-full relative transition-colors ${
+                        className={`w-12 h-6 rounded-full relative transition-colors flex-shrink-0 ${
                           day.enabled ? 'bg-cyan-500' : 'bg-slate-700'
                         }`}
                       >
@@ -1852,15 +1852,15 @@ export default function QuantumWebEngine() {
                           className="w-5 h-5 bg-white rounded-full absolute top-0.5"
                         />
                       </button>
-                      <span className={`font-medium ${day.enabled ? 'text-white' : 'text-slate-500'}`}>
+                      <span className={`font-medium text-sm sm:text-base ${day.enabled ? 'text-white' : 'text-slate-500'}`}>
                         {dayNames[index]}
                       </span>
                     </div>
                     
                     {day.enabled && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 justify-end">
                         {day.slots.map((slot, slotIndex) => (
-                          <div key={slotIndex} className="flex items-center gap-2">
+                          <div key={slotIndex} className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/50 rounded-lg p-1.5 sm:p-0 sm:bg-transparent">
                             <input
                               type="time"
                               value={slot.start}
@@ -1869,9 +1869,9 @@ export default function QuantumWebEngine() {
                                 newSlots[slotIndex] = { ...slot, start: e.target.value };
                                 updateDaySlots(index, newSlots);
                               }}
-                              className="bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:ring-2 focus:ring-cyan-500"
+                              className="bg-slate-700 border border-slate-600 rounded-lg px-1.5 sm:px-2 py-1 sm:py-1.5 text-white text-xs sm:text-sm focus:ring-2 focus:ring-cyan-500 w-[85px] sm:w-auto"
                             />
-                            <span className="text-slate-500">a</span>
+                            <span className="text-slate-500 text-xs sm:text-sm">a</span>
                             <input
                               type="time"
                               value={slot.end}
@@ -1880,7 +1880,7 @@ export default function QuantumWebEngine() {
                                 newSlots[slotIndex] = { ...slot, end: e.target.value };
                                 updateDaySlots(index, newSlots);
                               }}
-                              className="bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:ring-2 focus:ring-cyan-500"
+                              className="bg-slate-700 border border-slate-600 rounded-lg px-1.5 sm:px-2 py-1 sm:py-1.5 text-white text-xs sm:text-sm focus:ring-2 focus:ring-cyan-500 w-[85px] sm:w-auto"
                             />
                             {day.slots.length > 1 && (
                               <button
@@ -1888,7 +1888,7 @@ export default function QuantumWebEngine() {
                                   const newSlots = day.slots.filter((_, i) => i !== slotIndex);
                                   updateDaySlots(index, newSlots);
                                 }}
-                                className="p-1 hover:bg-red-500/20 rounded-lg transition-colors"
+                                className="p-1 hover:bg-red-500/20 rounded-lg transition-colors flex-shrink-0"
                               >
                                 <X className="w-4 h-4 text-red-400" />
                               </button>
@@ -1900,7 +1900,7 @@ export default function QuantumWebEngine() {
                             const newSlots = [...day.slots, { start: '14:00', end: '18:00' }];
                             updateDaySlots(index, newSlots);
                           }}
-                          className="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+                          className="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors flex-shrink-0"
                           title="Agregar otro horario"
                         >
                           <Plus className="w-4 h-4 text-slate-400" />
@@ -3088,14 +3088,14 @@ export default function QuantumWebEngine() {
         )}
         
         {/* Preview Frame */}
-        <div className={`flex-1 flex justify-center px-4 pt-4 pb-8 transition-all duration-300 overflow-y-auto overflow-x-hidden ${
-          showConfigPanel ? 'ml-72' : ''
+        <div className={`flex-1 flex justify-center px-2 sm:px-4 pt-4 pb-8 transition-all duration-300 overflow-y-auto overflow-x-hidden ${
+          showConfigPanel ? 'md:ml-72' : ''
         }`}>
           {/* Botón Publicar flotante */}
           <button
             onClick={publishSite}
             disabled={isLoading}
-            className="fixed top-20 right-6 z-50 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 hover:from-blue-700 hover:to-cyan-600 transition disabled:opacity-50 shadow-lg shadow-blue-500/30"
+            className="fixed top-20 right-2 sm:right-6 z-50 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:from-blue-700 hover:to-cyan-600 transition disabled:opacity-50 shadow-lg shadow-blue-500/30 text-sm sm:text-base"
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -3106,9 +3106,9 @@ export default function QuantumWebEngine() {
           </button>
           
           <div
-            className={`bg-white rounded-2xl shadow-2xl transition-all duration-300 flex-shrink-0 overflow-y-auto ${
+            className={`bg-white rounded-2xl shadow-2xl transition-all duration-300 flex-shrink-0 overflow-y-auto overflow-x-hidden ${
               previewMode === 'mobile' 
-                ? 'w-[375px] h-[calc(100vh-8rem)]' 
+                ? 'w-full max-w-[375px] h-[calc(100vh-8rem)]' 
                 : 'w-full max-w-5xl h-[calc(100vh-8rem)]'
             }`}
             style={previewMode === 'mobile' ? { minHeight: '667px' } : undefined}
@@ -3153,10 +3153,13 @@ export default function QuantumWebEngine() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3"
+            className="fixed bottom-6 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-lg flex items-center gap-2 sm:gap-3 max-w-[calc(100%-2rem)] sm:max-w-none"
           >
-            <Edit3 className="w-5 h-5" />
-            <span className="font-medium">Haz clic en cualquier texto o imagen para editarlo</span>
+            <Edit3 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+            <span className="font-medium text-sm sm:text-base">
+              <span className="hidden sm:inline">Haz clic en cualquier texto o imagen para editarlo</span>
+              <span className="sm:hidden">Toca texto o imagen para editar</span>
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -4281,10 +4284,10 @@ function WebsitePreview({
           {editMode && (
             <button
               onClick={() => setShowImageModal(true)}
-              className="absolute top-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 opacity-80 hover:opacity-100 transition z-20"
+              className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-orange-500 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg flex items-center gap-1 sm:gap-2 opacity-90 hover:opacity-100 transition z-20 text-xs sm:text-sm"
             >
-              <ImageIcon className="w-4 h-4" />
-              Cambiar imagen
+              <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Cambiar </span>imagen
             </button>
           )}
         </div>

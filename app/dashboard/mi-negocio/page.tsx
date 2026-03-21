@@ -353,18 +353,18 @@ Espero verte ahí!`;
   if (!userId && !visionId) return null;
 
   return (
-    <div className="bg-gradient-to-r from-orange-900/30 to-amber-900/30 rounded-2xl p-6 border border-orange-500/30">
-      <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-        <QrCode className="w-5 h-5 text-orange-400" />
+    <div className="bg-gradient-to-r from-orange-900/30 to-amber-900/30 rounded-2xl p-4 sm:p-6 border border-orange-500/30">
+      <h3 className="text-base sm:text-lg font-bold text-white mb-2 flex items-center gap-2">
+        <QrCode className="w-5 h-5 text-orange-400 flex-shrink-0" />
         Compartir en la Expo
       </h3>
-      <p className="text-slate-400 text-sm mb-4">
+      <p className="text-slate-400 text-xs sm:text-sm mb-4">
         Comparte este link o QR para que los invitados vean el catálogo y califiquen tu negocio
       </p>
 
       <div className="flex flex-col md:flex-row gap-4">
-        {/* QR Code */}
-        <div className="flex-shrink-0">
+        {/* QR Code - centrado en móvil */}
+        <div className="flex-shrink-0 flex justify-center md:justify-start">
           {generatingQR ? (
             <div className="w-32 h-32 bg-slate-800 rounded-xl flex items-center justify-center">
               <Loader2 className="w-6 h-6 text-orange-400 animate-spin" />
@@ -377,18 +377,18 @@ Espero verte ahí!`;
         </div>
 
         {/* Link y botones */}
-        <div className="flex-1 space-y-3">
+        <div className="flex-1 space-y-3 min-w-0">
           {/* Link */}
           <div className="flex gap-2">
             <input
               type="text"
               value={expoLink}
               readOnly
-              className="flex-1 p-2 rounded-lg bg-slate-800/50 border border-slate-600/50 text-white text-sm truncate"
+              className="flex-1 min-w-0 p-2 rounded-lg bg-slate-800/50 border border-slate-600/50 text-white text-sm truncate"
             />
             <button
               onClick={copyLink}
-              className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-1 ${
+              className={`flex-shrink-0 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 ${
                 copied 
                   ? 'bg-blue-600 text-white' 
                   : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
@@ -398,11 +398,11 @@ Espero verte ahí!`;
             </button>
           </div>
 
-          {/* Botones */}
-          <div className="flex flex-wrap gap-2">
+          {/* Botones - grid en móvil para mejor distribución */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             <button
               onClick={shareLink}
-              className="flex-1 py-2 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium text-sm hover:shadow-lg hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
+              className="col-span-1 py-2 px-3 sm:px-4 sm:flex-1 rounded-lg bg-gradient-to-r from-green-600 to-green-500 text-white font-medium text-sm hover:shadow-lg hover:shadow-green-500/25 transition-all flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
@@ -411,7 +411,7 @@ Espero verte ahí!`;
             </button>
             <button
               onClick={printQR}
-              className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-cyan-500 text-white text-sm flex items-center gap-2 transition-colors font-medium"
+              className="col-span-1 py-2 px-3 sm:px-4 rounded-lg bg-blue-600 hover:bg-cyan-500 text-white text-sm flex items-center justify-center gap-2 transition-colors font-medium"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -422,7 +422,7 @@ Espero verte ahí!`;
               href={expoLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="py-2 px-4 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm flex items-center gap-2 transition-colors"
+              className="col-span-2 sm:col-span-1 py-2 px-3 sm:px-4 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm flex items-center justify-center gap-2 transition-colors"
             >
               <ExternalLink className="w-4 h-4" />
               Probar
@@ -532,15 +532,15 @@ function ExpoReviewsSection({ userId }: { userId?: number }) {
   };
 
   return (
-    <div className="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-2xl p-6 border border-blue-500/30">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-          <Star className="w-5 h-5 text-yellow-400" />
+    <div className="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-2xl p-4 sm:p-6 border border-blue-500/30">
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+          <Star className="w-5 h-5 text-yellow-400 flex-shrink-0" />
           Calificaciones de la Expo
         </h3>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+          className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 flex-shrink-0"
         >
           {expanded ? 'Ver menos' : 'Ver detalles'}
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -548,23 +548,23 @@ function ExpoReviewsSection({ userId }: { userId?: number }) {
       </div>
 
       {/* Estadísticas principales */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <div className="bg-slate-800/50 rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold text-white">{stats.totalReviews}</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4">
+        <div className="bg-slate-800/50 rounded-xl p-2 sm:p-3 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-white">{stats.totalReviews}</div>
           <div className="text-xs text-slate-400">Votos totales</div>
         </div>
-        <div className="bg-slate-800/50 rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold text-yellow-400 flex items-center justify-center gap-1">
+        <div className="bg-slate-800/50 rounded-xl p-2 sm:p-3 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-yellow-400 flex items-center justify-center gap-1">
             {stats.avgRating} <Star className="w-4 h-4 fill-yellow-400" />
           </div>
           <div className="text-xs text-slate-400">Promedio</div>
         </div>
-        <div className="bg-cyan-500/20 rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold text-cyan-400">{stats.hotLeadsCount} 🔥</div>
+        <div className="bg-cyan-500/20 rounded-xl p-2 sm:p-3 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-cyan-400">{stats.hotLeadsCount} 🔥</div>
           <div className="text-xs text-cyan-300">Hot Leads</div>
         </div>
-        <div className="bg-yellow-500/20 rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold text-yellow-400">{stats.warmLeadsCount} 🤔</div>
+        <div className="bg-yellow-500/20 rounded-xl p-2 sm:p-3 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-yellow-400">{stats.warmLeadsCount} 🤔</div>
           <div className="text-xs text-yellow-300">Warm Leads</div>
         </div>
       </div>
@@ -1656,23 +1656,23 @@ export default function QuantumBusinessBuilderPage() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center p-6"
+      className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center px-3 py-6 sm:p-6 overflow-x-hidden"
     >
       {/* Fondo con efecto grid sutil */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1a1a2e_1px,transparent_1px),linear-gradient(to_bottom,#1a1a2e_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-10" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1a1a2e_1px,transparent_1px),linear_gradient(to_bottom,#1a1a2e_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-10" />
       
       <motion.div
         initial={{ y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="text-center mb-12 relative z-10"
+        className="text-center mb-8 sm:mb-12 relative z-10"
       >
         <div className="flex items-center justify-center gap-3 mb-4">
-          <h1 className="text-4xl md:text-5xl font-black text-white">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-white">
             Mi Futuro Imposible
           </h1>
         </div>
-        <p className="text-slate-400 text-lg">
+        <p className="text-slate-400 text-base sm:text-lg">
           Laboratorio de Posibilidades de Negocios
         </p>
       </motion.div>
@@ -1683,7 +1683,7 @@ export default function QuantumBusinessBuilderPage() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.35 }}
-          className="w-full max-w-4xl mb-8 relative z-10 space-y-4"
+          className="w-full max-w-4xl mb-6 sm:mb-8 relative z-10 space-y-4"
         >
           <ExpoShareSection 
             userId={existingProfile.userId} 
@@ -1694,34 +1694,34 @@ export default function QuantumBusinessBuilderPage() {
           
           {/* Botón Ver Mi Sitio Web */}
           <div 
-            className="rounded-2xl p-5 border border-slate-600/30"
+            className="rounded-2xl p-4 sm:p-5 border border-slate-600/30"
             style={{ backgroundColor: `${orgBrandColor}15` }}
           >
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: orgBrandColor }}
                 >
-                  <Globe className="w-6 h-6 text-white" />
+                  <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Mi Sitio Web</h3>
-                  <p className="text-slate-400 text-sm">
+                  <h3 className="text-base sm:text-lg font-bold text-white">Mi Sitio Web</h3>
+                  <p className="text-slate-400 text-xs sm:text-sm">
                     {hasExistingWebsite ? 'Tu página está publicada' : 'Crea tu página web profesional'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 {hasExistingWebsite && existingWebsite?.site ? (
                   <>
                     <button
                       onClick={() => window.open(`/site/${existingWebsite.site.slug}`, '_blank')}
-                      className="px-5 py-2.5 rounded-xl text-white font-medium hover:opacity-90 transition flex items-center gap-2"
+                      className="flex-1 sm:flex-initial px-4 sm:px-5 py-2.5 rounded-xl text-white font-medium hover:opacity-90 transition flex items-center justify-center gap-2 text-sm sm:text-base"
                       style={{ backgroundColor: orgBrandColor }}
                     >
                       <Eye className="w-4 h-4" />
-                      Ver mi Sitio Web
+                      <span className="hidden xs:inline">Ver mi </span>Sitio Web
                     </button>
                     <button
                       onClick={async () => {
@@ -1737,7 +1737,7 @@ export default function QuantumBusinessBuilderPage() {
                           console.error('Error al copiar:', err);
                         }
                       }}
-                      className="px-4 py-2.5 rounded-xl bg-slate-700 text-white hover:bg-slate-600 transition flex items-center gap-2"
+                      className="flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-700 text-white hover:bg-slate-600 transition flex items-center justify-center"
                     >
                       <Share2 className="w-4 h-4" />
                     </button>
@@ -1760,7 +1760,7 @@ export default function QuantumBusinessBuilderPage() {
                         localStorage.setItem('quantum_web_prefill', JSON.stringify(prefillData));
                         router.push('/dashboard/quantum-web');
                       }}
-                      className="px-4 py-2.5 rounded-xl bg-slate-700 text-white hover:bg-slate-600 transition flex items-center gap-2"
+                      className="flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-700 text-white hover:bg-slate-600 transition flex items-center justify-center"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
@@ -1768,7 +1768,7 @@ export default function QuantumBusinessBuilderPage() {
                 ) : (
                   <button
                     onClick={() => router.push('/dashboard/quantum-web')}
-                    className="px-5 py-2.5 rounded-xl text-white font-medium hover:opacity-90 transition flex items-center gap-2"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-white font-medium hover:opacity-90 transition flex items-center justify-center gap-2"
                     style={{ backgroundColor: orgBrandColor }}
                   >
                     <Rocket className="w-4 h-4" />
@@ -2998,46 +2998,17 @@ export default function QuantumBusinessBuilderPage() {
                       value={previewDireccion}
                       onChange={(e) => setPreviewDireccion(e.target.value)}
                       autoComplete="off"
-                      placeholder="Escribe tu dirección o selecciona en el mapa"
+                      placeholder="Escribe tu dirección"
                       className="flex-1 p-3 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder-slate-500"
                     />
                     <button
-                      onClick={() => setShowMapModal(true)}
-                      className="px-4 py-3 rounded-xl bg-blue-600/20 border border-cyan-500/30 text-cyan-400 hover:bg-blue-600/30 transition-colors"
-                      title="Seleccionar en el mapa"
-                    >
-                      <Globe className="w-5 h-5" />
-                    </button>
-                    <button
                       onClick={getCurrentLocation}
-                      className="px-4 py-3 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 transition-colors"
+                      className="px-4 py-3 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 transition-colors flex-shrink-0"
                       title="Usar mi ubicación actual"
                     >
                       <MapPin className="w-5 h-5" />
                     </button>
                   </div>
-                  
-                  {/* Mini preview del mapa si hay coordenadas */}
-                  {previewLatitud && previewLongitud && (
-                    <div className="mt-3">
-                      <div 
-                        className="relative h-32 rounded-xl overflow-hidden cursor-pointer group"
-                        onClick={() => setShowMapModal(true)}
-                      >
-                        <img 
-                          src={`https://staticmap.openstreetmap.de/staticmap.php?center=${previewLatitud},${previewLongitud}&zoom=15&size=400x150&markers=${previewLatitud},${previewLongitud},red-pushpin`}
-                          alt="Ubicación en mapa"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-                          <span className="text-white text-sm font-medium">Editar ubicación</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-2">
-                        📍 {previewLatitud.toFixed(4)}, {previewLongitud.toFixed(4)}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -3553,140 +3524,6 @@ export default function QuantumBusinessBuilderPage() {
                 <p className="text-xs text-slate-500 text-center mt-3">
                   💡 Puedes generar nuevos diseños las veces que quieras
                 </p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal de Selección de Ubicación en Mapa */}
-      <AnimatePresence>
-        {showMapModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-            onClick={() => setShowMapModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-slate-900 rounded-2xl border border-slate-700/50 w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl"
-            >
-              {/* Header */}
-              <div className="p-5 border-b border-slate-700/50 bg-gradient-to-r from-emerald-900/30 to-blue-900/30">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Seleccionar Ubicación</h3>
-                      <p className="text-sm text-cyan-300/80">Busca tu dirección o usa el mapa</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowMapModal(false)}
-                    className="p-2 rounded-lg hover:bg-slate-700/50 transition text-slate-400 hover:text-white"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Buscador de direcciones */}
-              <div className="p-5 border-b border-slate-700/50">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={mapSearchQuery}
-                    onChange={(e) => setMapSearchQuery(e.target.value)}
-                    placeholder="Buscar dirección, ciudad, código postal..."
-                    className="w-full p-4 pl-12 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-emerald-500/20 transition"
-                  />
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    {searchingAddress ? (
-                      <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
-                    ) : (
-                      <Target className="w-5 h-5 text-slate-400" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Sugerencias de direcciones */}
-                {addressSuggestions.length > 0 && (
-                  <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
-                    {addressSuggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={() => selectAddress(suggestion)}
-                        className="w-full p-3 rounded-xl bg-slate-800/30 border border-slate-700/50 text-left hover:bg-slate-700/50 hover:border-cyan-500/50 transition-all group"
-                      >
-                        <div className="flex items-start gap-3">
-                          <MapPin className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-slate-300 group-hover:text-white transition line-clamp-2">
-                            {suggestion.display_name}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Vista del mapa */}
-              <div className="p-5">
-                <div className="relative h-64 rounded-xl overflow-hidden bg-slate-800">
-                  {previewLatitud && previewLongitud ? (
-                    <>
-                      <iframe
-                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${previewLongitud - 0.01},${previewLatitud - 0.01},${previewLongitud + 0.01},${previewLatitud + 0.01}&layer=mapnik&marker=${previewLatitud},${previewLongitud}`}
-                        className="w-full h-full border-0"
-                        style={{ filter: 'invert(90%) hue-rotate(180deg)' }}
-                      />
-                      <div className="absolute bottom-3 left-3 right-3 bg-slate-900/90 backdrop-blur rounded-lg p-3">
-                        <p className="text-sm text-white font-medium truncate">{previewDireccion}</p>
-                        <p className="text-xs text-slate-400 mt-1">
-                          📍 {previewLatitud.toFixed(6)}, {previewLongitud.toFixed(6)}
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-500">
-                      <Globe className="w-12 h-12 mb-3 opacity-50" />
-                      <p className="text-sm">Busca una dirección arriba</p>
-                      <p className="text-xs mt-1">o usa tu ubicación actual</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Footer con acciones */}
-              <div className="p-5 border-t border-slate-700/50 bg-slate-800/30">
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      getCurrentLocation();
-                      // Cerrar modal después de un momento para que se actualice la ubicación
-                      setTimeout(() => setShowMapModal(false), 1500);
-                    }}
-                    className="flex-1 py-3 px-4 rounded-xl border border-blue-500/50 text-blue-400 font-medium hover:bg-blue-500/10 transition-all flex items-center justify-center gap-2"
-                  >
-                    <MapPin className="w-4 h-4" />
-                    Usar Mi Ubicación
-                  </button>
-                  <button
-                    onClick={() => setShowMapModal(false)}
-                    disabled={!previewLatitud || !previewLongitud}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-blue-600 text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Check className="w-4 h-4" />
-                    Confirmar Ubicación
-                  </button>
-                </div>
               </div>
             </motion.div>
           </motion.div>
