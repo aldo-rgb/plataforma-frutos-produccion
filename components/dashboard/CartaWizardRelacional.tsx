@@ -719,13 +719,20 @@ export default function CartaWizardRelacional() {
   // ========== VALIDACIONES ==========
   
   // Nuevo Paso 1: Declaración del Ser
+  // Filtrar áreas de servicio si el usuario no es PL (igual que en la UI)
   const validateStep1 = () => {
-    return areasActivas.every(area => validateYoSoy(declaracionesSer[area.key] || ''));
+    const areasVisibles = userLevel === 'PL' 
+      ? areasActivas 
+      : areasActivas.filter(a => a.key !== 'servicioTrans' && a.key !== 'servicioComun');
+    return areasVisibles.every(area => validateYoSoy(declaracionesSer[area.key] || ''));
   };
 
   // Paso 2: Identidades (Múltiples por área)
   const validateStep2 = () => {
-    return areasActivas.every(area => {
+    const areasVisibles = userLevel === 'PL' 
+      ? areasActivas 
+      : areasActivas.filter(a => a.key !== 'servicioTrans' && a.key !== 'servicioComun');
+    return areasVisibles.every(area => {
       const identidades = identidadesPorArea[area.key] || [];
       return identidades.length > 0 && identidades.every(i => i.isValid);
     });
