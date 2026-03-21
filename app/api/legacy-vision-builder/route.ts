@@ -620,6 +620,7 @@ export async function POST(request: NextRequest) {
           userId: usuario.id,
           status: 'ACCEPTED',
           acceptedAt: new Date(),
+          updatedAt: new Date(),
           permissions: ['can_send_push_notifications', 'can_view_tribe_dashboard', 'can_view_attendance', 'can_assign_captains'],
         }
       });
@@ -786,6 +787,7 @@ export async function POST(request: NextRequest) {
           userId: parseInt(nominatedUserId),
           nominatedBy: usuario.id,
           status: 'PENDING',
+          updatedAt: new Date(),
           permissions: roleDef.permissions,
         }
       });
