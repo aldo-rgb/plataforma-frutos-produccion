@@ -52,7 +52,7 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
 
       {/* Badge BETA */}
       <div className="flex items-center gap-2 ml-2">
-        <span className="px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full uppercase tracking-wider animate-pulse">
+        <span className="px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full uppercase tracking-wider">
           BETA
         </span>
         <span className="text-xs text-slate-500 hidden lg:inline">v1.0.0</span>
