@@ -24,6 +24,7 @@ import ParticipantSurveyBanner from '@/components/surveys/ParticipantSurveyBanne
 import AmbassadorWalletWidget from '@/components/dashboard/AmbassadorWalletWidget';
 import TrainingsCarouselWidget from '@/components/dashboard/identity/widgets/TrainingsCarouselWidget';
 import MyBusinessWidget from '@/components/dashboard/MyBusinessWidget';
+import ActiveTrainingsWidget from '@/components/dashboard/ActiveTrainingsWidget';
 
 interface DashboardPageProps {
   searchParams: Promise<{ view?: string }>;
@@ -624,6 +625,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* SALTOS CUÁNTICOS - Objetivos por Área        */}
       {/* ============================================ */}
       <SaltosCuanticosWidget />
+
+      {/* ============================================ */}
+      {/* ENTRENAMIENTOS ACTIVOS - Inscripciones       */}
+      {/* Solo para usuarios con enrollments activos   */}
+      {/* ============================================ */}
+      <ActiveTrainingsWidget />
 
       {/* ============================================ */}
       {/* ZONA MEDIA: KPIs + Programa Intensivo        */}
