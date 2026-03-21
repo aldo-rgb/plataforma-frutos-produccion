@@ -24,7 +24,7 @@ export default function LoadingSpinner({
           loop 
           muted 
           playsInline
-          className="w-full h-full object-contain"
+          className="w-full h-full object-contain mix-blend-screen"
         >
           <source src="/videos/logo-loading.mp4" type="video/mp4" />
         </video>
