@@ -834,24 +834,6 @@ export default function LegacyVisionBuilderPage() {
                 </div>
               </div>
 
-              {/* Permisos */}
-              {captaincyModal.captaincy.permissions && captaincyModal.captaincy.permissions.length > 0 && (
-                <div>
-                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-cyan-400" />
-                    Permisos del Rol
-                  </h4>
-                  <ul className="space-y-2 text-sm">
-                    {captaincyModal.captaincy.permissions.map((permission, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-gray-400">
-                        <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span>{permission}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               {/* Capitanes Asignados */}
               <div>
                 <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
@@ -1814,7 +1796,7 @@ export default function LegacyVisionBuilderPage() {
                   <Sparkles className="w-6 h-6 text-cyan-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">Poderes Activados</h2>
+                  <h2 className="text-xl font-bold text-white">Herramientas Activadas</h2>
                   <p className="text-cyan-300/80 text-sm">
                     Tus widgets y herramientas especiales
                   </p>
