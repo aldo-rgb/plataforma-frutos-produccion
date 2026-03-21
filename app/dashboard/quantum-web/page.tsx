@@ -2865,7 +2865,7 @@ export default function QuantumWebEngine() {
                   </div>
                 </div>
                 
-                {/* Tabs */}
+                {/* Tabs - Solo mostrar Servicios si NO es página informativa */}
                 <div className="flex gap-2">
                   <button
                     onClick={() => setConfigPanelTab('colors')}
@@ -2878,17 +2878,19 @@ export default function QuantumWebEngine() {
                     <Palette className="w-4 h-4" />
                     Colores
                   </button>
-                  <button
-                    onClick={() => setConfigPanelTab('services')}
-                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 ${
-                      configPanelTab === 'services' 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Servicios
-                  </button>
+                  {siteType !== 'informative' && (
+                    <button
+                      onClick={() => setConfigPanelTab('services')}
+                      className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 ${
+                        configPanelTab === 'services' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Servicios
+                    </button>
+                  )}
                 </div>
               </div>
               
