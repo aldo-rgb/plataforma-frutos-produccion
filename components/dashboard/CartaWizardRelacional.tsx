@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Check, Sparkles, AlertCircle, Loader2, CheckCircle2, Brain, Atom, Settings, Send } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft, ChevronRight, Check, Sparkles, AlertCircle, Loader2, CheckCircle2, Brain, Atom, Settings, Send, Home } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import QuantumIdentityModal from '@/components/quantum/QuantumIdentityModal';
 import { validateYoSoy } from '@/lib/validaciones-carta';
@@ -51,6 +52,7 @@ interface MetaConfig {
 }
 
 export default function CartaWizardRelacional() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2749,12 +2751,21 @@ export default function CartaWizardRelacional() {
               {(userLevel === 'BASIC' || userLevel === 'ADVANCED') ? (
                 // Usuarios BASIC/ADVANCED - Solo completar carta, sin enviar
                 hasAvatar ? (
-                  <div className="flex items-center gap-3 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/50 rounded-xl px-4 sm:px-6 py-2 sm:py-3">
-                    <CheckCircle2 className="text-green-400 w-5 h-5 sm:w-6 sm:h-6" />
-                    <div>
-                      <p className="text-green-300 font-bold text-sm sm:text-base">¡Carta Completada!</p>
-                      <p className="text-green-200 text-xs sm:text-sm">Tu avatar ha sido generado. Tu carta está lista.</p>
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <div className="flex items-center gap-3 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/50 rounded-xl px-4 sm:px-6 py-2 sm:py-3">
+                      <CheckCircle2 className="text-green-400 w-5 h-5 sm:w-6 sm:h-6" />
+                      <div>
+                        <p className="text-green-300 font-bold text-sm sm:text-base">¡Carta Completada!</p>
+                        <p className="text-green-200 text-xs sm:text-sm">Tu avatar ha sido generado. Tu carta está lista.</p>
+                      </div>
                     </div>
+                    <button
+                      onClick={() => router.push('/dashboard')}
+                      className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold flex items-center gap-2 hover:shadow-lg hover:scale-105 transition-all text-sm sm:text-base"
+                    >
+                      <Home size={18} className="sm:w-5 sm:h-5" />
+                      <span>Ir al Dashboard</span>
+                    </button>
                   </div>
                 ) : (
                   <div className="text-[10px] sm:text-xs text-yellow-400 max-w-xs">
