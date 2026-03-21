@@ -23,7 +23,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { id: 2, title: 'Objetivo', subtitle: 'Visualización', emoji: '✨' },
   { id: 3, title: 'HACER', subtitle: 'Acciones', emoji: '🎯' },
   { id: 4, title: 'Acciones', subtitle: 'Frecuencia', emoji: '🔥' },
-  { id: 5, title: 'Avatar', subtitle: 'Tu Identidad', emoji: '⚡' }
+  { id: 5, title: 'TENER', subtitle: 'Tu Resultado', emoji: '⚡' }
 ];
 
 const AREAS = [
