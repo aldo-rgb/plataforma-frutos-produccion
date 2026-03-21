@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
     const captaincyNotifications = await prisma.captaincyNotification.findMany({
       where: {
         userId: userId,
+        TribeCaptainAssignment: {
+          status: { not: "REMOVED" }
+        },
         isRead: false
       },
       include: {
@@ -54,6 +57,9 @@ export async function GET(request: NextRequest) {
       prisma.ticketPurchase.findMany({
         where: { 
           userId: userId,
+        TribeCaptainAssignment: {
+          status: { not: "REMOVED" }
+        },
           status: { in: ['COMPLETED', 'REFUNDED'] } // COMPLETED significa pagado
         },
         select: { visionId: true }

@@ -995,6 +995,12 @@ export async function DELETE(request: NextRequest) {
       include: { TribeCaptaincy: true }
     });
 
+    // Marcar las notificaciones relacionadas como leídas para evitar notificaciones huérfanas
+    await prisma.captaincyNotification.updateMany({
+      where: { assignmentId: parseInt(assignmentId) },
+      data: { isRead: true }
+    });
+
     const roleDef = CAPTAINCY_DEFINITIONS[assignment.TribeCaptaincy.roleType];
 
     return NextResponse.json({
