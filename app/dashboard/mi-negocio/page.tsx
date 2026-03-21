@@ -3033,23 +3033,14 @@ export default function QuantumBusinessBuilderPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-slate-400 mb-2">Dirección</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={previewDireccion}
-                      onChange={(e) => setPreviewDireccion(e.target.value)}
-                      autoComplete="off"
-                      placeholder="Escribe tu dirección"
-                      className="flex-1 p-3 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder-slate-500"
-                    />
-                    <button
-                      onClick={getCurrentLocation}
-                      className="px-4 py-3 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 transition-colors flex-shrink-0"
-                      title="Usar mi ubicación actual"
-                    >
-                      <MapPin className="w-5 h-5" />
-                    </button>
-                  </div>
+                  <input
+                    type="text"
+                    value={previewDireccion}
+                    onChange={(e) => setPreviewDireccion(e.target.value)}
+                    autoComplete="off"
+                    placeholder="Escribe tu dirección"
+                    className="w-full p-3 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder-slate-500"
+                  />
                 </div>
               </div>
             </div>
