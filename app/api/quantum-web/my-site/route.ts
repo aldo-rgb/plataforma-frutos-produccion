@@ -87,3 +87,64 @@ export async function GET() {
     return NextResponse.json({ hasSite: false, error: error.message });
   }
 }
+
+// PATCH - Actualizar campos específicos del sitio
+export async function PATCH(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const user = await prisma.usuario.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    const website = await prisma.quantumWebsite.findUnique({
+      where: { userId: user.id }
+    });
+
+    if (!website) {
+      return NextResponse.json({ error: 'No tienes un sitio web' }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const { address, schedule, phone, whatsapp } = body;
+
+    // Construir objeto de actualización con solo los campos proporcionados
+    const updateData: Record<string, any> = {
+      updatedAt: new Date()
+    };
+
+    if (address !== undefined) updateData.address = address;
+    if (schedule !== undefined) updateData.schedule = schedule;
+    if (phone !== undefined) updateData.phone = phone;
+    if (whatsapp !== undefined) updateData.whatsapp = whatsapp;
+
+    const updatedSite = await prisma.quantumWebsite.update({
+      where: { userId: user.id },
+      data: updateData
+    });
+
+    console.log('[my-site PATCH] Actualizado:', updateData);
+
+    return NextResponse.json({ 
+      success: true, 
+      site: {
+        address: updatedSite.address,
+        schedule: updatedSite.schedule,
+        phone: updatedSite.phone,
+        whatsapp: updatedSite.whatsapp
+      }
+    });
+
+  } catch (error: any) {
+    logger.error('Error actualizando sitio:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

@@ -1571,6 +1571,47 @@ export default function QuantumBusinessBuilderPage() {
     }
   };
 
+  // ============================================
+  // AUTO-GUARDAR DIRECCIÓN Y HORARIO EN QUANTUM WEB
+  // ============================================
+  const autoSaveToQuantumWeb = async (field: 'address' | 'schedule', value: string) => {
+    if (!hasExistingWebsite || !value) return;
+    
+    try {
+      const updateData: Record<string, string> = {};
+      updateData[field] = value;
+      
+      await fetch('/api/quantum-web/my-site', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      });
+      console.log(`[mi-negocio] Auto-guardado ${field}:`, value);
+    } catch (error) {
+      console.error(`Error auto-guardando ${field}:`, error);
+    }
+  };
+
+  // Auto-guardar dirección cuando cambia
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (previewDireccion && hasExistingWebsite) {
+        autoSaveToQuantumWeb('address', previewDireccion);
+      }
+    }, 1000); // Esperar 1 segundo después del último cambio
+    return () => clearTimeout(timer);
+  }, [previewDireccion, hasExistingWebsite]);
+
+  // Auto-guardar horario cuando cambia
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (previewHorario && hasExistingWebsite) {
+        autoSaveToQuantumWeb('schedule', previewHorario);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [previewHorario, hasExistingWebsite]);
+
   const triggerCelebration = () => {
     // Confeti
     confetti({
