@@ -244,7 +244,7 @@ export default function TribeNotificationsWidget() {
         const errorMessages: Record<string, { title: string; description: string; needsOath?: boolean }> = {
           'Debes ser miembro de la tribu para votar': {
             title: '🔒 Acceso Restringido',
-            description: 'Para votar necesitas haber realizado el Juramento de Tribu. Este juramento se hace durante el fin de semana de Liderato.',
+            description: 'Para votar necesitas haber realizado el compromiso de Tribu. Este juramento se hace durante el fin de semana de Liderato.',
             needsOath: true
           },
           'Ya has votado en esta votación': {
@@ -805,7 +805,7 @@ export default function TribeNotificationsWidget() {
                             href="/dashboard/legacy-vision-builder"
                             className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
                           >
-                            ✍️ Ir a firmar el Juramento
+                            ✍️ Ir a firmar el compromiso
                           </a>
                         )}
                       </div>

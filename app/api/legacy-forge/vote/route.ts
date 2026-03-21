@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
       if (!hasSigned) {
         return NextResponse.json(
-          { error: 'Debes firmar el juramento de la tribu para participar' }, 
+          { error: 'Debes firmar el compromiso de la tribu para participar' }, 
           { status: 403 }
         );
       }
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
 
     if (!hasSigned) {
       return NextResponse.json(
-        { error: 'Debes firmar el juramento de la tribu para votar' }, 
+        { error: 'Debes firmar el compromiso de la tribu para votar' }, 
         { status: 403 }
       );
     }

@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     if (!hasSigned) {
       return NextResponse.json(
-        { error: 'Debes firmar el juramento de la tribu para ver el chat' }, 
+        { error: 'Debes firmar el compromiso de la tribu para ver el chat' }, 
         { status: 403 }
       );
     }
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     if (!hasSigned) {
       return NextResponse.json(
-        { error: 'Debes firmar el juramento de la tribu para participar en el chat' }, 
+        { error: 'Debes firmar el compromiso de la tribu para participar en el chat' }, 
         { status: 403 }
       );
     }

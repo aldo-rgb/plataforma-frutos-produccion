@@ -187,6 +187,12 @@ export default function LegacyVisionBuilderPage() {
   
   const promisesContainerRef = useRef<HTMLDivElement>(null);
 
+  // Modal para detalles de capitanía
+  const [captaincyModal, setCaptaincyModal] = useState<{
+    show: boolean;
+    captaincy: Captaincy | null;
+  }>({ show: false, captaincy: null });
+
   // Toast notification
   const [toast, setToast] = useState<{
     show: boolean;
@@ -767,6 +773,149 @@ export default function LegacyVisionBuilderPage() {
         </div>
       )}
 
+      {/* Modal de Detalles de Capitanía */}
+      {captaincyModal.show && captaincyModal.captaincy && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-2xl border border-blue-600/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            {/* Header del Modal */}
+            <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/20 rounded-xl text-2xl">
+                    {captaincyModal.captaincy.icon}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">{captaincyModal.captaincy.name}</h2>
+                    <p className="text-cyan-200 text-sm">Capitanía de la Tribu</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCaptaincyModal({ show: false, captaincy: null })}
+                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-6 space-y-6">
+              {/* Misión del Rol */}
+              <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                <h4 className="text-cyan-400 font-semibold mb-2 flex items-center gap-2">
+                  <Target className="w-4 h-4" />
+                  Misión del Rol
+                </h4>
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {captaincyModal.captaincy.mission}
+                </p>
+              </div>
+
+              {/* Descripción */}
+              <div>
+                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-cyan-400" />
+                  ¿Qué implica este rol?
+                </h4>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  {captaincyModal.captaincy.description}
+                </p>
+              </div>
+
+              {/* Widget Asociado */}
+              <div>
+                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-cyan-400" />
+                  Widget de Gestión
+                </h4>
+                <div className="bg-blue-900/30 border border-blue-600/30 rounded-xl p-3">
+                  <p className="text-cyan-200 text-sm font-medium">{captaincyModal.captaincy.widgetName}</p>
+                  <p className="text-gray-400 text-xs mt-1">Tipo: {captaincyModal.captaincy.widgetType}</p>
+                </div>
+              </div>
+
+              {/* Permisos */}
+              {captaincyModal.captaincy.permissions && captaincyModal.captaincy.permissions.length > 0 && (
+                <div>
+                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-cyan-400" />
+                    Permisos del Rol
+                  </h4>
+                  <ul className="space-y-2 text-sm">
+                    {captaincyModal.captaincy.permissions.map((permission, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-gray-400">
+                        <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span>{permission}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Capitanes Asignados */}
+              <div>
+                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-cyan-400" />
+                  Capitanes Asignados ({captaincyModal.captaincy.confirmedCount}/{captaincyModal.captaincy.maxCaptains})
+                </h4>
+                {captaincyModal.captaincy.assignments.filter(a => ['PENDING', 'ACCEPTED'].includes(a.status)).length === 0 ? (
+                  <p className="text-gray-500 text-sm italic">Sin asignar</p>
+                ) : (
+                  <div className="space-y-2">
+                    {captaincyModal.captaincy.assignments
+                      .filter(a => ['PENDING', 'ACCEPTED'].includes(a.status))
+                      .map((assignment) => (
+                        <div
+                          key={assignment.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border ${
+                            assignment.status === 'ACCEPTED'
+                              ? 'bg-green-600/10 border-green-600/30'
+                              : 'bg-gray-800 border-gray-700'
+                          }`}
+                        >
+                          <div className="w-10 h-10 bg-gray-700 rounded-full overflow-hidden">
+                            {assignment.userImage ? (
+                              <img src={assignment.userImage} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <Users className="w-5 h-5 text-gray-500 m-auto mt-2.5" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className={`font-medium ${
+                              assignment.status === 'ACCEPTED' ? 'text-green-400' : 'text-gray-300'
+                            }`}>
+                              {assignment.userName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {assignment.status === 'ACCEPTED' 
+                                ? `Aceptado ${assignment.acceptedAt ? new Date(assignment.acceptedAt).toLocaleDateString('es-MX') : ''}`
+                                : 'Pendiente de aceptación'}
+                            </p>
+                          </div>
+                          {assignment.status === 'PENDING' && (
+                            <Clock className="w-5 h-5 text-cyan-500" />
+                          )}
+                          {assignment.status === 'ACCEPTED' && (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Botón de acción */}
+              <button
+                className="w-full py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl transition-colors"
+                onClick={() => setCaptaincyModal({ show: false, captaincy: null })}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal para Capturar Misión de la Tribu */}
       {missionModal.show && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
@@ -1124,7 +1273,7 @@ export default function LegacyVisionBuilderPage() {
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-2 md:gap-4">
           {[
-            { phase: 1, label: 'El Juramento', icon: FileSignature },
+            { phase: 1, label: 'El Compromiso', icon: FileSignature },
             { phase: 2, label: 'La Elección', icon: Users },
             { phase: 3, label: 'Poderes Activados', icon: Sparkles },
           ].map((step, idx) => {
@@ -1164,7 +1313,7 @@ export default function LegacyVisionBuilderPage() {
           })}
         </div>
 
-        {/* FASE 1: EL JURAMENTO */}
+        {/* FASE 1: EL COMPROMISO */}
         {currentPhase === 1 && (
           <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-900/50 to-slate-900/50 p-6 border-b border-gray-800">
@@ -1173,7 +1322,7 @@ export default function LegacyVisionBuilderPage() {
                   <Shield className="w-6 h-6 text-cyan-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">El Juramento de la Tribu</h2>
+                  <h2 className="text-xl font-bold text-white">El Compromiso de la Tribu</h2>
                   <p className="text-cyan-300/80 text-sm">
                     Las 16 Promesas de Sostenibilidad
                   </p>
@@ -1187,7 +1336,7 @@ export default function LegacyVisionBuilderPage() {
                   <CheckCircle className="w-10 h-10 text-green-500" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">
-                  ¡Has firmado el Juramento!
+                  ¡Has firmado un compromiso!
                 </h3>
                 <p className="text-gray-400 mb-4">
                   Firmado el {new Date(data.oathSignedAt!).toLocaleDateString('es-MX', {
@@ -1294,7 +1443,7 @@ export default function LegacyVisionBuilderPage() {
                           <Crown className="w-10 h-10 text-cyan-400" />
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">
-                          ¡La Tribu Necesita un Líder!
+                          ¡La Tribu Necesita un Capitan!
                         </h2>
                         <p className="text-cyan-200/80 mb-6 max-w-md mx-auto">
                           Sé el primero en tomar el mando. Como Capitán de Tribu serás responsable de 
@@ -1571,7 +1720,11 @@ export default function LegacyVisionBuilderPage() {
                   const RoleIcon = roleIcons[cap.roleType] || Star;
                   
                   return (
-                    <div key={cap.roleType} className="p-4 md:p-6">
+                    <div 
+                      key={cap.roleType} 
+                      className="p-4 md:p-6 cursor-pointer hover:bg-gray-800/50 transition-colors"
+                      onClick={() => setCaptaincyModal({ show: true, captaincy: cap })}
+                    >
                       <div className="flex flex-col md:flex-row md:items-center gap-4">
                         {/* Info del Rol */}
                         <div className="flex items-center gap-4 flex-1">
@@ -1588,7 +1741,7 @@ export default function LegacyVisionBuilderPage() {
                         </div>
 
                         {/* Capitanes Asignados */}
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 items-center">
                           {cap.assignments.filter(a => ['PENDING', 'ACCEPTED'].includes(a.status)).length === 0 ? (
                             <span className="text-gray-500 text-sm italic">Sin asignar</span>
                           ) : (
@@ -1627,7 +1780,10 @@ export default function LegacyVisionBuilderPage() {
                                     data.captaincies.find(c => c.roleType === 'TRIBE_CO_CAPTAIN')?.assignments.some(a => a.userId === data.userId && a.status === 'ACCEPTED')
                                   ) && (
                                     <button
-                                      onClick={() => handleRemoveCaptain(assignment.id)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRemoveCaptain(assignment.id);
+                                      }}
                                       className="p-1 hover:bg-red-600/20 rounded transition-colors"
                                       title="Remover"
                                     >
@@ -1637,6 +1793,8 @@ export default function LegacyVisionBuilderPage() {
                                 </div>
                               ))
                           )}
+                          {/* Indicador de click */}
+                          <ChevronRight className="w-5 h-5 text-gray-500 ml-2 flex-shrink-0" />
                         </div>
                       </div>
                     </div>

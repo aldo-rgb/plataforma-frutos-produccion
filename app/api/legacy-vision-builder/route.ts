@@ -10,7 +10,7 @@ import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
-// Las 16 Promesas del Juramento
+// Las 16 Promesas del compromiso
 export const TRIBE_PROMISES = [
   { id: 1, title: "Salud", description: "Me comprometo a cuidar mi cuerpo como el templo que es." },
   { id: 2, title: "No Drogas", description: "Me comprometo a mantener mi mente y cuerpo libres de sustancias dañinas." },
@@ -490,7 +490,7 @@ export async function POST(request: NextRequest) {
       
       if (!signatureText || signatureText.trim().length < 3) {
         return NextResponse.json({ 
-          error: "Debes escribir tu nombre completo para firmar el juramento" 
+          error: "Debes escribir tu nombre completo para firmar" 
         }, { status: 400 });
       }
 
@@ -506,7 +506,7 @@ export async function POST(request: NextRequest) {
 
       if (existingOath) {
         return NextResponse.json({ 
-          error: "Ya has firmado el juramento para esta visión" 
+          error: "Ya has firmado el compromiso para esta visión" 
         }, { status: 400 });
       }
 
@@ -521,7 +521,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: "¡Has firmado el Juramento de la Tribu!",
+        message: "¡Has firmado el Compromiso de la Tribu!",
         oath: {
           id: oath.id,
           signedAt: oath.signedAt,
@@ -568,7 +568,7 @@ export async function POST(request: NextRequest) {
 
       if (!oath) {
         return NextResponse.json({ 
-          error: "Debes firmar el Juramento antes de reclamar la capitanía" 
+          error: "Debes firmar el Compromiso antes de reclamar la capitanía" 
         }, { status: 400 });
       }
 
