@@ -2795,12 +2795,21 @@ export default function QuantumWebEngine() {
         {/* Side Panel - Configuration */}
         <AnimatePresence>
           {showConfigPanel && (
-            <motion.div
-              initial={{ x: -288, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -288, opacity: 0 }}
-              className="fixed left-0 top-16 bottom-0 w-72 bg-slate-900/95 backdrop-blur-sm border-r border-slate-700/50 z-30 overflow-y-auto shadow-xl"
-            >
+            <>
+              {/* Overlay para móviles */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 z-20 md:hidden"
+                onClick={() => setShowConfigPanel(false)}
+              />
+              <motion.div
+                initial={{ x: -288, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -288, opacity: 0 }}
+                className="fixed left-0 top-16 bottom-0 w-[85vw] max-w-[320px] md:w-72 bg-slate-900/98 md:bg-slate-900/95 backdrop-blur-sm border-r border-slate-700/50 z-30 overflow-y-auto shadow-xl"
+              >
               {/* Panel Header */}
               <div className="sticky top-0 bg-slate-900 border-b border-slate-700/50 p-4 pb-5 z-10">
                 {/* Botón Volver */}
@@ -3065,6 +3074,7 @@ export default function QuantumWebEngine() {
                 )}
               </div>
             </motion.div>
+            </>
           )}
         </AnimatePresence>
         
