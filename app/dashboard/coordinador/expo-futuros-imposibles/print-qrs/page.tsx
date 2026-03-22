@@ -538,7 +538,7 @@ export default function PrintExpoQRsPage() {
             <button
               onClick={handleDownloadPDF}
               disabled={generatingPDF || participantes.filter(p => p.businessName).length === 0}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 disabled:cursor-not-allowed"
             >
               {generatingPDF ? (
                 <>
@@ -551,13 +551,6 @@ export default function PrintExpoQRsPage() {
                   Descargar PDF ({participantes.filter(p => p.businessName).length})
                 </>
               )}
-            </button>
-            <button
-              onClick={handlePrint}
-              className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white px-8 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2"
-            >
-              <Printer size={20} />
-              Imprimir Todo ({participantes.filter(p => p.businessName).length})
             </button>
           </div>
         </div>
