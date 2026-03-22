@@ -7,6 +7,7 @@ import logger from '@/lib/logger';
 import crypto from 'crypto';
 import { processAmbassadorCommission, determineProductType } from '@/lib/ambassador-engine';
 import { autoCreateMedicalFormInTransaction } from '@/lib/medical-form-helper';
+import { sendWelcomeNotifications } from '@/lib/welcome-notification';
 
 /**
  * POST /api/treasury/register-basic
@@ -388,6 +389,62 @@ export async function POST(request: NextRequest) {
         logger.warn(`⚠️ [Treasury] Error al procesar comisión:`, commError);
         // No fallar el registro por error de comisión
       }
+    }
+
+    // 📱 Enviar notificaciones de bienvenida (Email + WhatsApp con auto-login)
+    try {
+      const orgInfo = await prisma.organization.findUnique({
+        where: { id: result.vision.organizationId! },
+        select: { name: true }
+      });
+      
+      const notificationResult = await sendWelcomeNotifications({
+        userId: result.user.id,
+        email: result.user.email,
+        telefono: telefono || '',
+        nombre: result.user.nombre,
+        password: 'Quantum123',
+        organizationName: orgInfo?.name || 'Impacto Cuántico',
+        visionName: result.vision.nombre,
+        ticket: {
+          id: result.ticket.id,
+          level: result.isCombo ? 'PL' : 'BÁSICO',
+          visionDate: result.vision.startDate?.toLocaleDateString('es-MX') || undefined
+        }
+      });
+      
+      logger.info(`📬 [Treasury] Notificaciones enviadas: Email=${notificationResult.emailSent}, WhatsApp=${notificationResult.whatsappSent}`);
+    } catch (notifError) {
+      logger.warn('⚠️ [Treasury] Error al enviar notificaciones:', notifError);
+      // No fallar el registro por error de notificación
+    }
+
+    // 📱 Enviar notificaciones de bienvenida (Email + WhatsApp con auto-login)
+    try {
+      const orgInfo = await prisma.organization.findUnique({
+        where: { id: result.vision.organizationId! },
+        select: { name: true }
+      });
+      
+      const notificationResult = await sendWelcomeNotifications({
+        userId: result.user.id,
+        email: result.user.email,
+        telefono: telefono || '',
+        nombre: result.user.nombre,
+        password: 'Quantum123',
+        organizationName: orgInfo?.name || 'Impacto Cuántico',
+        visionName: result.vision.nombre,
+        ticket: {
+          id: result.ticket.id,
+          level: result.isCombo ? 'PL' : 'BÁSICO',
+          visionDate: result.vision.startDate?.toLocaleDateString('es-MX') || undefined
+        }
+      });
+      
+      logger.info(`📬 [Treasury] Notificaciones enviadas: Email=${notificationResult.emailSent}, WhatsApp=${notificationResult.whatsappSent}`);
+    } catch (notifError) {
+      logger.warn('⚠️ [Treasury] Error al enviar notificaciones:', notifError);
+      // No fallar el registro por error de notificación
     }
 
     return NextResponse.json({
