@@ -14,9 +14,10 @@ import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
+import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
 import CartaPrellenadaWidget from '@/components/dashboard/CartaPrellenadaWidget';
 import QuantumWalletWidget from '@/components/dashboard/coordinator/QuantumWalletWidget';
-import TrainingsCarouselWidget from '@/components/dashboard/identity/widgets/TrainingsCarouselWidget';
+import ExpoFuturosImposiblesWidget from '@/components/dashboard/ExpoFuturosImposiblesWidget';
 
 interface DashboardData {
   overview: {
@@ -241,11 +242,6 @@ export default function CoordinadorDashboard() {
         {/* Quantum Wallet - Comisiones del Coordinador */}
         <div className="mt-8">
           <QuantumWalletWidget />
-        </div>
-
-        {/* Carrusel de Entrenamientos/Talleres Activos */}
-        <div className="mt-8">
-          <TrainingsCarouselWidget />
         </div>
 
         {/* Widget de Cartas Prellenadas */}
@@ -513,12 +509,26 @@ export default function CoordinadorDashboard() {
           <GCCallsMonitorWidget />
         </div>
 
-        {/* Widget de Backlogs y Drops */}
-        <div className="mt-8">
+        {/* Widget de Backlogs y Drops + Expo de Futuros Imposibles */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
           <BacklogsDropsWidget />
+          <ExpoFuturosImposiblesWidget />
         </div>
 
-
+        {/* ═══════════════════════════════════════════════════ */}
+        {/*              QR PERSONAL - INVITAR PARTICIPANTES    */}
+        {/* ═══════════════════════════════════════════════════ */}
+        {session?.user && (
+          <div className="mt-8">
+            <PersonalQRWidget
+              userName={session.user.name || 'Coordinador'}
+              userId={parseInt(session.user.id as string)}
+              userEmail={session.user.email || ''}
+              referralCode={session.user.referralCode}
+              organizationId={session.user.organizationId}
+            />
+          </div>
+        )}
 
         {/* Widgets de Acción - 2x3 Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
