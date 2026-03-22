@@ -12,31 +12,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ exhibitors: [] });
     }
 
-    // Construir condiciones de búsqueda
-    const whereConditions: any[] = [
-      // Tiene perfil de negocio
-      { BusinessProfile: { isNot: null } },
-      // Coincide con el nombre
-      { nombre: { contains: query, mode: 'insensitive' } }
-    ];
+    // Construir condiciones base
+    const whereConditions: any = {
+      // Tiene perfil de negocio configurado (con nombre de negocio)
+      BusinessProfile: { 
+        isNot: null,
+        businessName: { not: null }
+      },
+      // Nombre contiene el query
+      OR: [
+        { nombre: { contains: query, mode: 'insensitive' } },
+        { BusinessProfile: { businessName: { contains: query, mode: 'insensitive' } } }
+      ]
+    };
 
-    // Si hay visionId, filtrar por esa visión
+    // Si hay visionId, filtrar por participantes de esa visión con nivel PL
     if (visionId) {
-      whereConditions.push({ visionId: parseInt(visionId) });
+      whereConditions.vision_enrollments = {
+        some: {
+          visionId: parseInt(visionId),
+          level: 'PL',
+          attendance: true
+        }
+      };
     }
 
-    // Buscar expositores (usuarios con BusinessProfile)
+    // Buscar expositores
     const exhibitors = await prisma.usuario.findMany({
-      where: {
-        AND: whereConditions
-      },
+      where: whereConditions,
       select: {
         id: true,
         nombre: true,
         imagen: true,
         BusinessProfile: {
           select: {
-            headline: true
+            headline: true,
+            businessName: true
           }
         }
       },
@@ -48,7 +59,8 @@ export async function GET(request: NextRequest) {
       nombre: e.nombre,
       apellido: '',
       imagen: e.imagen,
-      headline: e.BusinessProfile?.headline || null
+      headline: e.BusinessProfile?.headline || null,
+      businessName: e.BusinessProfile?.businessName || null
     }));
 
     return NextResponse.json({ exhibitors: result });
