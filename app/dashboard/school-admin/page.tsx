@@ -986,30 +986,7 @@ export default function SchoolAdminDashboard() {
               </div>
             </Link>
 
-            {/* Widget de Prospectos de Staff - CYAN/GARGANTA */}
-            <Link href="/dashboard/prospectos-staff" className="block">
-              <div className="bg-gradient-to-br from-cyan-900/50 via-teal-900/30 to-slate-900 border-2 border-cyan-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 relative overflow-hidden">
-                {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-2xl -z-10"></div>
-                
-                <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-                  <div className="p-2 md:p-3 bg-cyan-500/20 group-hover:bg-cyan-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
-                    <span className="text-2xl">🌟</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
-                      🌟 Prospectos de Staff
-                    </h3>
-                    <p className="text-[10px] md:text-xs text-cyan-300 line-clamp-1">
-                      Ver participantes interesados en ser Staff
-                    </p>
-                  </div>
-                </div>
-                <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
-                  Personas que activaron &quot;Quiero ser Staff&quot; en su perfil
-                </p>
-              </div>
-            </Link>
+
 
             {/* Widget Gestionar Equipo - VERDE/CORAZÓN */}
             <Link href="/dashboard/school-admin/coordinadores" className="block">
@@ -1171,39 +1148,66 @@ export default function SchoolAdminDashboard() {
               </div>
             </Link>
 
-            {/* Widget de Registros Médicos */}
-            <Link href="/dashboard/school-admin/medical-records" className="block">
-              <div className="bg-gradient-to-br from-red-900/50 via-pink-900/30 to-slate-900 border-2 border-red-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/10 relative overflow-hidden">
-                {/* Badge de alertas */}
-                {medicalAlertsCount > 0 && (
-                  <div className="absolute top-2 right-2">
-                    <div className="relative">
-                      <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-red-400 opacity-75"></div>
-                      <div className="relative inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-500 border-2 border-slate-900">
-                        <span className="text-white font-bold text-xs">{medicalAlertsCount}</span>
+{/* Grid de Registros Médicos y Prospectos de Staff - LADO A LADO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Widget de Registros Médicos */}
+              <Link href="/dashboard/school-admin/medical-records" className="block">
+                <div className="bg-gradient-to-br from-red-900/50 via-pink-900/30 to-slate-900 border-2 border-red-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/10 relative overflow-hidden h-full">
+                  {/* Badge de alertas */}
+                  {medicalAlertsCount > 0 && (
+                    <div className="absolute top-2 right-2">
+                      <div className="relative">
+                        <div className="animate-ping absolute inline-flex h-5 w-5 md:h-6 md:w-6 rounded-full bg-red-400 opacity-75"></div>
+                        <div className="relative inline-flex items-center justify-center h-5 w-5 md:h-6 md:w-6 rounded-full bg-red-500 border-2 border-slate-900">
+                          <span className="text-white font-bold text-[10px] md:text-xs">{medicalAlertsCount}</span>
+                        </div>
                       </div>
                     </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                    <div className="p-2 md:p-3 bg-red-500/20 group-hover:bg-red-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
+                      <Heart size={20} className="text-red-300 md:w-6 md:h-6" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
+                        🏥 Registros Médicos
+                      </h3>
+                      <p className="text-[10px] md:text-xs text-red-300 line-clamp-1">
+                        {medicalAlertsCount > 0 ? `${medicalAlertsCount} alertas pendientes` : 'Ver formularios médicos'}
+                      </p>
+                    </div>
                   </div>
-                )}
-                
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-red-500/20 group-hover:bg-red-500/30 rounded-xl transition-colors">
-                    <Heart size={24} className="text-red-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      🏥 Registros Médicos
-                    </h3>
-                    <p className="text-xs text-red-300">
-                      {medicalAlertsCount > 0 ? `${medicalAlertsCount} alertas pendientes` : 'Ver formularios médicos'}
-                    </p>
-                  </div>
+                  <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
+                    Revisa los registros médicos de los participantes y alertas de condiciones especiales
+                  </p>
                 </div>
-                <p className="text-xs text-slate-400">
-                  Revisa los registros médicos de los participantes y alertas de condiciones especiales
-                </p>
-              </div>
-            </Link>
+              </Link>
+
+              {/* Widget de Prospectos de Staff */}
+              <Link href="/dashboard/prospectos-staff" className="block">
+                <div className="bg-gradient-to-br from-cyan-900/50 via-teal-900/30 to-slate-900 border-2 border-cyan-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 relative overflow-hidden h-full">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-2xl -z-10"></div>
+                  
+                  <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                    <div className="p-2 md:p-3 bg-cyan-500/20 group-hover:bg-cyan-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
+                      <span className="text-xl md:text-2xl">🌟</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
+                        Prospectos de Staff
+                      </h3>
+                      <p className="text-[10px] md:text-xs text-cyan-300 line-clamp-1">
+                        Ver participantes interesados en ser Staff
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
+                    Personas que activaron &quot;Quiero ser Staff&quot; en su perfil
+                  </p>
+                </div>
+              </Link>
+            </div>
 
             {/* Widget Comprar Licencias */}
             <Link href={data.pendingOrders.length > 0 ? "/dashboard/school-admin/licenses/payment" : "/dashboard/school-admin/licenses/request"} className="block">
