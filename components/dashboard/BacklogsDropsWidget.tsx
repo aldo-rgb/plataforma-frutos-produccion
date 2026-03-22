@@ -38,7 +38,7 @@ export default function BacklogsDropsWidget() {
 
   return (
     <Link href="/dashboard/coordinador/backlogs-drops">
-      <div className="bg-gradient-to-br from-orange-900/40 via-red-900/30 to-slate-900 border-2 border-orange-500/30 rounded-2xl p-6 hover:border-orange-500/50 transition-all cursor-pointer group hover:scale-[1.01]">
+      <div className="bg-gradient-to-br from-orange-900/40 via-red-900/30 to-slate-900 border-2 border-orange-500/30 rounded-2xl p-6 hover:border-orange-500/50 transition-all cursor-pointer group hover:scale-[1.01] h-full flex flex-col">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-orange-500/20 rounded-xl">
@@ -85,7 +85,7 @@ export default function BacklogsDropsWidget() {
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-end gap-2 text-orange-400 group-hover:text-orange-300 transition-colors">
+        <div className="mt-auto pt-4 flex items-center justify-end gap-2 text-orange-400 group-hover:text-orange-300 transition-colors">
           <span className="text-sm font-medium">Ver todos</span>
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </div>
