@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { 
   Rocket, Filter, Users, Store, ClipboardList, Star, 
   ChevronDown, Search, Eye, ArrowLeft, Building2,
-  TrendingUp, Award, UserCheck
+  TrendingUp, Award, UserCheck, Printer, QrCode, UserPlus
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -23,6 +23,7 @@ interface ExpoParticipant {
   businessName?: string;
   businessCategory?: string;
   expoRegistrations: number;
+  referredVisitors: number; // Invitados registrados con su link
   avgRating: number | null;
   totalRatings: number;
   lastRating?: {
@@ -37,6 +38,7 @@ interface ExpoStats {
   totalParticipants: number;
   totalBusinesses: number;
   totalRegistrations: number;
+  totalReferredVisitors: number; // Total de invitados registrados
   avgRating: number;
   participantsWithRating: number;
 }
@@ -70,8 +72,12 @@ export default function ExpoFuturosImposiblesPage() {
       if (res.ok) {
         const data = await res.json();
         setVisiones(data.visiones || []);
-        // Seleccionar la primera visión por defecto
-        if (data.visiones?.length > 0) {
+        
+        // Priorizar la visión con producto PL activo (recomendada para Expo)
+        if (data.expoRecommendedVisionId) {
+          setSelectedVision(data.expoRecommendedVisionId);
+        } else if (data.visiones?.length > 0) {
+          // Si no hay recomendada, seleccionar la primera
           setSelectedVision(data.visiones[0].id);
         }
       }
@@ -158,26 +164,36 @@ export default function ExpoFuturosImposiblesPage() {
             </div>
           </div>
 
-          {/* Selector de Visión */}
-          <div className="relative">
-            <select
-              value={selectedVision || ''}
-              onChange={(e) => setSelectedVision(Number(e.target.value))}
-              className="appearance-none bg-slate-800/80 border-2 border-purple-500/30 rounded-xl px-4 py-3 pr-10 text-white font-medium focus:border-purple-500/50 focus:outline-none cursor-pointer min-w-[200px]"
+          {/* Botón Imprimir QRs y Selector de Visión */}
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/dashboard/coordinador/expo-futuros-imposibles/print-qrs${selectedVision ? `?visionId=${selectedVision}` : ''}`}
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white px-4 py-3 rounded-xl font-semibold shadow-lg transition-all border-2 border-orange-400/30 min-w-[140px] h-[50px]"
             >
-              {visiones.map(vision => (
-                <option key={vision.id} value={vision.id}>
-                  {vision.nombre}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-400 pointer-events-none" size={20} />
+              <QrCode size={20} />
+              <span className="hidden md:inline">Imprimir QRs</span>
+            </Link>
+            
+            <div className="relative">
+              <select
+                value={selectedVision || ''}
+                onChange={(e) => setSelectedVision(Number(e.target.value))}
+                className="appearance-none bg-slate-800/80 border-2 border-purple-500/30 rounded-xl px-4 py-3 pr-10 text-white font-medium focus:border-purple-500/50 focus:outline-none cursor-pointer min-w-[200px] h-[50px]"
+              >
+                {visiones.map(vision => (
+                  <option key={vision.id} value={vision.id}>
+                    {vision.nombre}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-400 pointer-events-none" size={20} />
+            </div>
           </div>
         </div>
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
             <div className="bg-gradient-to-br from-blue-900/40 to-slate-900 border border-blue-500/30 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Users className="text-blue-400" size={20} />
@@ -200,6 +216,14 @@ export default function ExpoFuturosImposiblesPage() {
                 <span className="text-slate-400 text-sm">Registros Expo</span>
               </div>
               <p className="text-2xl font-bold text-white">{stats.totalRegistrations}</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-900/40 to-slate-900 border border-orange-500/30 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <UserPlus className="text-orange-400" size={20} />
+                <span className="text-slate-400 text-sm">Invitados</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{stats.totalReferredVisitors || 0}</p>
             </div>
 
             <div className="bg-gradient-to-br from-yellow-900/40 to-slate-900 border border-yellow-500/30 rounded-xl p-4">
@@ -314,7 +338,7 @@ export default function ExpoFuturosImposiblesPage() {
                 </div>
 
                 {/* Business Info */}
-                {participant.businessName && (
+                {participant.businessName ? (
                   <div className="bg-slate-900/50 rounded-lg p-3 mb-4">
                     <div className="flex items-center gap-2 mb-1">
                       <Building2 className="text-purple-400" size={16} />
@@ -324,13 +348,29 @@ export default function ExpoFuturosImposiblesPage() {
                       <span className="text-slate-400 text-xs">{participant.businessCategory}</span>
                     )}
                   </div>
+                ) : (
+                  <div className="bg-red-900/30 border border-red-500/40 rounded-lg p-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <span className="text-red-400 text-sm">⚠️</span>
+                      </div>
+                      <div>
+                        <span className="text-red-300 font-medium text-sm">Sin negocio configurado</span>
+                        <p className="text-red-400/70 text-xs">Este participante no ha registrado su negocio</p>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {/* Stats Row */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="grid grid-cols-4 gap-2 mb-4">
                   <div className="bg-slate-900/50 rounded-lg p-2 text-center">
                     <p className="text-cyan-400 font-bold">{participant.expoRegistrations}</p>
                     <p className="text-slate-500 text-xs">Registros</p>
+                  </div>
+                  <div className="bg-slate-900/50 rounded-lg p-2 text-center">
+                    <p className="text-orange-400 font-bold">{participant.referredVisitors || 0}</p>
+                    <p className="text-slate-500 text-xs">Invitados</p>
                   </div>
                   <div className="bg-slate-900/50 rounded-lg p-2 text-center">
                     <p className="text-yellow-400 font-bold">{participant.totalRatings}</p>

@@ -60,7 +60,7 @@ export async function GET(
               select: {
                 id: true,
                 headline: true,
-                bio: true,
+                description: true,
                 status: true
               }
             }
@@ -82,7 +82,7 @@ export async function GET(
               select: {
                 id: true,
                 headline: true,
-                bio: true,
+                description: true,
                 status: true
               }
             }

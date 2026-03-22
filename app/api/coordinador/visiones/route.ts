@@ -121,6 +121,11 @@ export async function GET() {
               lte: tomorrow
             },
             trainingStatus: { not: 'COMPLETED' }
+          },
+          // Incluir productos PL activos (para Expo)
+          {
+            levelType: 'PL',
+            trainingStatus: { not: 'COMPLETED' }
           }
         ]
       },
@@ -147,7 +152,38 @@ export async function GET() {
       activeProducts: productsByVision[v.id] || []
     }));
 
+    // Encontrar la visión con producto PL activo (para Expo de Futuros Imposibles)
+    // Priorizar: productos PL que están IN_PROGRESS (actualmente en curso)
+    let expoRecommendedVisionId: number | null = null;
+    
+    // Primero buscar visiones con PL IN_PROGRESS (máxima prioridad)
+    for (const vision of visionesConProductos) {
+      const plProductInProgress = vision.activeProducts.find((p: any) => 
+        p.levelType === 'PL' && p.trainingStatus === 'IN_PROGRESS'
+      );
+      if (plProductInProgress) {
+        expoRecommendedVisionId = vision.id;
+        logger.debug('🎯 Encontrada visión con PL IN_PROGRESS:', vision.id, vision.nombre);
+        break;
+      }
+    }
+    
+    // Si no hay IN_PROGRESS, buscar PL que haya iniciado recientemente
+    if (!expoRecommendedVisionId) {
+      for (const vision of visionesConProductos) {
+        const plProduct = vision.activeProducts.find((p: any) => 
+          p.levelType === 'PL' && p.startDate && new Date(p.startDate) <= new Date()
+        );
+        if (plProduct) {
+          expoRecommendedVisionId = vision.id;
+          logger.debug('🎯 Encontrada visión con PL iniciado:', vision.id, vision.nombre);
+          break;
+        }
+      }
+    }
+
     logger.debug('✅ Visiones encontradas:', visionesConProductos.length);
+    logger.debug('🎯 Visión recomendada para Expo:', expoRecommendedVisionId);
     if (visionesConProductos.length > 0) {
       logger.debug('📋 Lista de visiones:', visionesConProductos.map(v => ({
         id: v.id,
@@ -160,7 +196,8 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      visiones: visionesConProductos
+      visiones: visionesConProductos,
+      expoRecommendedVisionId
     });
 
   } catch (error: any) {
