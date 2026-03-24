@@ -12,26 +12,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ exhibitors: [] });
     }
 
-    // Construir condiciones base
+    // Construir condiciones base - buscar por nombre de persona o nombre de negocio
     const whereConditions: any = {
-      // Tiene perfil de negocio configurado (con nombre de negocio)
-      BusinessProfile: { 
-        isNot: null,
-        businessName: { not: null }
-      },
-      // Nombre contiene el query
       OR: [
         { nombre: { contains: query, mode: 'insensitive' } },
         { BusinessProfile: { businessName: { contains: query, mode: 'insensitive' } } }
       ]
     };
 
-    // Si hay visionId, filtrar por participantes de esa visión con nivel PL
+    // Si hay visionId, filtrar por participantes de esa visión (cualquier nivel con asistencia)
     if (visionId) {
       whereConditions.vision_enrollments = {
         some: {
           visionId: parseInt(visionId),
-          level: 'PL',
           attendance: true
         }
       };
