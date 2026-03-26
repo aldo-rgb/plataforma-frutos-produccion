@@ -95,6 +95,7 @@ function CheckoutContent() {
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
   const [prices, setPrices] = useState<PriceConfig | null>(null);
   const [bankConfig, setBankConfig] = useState<BankConfig | null>(null);
+  const [brandColor, setBrandColor] = useState<string>('#6366F1');
   const [loading, setLoading] = useState(true);
   
   // Checkout tracking for abandoned cart
@@ -246,6 +247,10 @@ function CheckoutContent() {
         // Set bank config if available
         if (data.bankConfig) {
           setBankConfig(data.bankConfig);
+        }
+        // Set brand color if available
+        if (data.branding?.brandColor) {
+          setBrandColor(data.branding.brandColor);
         }
       } else {
         // Use default prices
@@ -692,27 +697,51 @@ function CheckoutContent() {
           
           {/* Progress */}
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step === 'ticket' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'
-            }`}>1</div>
-            <div className={`w-12 h-0.5 ${step !== 'ticket' ? 'bg-white' : 'bg-slate-700'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step === 'payment' ? 'bg-white text-slate-900' : step === 'confirm' ? 'bg-slate-800 text-slate-400' : 'bg-slate-800 text-slate-500'
-            }`}>2</div>
-            <div className={`w-12 h-0.5 ${step === 'confirm' ? 'bg-white' : 'bg-slate-700'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step === 'confirm' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-500'
-            }`}>3</div>
+            <div 
+              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
+              style={{ 
+                backgroundColor: step === 'ticket' ? brandColor : '#1e293b',
+                color: step === 'ticket' ? 'white' : '#94a3b8'
+              }}
+            >1</div>
+            <div 
+              className="w-12 h-0.5"
+              style={{ backgroundColor: step !== 'ticket' ? brandColor : '#334155' }}
+            ></div>
+            <div 
+              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
+              style={{ 
+                backgroundColor: step === 'payment' ? brandColor : '#1e293b',
+                color: step === 'payment' ? 'white' : '#94a3b8'
+              }}
+            >2</div>
+            <div 
+              className="w-12 h-0.5"
+              style={{ backgroundColor: step === 'confirm' ? brandColor : '#334155' }}
+            ></div>
+            <div 
+              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
+              style={{ 
+                backgroundColor: step === 'confirm' ? brandColor : '#1e293b',
+                color: step === 'confirm' ? 'white' : '#94a3b8'
+              }}
+            >3</div>
           </div>
         </div>
 
         {/* Welcome Banner */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8">
+        <div 
+          className="rounded-2xl p-6 mb-8 border"
+          style={{ 
+            backgroundColor: `${brandColor}15`,
+            borderColor: `${brandColor}30`
+          }}
+        >
           <h1 className="text-2xl font-bold mb-2">
             ¡Hola, {registrationData.nombre.split(' ')[0]}! 👋
           </h1>
           <p className="text-slate-400">
-            Ya casi terminas. Selecciona tu plan y completa el pago para unirte a{' '}
+            Ya casi terminas. Selecciona tu plan y completa el pago para unirte a{' '}}
             <span className="text-white font-semibold">{registrationData.organizationName}</span>
             {registrationData.visionName && (
               <> en la visión <span className="text-white font-semibold">{registrationData.visionName}</span></>
@@ -743,22 +772,27 @@ function CheckoutContent() {
                 {/* BASIC ONLY */}
                 <button
                   onClick={() => setTicketSelection('BASIC_ONLY')}
-                  className={`text-left p-6 rounded-2xl border transition-all ${
-                    ticketSelection === 'BASIC_ONLY'
-                      ? 'border-white bg-slate-900'
-                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
-                  }`}
+                  className="text-left p-6 rounded-2xl border transition-all bg-slate-900/50 hover:bg-slate-900"
+                  style={ticketSelection === 'BASIC_ONLY' ? { 
+                    borderColor: brandColor,
+                    backgroundColor: '#0f172a'
+                  } : { borderColor: '#1e293b' }}
                 >
                   <div className="flex items-center gap-3 mb-4">
-                    <div className={`p-3 rounded-xl ${
-                      ticketSelection === 'BASIC_ONLY' ? 'bg-white/10' : 'bg-slate-800'
-                    }`}>
-                      <Ticket className={ticketSelection === 'BASIC_ONLY' ? 'text-white' : 'text-slate-500'} size={32} />
+                    <div 
+                      className="p-3 rounded-xl"
+                      style={{ backgroundColor: ticketSelection === 'BASIC_ONLY' ? `${brandColor}20` : '#1e293b' }}
+                    >
+                      <Ticket 
+                        size={32}
+                        style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#64748b' }}
+                      />
                     </div>
                     <div>
-                      <h3 className={`font-bold text-lg ${
-                        ticketSelection === 'BASIC_ONLY' ? 'text-white' : 'text-slate-300'
-                      }`}>
+                      <h3 
+                        className="font-bold text-lg"
+                        style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#cbd5e1' }}
+                      >
                         BÁSICO
                       </h3>
                       <p className="text-sm text-slate-500">Nivel Básico</p>
@@ -767,25 +801,28 @@ function CheckoutContent() {
                   
                   <ul className="space-y-2 mb-6">
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} className="text-slate-500" />
+                      <CheckCircle size={16} style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#64748b' }} />
                       Acceso al nivel BÁSICO completo
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} className="text-slate-500" />
+                      <CheckCircle size={16} style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#64748b' }} />
                       3 dias de entrenamiento
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} className="text-slate-500" />
+                      <CheckCircle size={16} style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#64748b' }} />
                       Acceso a mentorías grupales
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} className="text-slate-500" />
+                      <CheckCircle size={16} style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#64748b' }} />
                       Entrenador certificado
                     </li>
                   </ul>
                   
                   <div className="text-right">
-                    <span className="text-3xl font-bold text-white">
+                    <span 
+                      className="text-3xl font-bold"
+                      style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : 'white' }}
+                    >
                       ${prices?.BASIC.toLocaleString()}
                     </span>
                     <span className="text-slate-500 text-sm ml-1">MXN</span>
@@ -795,62 +832,76 @@ function CheckoutContent() {
                 {/* FULL VISION */}
                 <button
                   onClick={() => setTicketSelection('FULL_VISION')}
-                  className={`text-left p-6 rounded-2xl border transition-all relative overflow-hidden ${
-                    ticketSelection === 'FULL_VISION'
-                      ? 'border-white bg-slate-900'
-                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
-                  }`}
+                  className="text-left p-6 rounded-2xl border transition-all relative overflow-hidden bg-slate-900/50 hover:bg-slate-900"
+                  style={ticketSelection === 'FULL_VISION' ? { 
+                    borderColor: brandColor,
+                    backgroundColor: '#0f172a'
+                  } : { borderColor: '#1e293b' }}
                 >
                   {/* Best Value Badge */}
                   <div className="absolute top-4 right-4">
-                    <span className="px-3 py-1 bg-white text-slate-900 text-xs font-bold rounded-full">
+                    <span 
+                      className="px-3 py-1 text-white text-xs font-bold rounded-full"
+                      style={{ backgroundColor: brandColor }}
+                    >
                       RECOMENDADO
                     </span>
                   </div>
                   
                   <div className="flex items-center gap-3 mb-4">
-                    <div className={`p-3 rounded-xl ${
-                      ticketSelection === 'FULL_VISION' ? 'bg-white/10' : 'bg-slate-800'
-                    }`}>
-                      <Crown className={ticketSelection === 'FULL_VISION' ? 'text-white' : 'text-slate-500'} size={32} />
+                    <div 
+                      className="p-3 rounded-xl"
+                      style={{ backgroundColor: ticketSelection === 'FULL_VISION' ? `${brandColor}20` : '#1e293b' }}
+                    >
+                      <Crown 
+                        size={32}
+                        style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#64748b' }}
+                      />
                     </div>
                     <div>
-                      <h3 className={`font-bold text-lg ${
-                        ticketSelection === 'FULL_VISION' ? 'text-white' : 'text-slate-300'
-                      }`}>
+                      <h3 
+                        className="font-bold text-lg"
+                        style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#cbd5e1' }}
+                      >
                         JORNADA COMPLETA
                       </h3>
-                      <p className="text-sm text-slate-500">Visión Completa</p>
+                      <p className="text-sm text-slate-500">Visión Completa</p></p>
                     </div>
                   </div>
                   
                   <ul className="space-y-2 mb-4">
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} className="text-slate-500" />
+                      <CheckCircle size={16} style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#64748b' }} />
                       Acceso a 3 niveles (BÁSICO, AVANZADO, TU VIDA)
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} className="text-slate-500" />
+                      <CheckCircle size={16} style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#64748b' }} />
                       +10 semanas de entrenamiento
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} className="text-slate-500" />
+                      <CheckCircle size={16} style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#64748b' }} />
                       Mentorías 1:1 con expertos
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} className="text-slate-500" />
+                      <CheckCircle size={16} style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#64748b' }} />
                       Acceso a comunidad premium
                     </li>
                   </ul>
                   
                   {/* Quantum Matter License */}
-                  <div className="mb-6 p-3 rounded-xl bg-slate-800 border border-slate-700">
+                  <div 
+                    className="mb-6 p-3 rounded-xl border"
+                    style={{ 
+                      backgroundColor: `${brandColor}10`,
+                      borderColor: `${brandColor}30`
+                    }}
+                  >
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg">🚀</span>
-                      <span className="text-slate-300 font-bold text-sm">INCLUYE LICENCIA EXCLUSIVA</span>
+                      <span style={{ color: brandColor }} className="font-bold text-sm">INCLUYE LICENCIA EXCLUSIVA</span>
                     </div>
                     <p className="text-white text-sm font-medium">
-                      Software <span className="text-white font-bold">Quantum Matter</span>
+                      Software <span style={{ color: brandColor }} className="font-bold">Quantum Matter</span>
                     </p>
                     <p className="text-slate-500 text-xs mt-1">
                       Mentoría Virtual + Seguimiento de Metas Asistido por IA
@@ -861,7 +912,10 @@ function CheckoutContent() {
                     <span className="text-slate-600 text-sm line-through mr-2">
                       ${prices ? (prices.FULL_VISION + 5000).toLocaleString() : '---'}
                     </span>
-                    <span className="text-3xl font-bold text-white">
+                    <span 
+                      className="text-3xl font-bold"
+                      style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : 'white' }}
+                    >
                       ${prices?.FULL_VISION.toLocaleString()}
                     </span>
                     <span className="text-slate-500 text-sm ml-1">MXN</span>
@@ -871,7 +925,8 @@ function CheckoutContent() {
 
               <button
                 onClick={goNext}
-                className="w-full mt-8 py-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                className="w-full mt-8 py-4 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 hover:opacity-90"
+                style={{ backgroundColor: brandColor }}
               >
                 Continuar al Pago
                 <ArrowRight size={20} />
@@ -1263,7 +1318,8 @@ function CheckoutContent() {
               <button
                 onClick={goNext}
                 disabled={appliedPayments.length === 0 && getRemainingBalance() > 0 && paymentMethod !== 'STRIPE' && paymentMethod !== 'MERCADOPAGO' && paymentMethod !== 'TRANSFER'}
-                className="w-full mt-8 py-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-8 py-4 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+                style={{ backgroundColor: brandColor }}
               >
                 {getRemainingBalance() > 0 && paymentMethod === 'STRIPE' ? (
                   <>
@@ -1424,7 +1480,8 @@ function CheckoutContent() {
               <button
                 onClick={handlePayment}
                 disabled={processing}
-                className="w-full py-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-4 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90"
+                style={{ backgroundColor: brandColor }}
               >
                 {processing ? (
                   <>
