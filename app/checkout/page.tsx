@@ -741,7 +741,7 @@ function CheckoutContent() {
             ¡Hola, {registrationData.nombre.split(' ')[0]}! 👋
           </h1>
           <p className="text-slate-400">
-            Ya casi terminas. Selecciona tu plan y completa el pago para unirte a{' '}}
+            Ya casi terminas. Selecciona tu plan y completa el pago para unirte a{' '}
             <span className="text-white font-semibold">{registrationData.organizationName}</span>
             {registrationData.visionName && (
               <> en la visión <span className="text-white font-semibold">{registrationData.visionName}</span></>
