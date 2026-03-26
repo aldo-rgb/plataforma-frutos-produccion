@@ -772,27 +772,22 @@ function CheckoutContent() {
                 {/* BASIC ONLY */}
                 <button
                   onClick={() => setTicketSelection('BASIC_ONLY')}
-                  className="text-left p-6 rounded-2xl border transition-all bg-slate-900/50 hover:bg-slate-900"
-                  style={ticketSelection === 'BASIC_ONLY' ? { 
-                    borderColor: brandColor,
-                    backgroundColor: '#0f172a'
-                  } : { borderColor: '#1e293b' }}
+                  className={`text-left p-6 rounded-2xl border transition-all ${
+                    ticketSelection === 'BASIC_ONLY'
+                      ? 'border-white bg-slate-900'
+                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
+                  }`}
                 >
                   <div className="flex items-center gap-3 mb-4">
-                    <div 
-                      className="p-3 rounded-xl"
-                      style={{ backgroundColor: ticketSelection === 'BASIC_ONLY' ? `${brandColor}20` : '#1e293b' }}
-                    >
-                      <Ticket 
-                        size={32}
-                        style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#64748b' }}
-                      />
+                    <div className={`p-3 rounded-xl ${
+                      ticketSelection === 'BASIC_ONLY' ? 'bg-white/10' : 'bg-slate-800'
+                    }`}>
+                      <Ticket className={ticketSelection === 'BASIC_ONLY' ? 'text-white' : 'text-slate-500'} size={32} />
                     </div>
                     <div>
-                      <h3 
-                        className="font-bold text-lg"
-                        style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#cbd5e1' }}
-                      >
+                      <h3 className={`font-bold text-lg ${
+                        ticketSelection === 'BASIC_ONLY' ? 'text-white' : 'text-slate-300'
+                      }`}>
                         BÁSICO
                       </h3>
                       <p className="text-sm text-slate-500">Nivel Básico</p>
@@ -801,28 +796,25 @@ function CheckoutContent() {
                   
                   <ul className="space-y-2 mb-6">
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#64748b' }} />
+                      <CheckCircle size={16} className="text-slate-500" />
                       Acceso al nivel BÁSICO completo
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#64748b' }} />
+                      <CheckCircle size={16} className="text-slate-500" />
                       3 dias de entrenamiento
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#64748b' }} />
+                      <CheckCircle size={16} className="text-slate-500" />
                       Acceso a mentorías grupales
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : '#64748b' }} />
+                      <CheckCircle size={16} className="text-slate-500" />
                       Entrenador certificado
                     </li>
                   </ul>
                   
                   <div className="text-right">
-                    <span 
-                      className="text-3xl font-bold"
-                      style={{ color: ticketSelection === 'BASIC_ONLY' ? brandColor : 'white' }}
-                    >
+                    <span className="text-3xl font-bold text-white">
                       ${prices?.BASIC.toLocaleString()}
                     </span>
                     <span className="text-slate-500 text-sm ml-1">MXN</span>
@@ -832,11 +824,11 @@ function CheckoutContent() {
                 {/* FULL VISION */}
                 <button
                   onClick={() => setTicketSelection('FULL_VISION')}
-                  className="text-left p-6 rounded-2xl border transition-all relative overflow-hidden bg-slate-900/50 hover:bg-slate-900"
-                  style={ticketSelection === 'FULL_VISION' ? { 
-                    borderColor: brandColor,
-                    backgroundColor: '#0f172a'
-                  } : { borderColor: '#1e293b' }}
+                  className={`text-left p-6 rounded-2xl border transition-all relative overflow-hidden ${
+                    ticketSelection === 'FULL_VISION'
+                      ? 'border-white bg-slate-900'
+                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
+                  }`}
                 >
                   {/* Best Value Badge */}
                   <div className="absolute top-4 right-4">
@@ -849,59 +841,48 @@ function CheckoutContent() {
                   </div>
                   
                   <div className="flex items-center gap-3 mb-4">
-                    <div 
-                      className="p-3 rounded-xl"
-                      style={{ backgroundColor: ticketSelection === 'FULL_VISION' ? `${brandColor}20` : '#1e293b' }}
-                    >
-                      <Crown 
-                        size={32}
-                        style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#64748b' }}
-                      />
+                    <div className={`p-3 rounded-xl ${
+                      ticketSelection === 'FULL_VISION' ? 'bg-white/10' : 'bg-slate-800'
+                    }`}>
+                      <Crown className={ticketSelection === 'FULL_VISION' ? 'text-white' : 'text-slate-500'} size={32} />
                     </div>
                     <div>
-                      <h3 
-                        className="font-bold text-lg"
-                        style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#cbd5e1' }}
-                      >
+                      <h3 className={`font-bold text-lg ${
+                        ticketSelection === 'FULL_VISION' ? 'text-white' : 'text-slate-300'
+                      }`}>
                         JORNADA COMPLETA
                       </h3>
-                      <p className="text-sm text-slate-500">Visión Completa</p></p>
+                      <p className="text-sm text-slate-500">Visión Completa</p>
                     </div>
                   </div>
                   
                   <ul className="space-y-2 mb-4">
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#64748b' }} />
+                      <CheckCircle size={16} className="text-slate-500" />
                       Acceso a 3 niveles (BÁSICO, AVANZADO, TU VIDA)
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#64748b' }} />
+                      <CheckCircle size={16} className="text-slate-500" />
                       +10 semanas de entrenamiento
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#64748b' }} />
+                      <CheckCircle size={16} className="text-slate-500" />
                       Mentorías 1:1 con expertos
                     </li>
                     <li className="flex items-center gap-2 text-sm text-slate-400">
-                      <CheckCircle size={16} style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : '#64748b' }} />
+                      <CheckCircle size={16} className="text-slate-500" />
                       Acceso a comunidad premium
                     </li>
                   </ul>
                   
                   {/* Quantum Matter License */}
-                  <div 
-                    className="mb-6 p-3 rounded-xl border"
-                    style={{ 
-                      backgroundColor: `${brandColor}10`,
-                      borderColor: `${brandColor}30`
-                    }}
-                  >
+                  <div className="mb-6 p-3 rounded-xl bg-slate-800 border border-slate-700">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg">🚀</span>
-                      <span style={{ color: brandColor }} className="font-bold text-sm">INCLUYE LICENCIA EXCLUSIVA</span>
+                      <span className="text-slate-300 font-bold text-sm">INCLUYE LICENCIA EXCLUSIVA</span>
                     </div>
                     <p className="text-white text-sm font-medium">
-                      Software <span style={{ color: brandColor }} className="font-bold">Quantum Matter</span>
+                      Software <span className="text-white font-bold">Quantum Matter</span>
                     </p>
                     <p className="text-slate-500 text-xs mt-1">
                       Mentoría Virtual + Seguimiento de Metas Asistido por IA
@@ -912,10 +893,7 @@ function CheckoutContent() {
                     <span className="text-slate-600 text-sm line-through mr-2">
                       ${prices ? (prices.FULL_VISION + 5000).toLocaleString() : '---'}
                     </span>
-                    <span 
-                      className="text-3xl font-bold"
-                      style={{ color: ticketSelection === 'FULL_VISION' ? brandColor : 'white' }}
-                    >
+                    <span className="text-3xl font-bold text-white">
                       ${prices?.FULL_VISION.toLocaleString()}
                     </span>
                     <span className="text-slate-500 text-sm ml-1">MXN</span>

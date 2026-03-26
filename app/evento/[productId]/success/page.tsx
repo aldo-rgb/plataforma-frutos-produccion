@@ -14,6 +14,9 @@ export default function EventSuccessPage() {
   const productId = params.productId as string;
   const sessionId = searchParams.get('session_id');
   const registrationId = searchParams.get('registration_id');
+  // MercadoPago params
+  const paymentId = searchParams.get('payment_id') || searchParams.get('collection_id');
+  const paymentStatus = searchParams.get('status') || searchParams.get('collection_status');
   
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
@@ -41,6 +44,8 @@ export default function EventSuccessPage() {
         body: JSON.stringify({
           sessionId,
           registrationId,
+          paymentId,
+          paymentStatus,
         }),
       });
       

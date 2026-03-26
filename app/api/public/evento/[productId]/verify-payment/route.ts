@@ -131,7 +131,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { sessionId, registrationId, simulatePayment } = body;
+    const { sessionId, registrationId, simulatePayment, paymentId, paymentStatus } = body;
 
     if (!registrationId) {
       return NextResponse.json(
@@ -495,9 +495,9 @@ export async function POST(
     }
 
     // ====== VERIFICAR PAGO CON MERCADOPAGO ======
-    // MercadoPago puede verificarse por el preference_id almacenado
-    if (!sessionId && registration.paymentProvider === 'mercadopago' && registration.paymentSessionId) {
-      console.log('🔵 [MercadoPago] Verificando pago para registro:', registration.id);
+    // MercadoPago puede verificarse por payment_id directo o por búsqueda
+    if (registration.paymentProvider === 'mercadopago' || paymentId) {
+      console.log('🔵 [MercadoPago] Verificando pago para registro:', registration.id, 'paymentId:', paymentId);
       
       try {
         const gateway = await getPaymentGateway(
@@ -510,158 +510,185 @@ export async function POST(
           const client = new MercadoPagoConfig({ accessToken: gateway.secretKey });
           const paymentApi = new Payment(client);
 
-          // Buscar pagos asociados a esta preferencia usando la API de búsqueda
-          const searchResponse = await fetch(
-            `https://api.mercadopago.com/v1/payments/search?external_reference=${encodeURIComponent(JSON.stringify({ registrationId: registration.id }))}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${gateway.secretKey}`,
-                'Content-Type': 'application/json',
+          let approvedPayment = null;
+          
+          // Si tenemos paymentId directo, verificar directamente
+          if (paymentId) {
+            console.log('🔵 [MercadoPago] Verificando payment_id directo:', paymentId);
+            try {
+              const payment = await paymentApi.get({ id: paymentId });
+              if (payment.status === 'approved') {
+                approvedPayment = payment;
+                console.log('✅ [MercadoPago] Pago aprobado verificado directamente:', payment.id);
+              }
+            } catch (paymentError) {
+              console.log('⚠️ [MercadoPago] Error obteniendo pago directo, intentando búsqueda...', paymentError);
+            }
+          }
+          
+          // Si no encontramos pago directo, buscar por external_reference con diferentes formatos
+          if (!approvedPayment && registration.paymentSessionId) {
+            // Intentar búsqueda por preference_id
+            const searchUrls = [
+              `https://api.mercadopago.com/v1/payments/search?preference_id=${registration.paymentSessionId}`,
+              `https://api.mercadopago.com/v1/payments/search?external_reference=${registration.id}`,
+            ];
+            
+            for (const searchUrl of searchUrls) {
+              const searchResponse = await fetch(searchUrl, {
+                headers: {
+                  'Authorization': `Bearer ${gateway.secretKey}`,
+                  'Content-Type': 'application/json',
+                }
+              });
+
+              if (searchResponse.ok) {
+                const searchData = await searchResponse.json();
+                approvedPayment = searchData.results?.find((p: any) => p.status === 'approved');
+                if (approvedPayment) {
+                  console.log('✅ [MercadoPago] Pago encontrado por búsqueda:', approvedPayment.id);
+                  break;
+                }
               }
             }
-          );
+          }
 
-          if (searchResponse.ok) {
-            const searchData = await searchResponse.json();
-            const approvedPayment = searchData.results?.find((p: any) => p.status === 'approved');
+          if (approvedPayment) {
+            console.log('✅ [MercadoPago] Pago aprobado encontrado:', approvedPayment.id);
+            const amountPaid = approvedPayment.transaction_amount || 0;
 
-            if (approvedPayment) {
-              console.log('✅ [MercadoPago] Pago aprobado encontrado:', approvedPayment.id);
-              const amountPaid = approvedPayment.transaction_amount || 0;
+            // ====== CREAR USUARIO SI NO EXISTE ======
+            let payerUser = await prisma.usuario.findUnique({
+              where: { email: registration.email.toLowerCase() },
+              select: { id: true, nombre: true, referralCode: true }
+            });
 
-              // ====== CREAR USUARIO SI NO EXISTE ======
-              let payerUser = await prisma.usuario.findUnique({
-                where: { email: registration.email.toLowerCase() },
+            if (!payerUser) {
+              console.log('👤 [MercadoPago] Creando nuevo usuario para:', registration.email);
+              const bcrypt = require('bcryptjs');
+              const defaultPassword = 'Quantum123.';
+              const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+              
+              // Generar referralCode único
+              const timestamp = Date.now().toString(36).toUpperCase();
+              const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+              const namePrefix = registration.nombre.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
+              const referralCode = `${namePrefix}${timestamp}${random}`;
+
+              payerUser = await prisma.usuario.create({
+                data: {
+                  nombre: registration.nombre,
+                  email: registration.email.toLowerCase(),
+                  telefono: registration.telefono || null,
+                  password: hashedPassword,
+                  organizationId: registration.organizationId,
+                  isActive: true,
+                  rol: 'PARTICIPANTE',
+                  referralCode,
+                },
                 select: { id: true, nombre: true, referralCode: true }
               });
+              console.log('✅ [MercadoPago] Usuario creado:', payerUser.id, payerUser.referralCode);
 
-              if (!payerUser) {
-                console.log('👤 [MercadoPago] Creando nuevo usuario para:', registration.email);
-                const bcrypt = require('bcryptjs');
-                const defaultPassword = 'Quantum123.';
-                const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-                
-                // Generar referralCode único
-                const timestamp = Date.now().toString(36).toUpperCase();
-                const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-                const namePrefix = registration.nombre.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
-                const referralCode = `${namePrefix}${timestamp}${random}`;
+              // 📱 Enviar WhatsApp de bienvenida con plantilla quantum_confirmar
+              const org = await prisma.organization.findUnique({
+                where: { id: registration.organizationId },
+                select: { name: true }
+              });
+              
+              sendWelcomeNotifications({
+                userId: payerUser.id,
+                email: registration.email.toLowerCase(),
+                telefono: registration.telefono || '',
+                nombre: registration.nombre,
+                password: defaultPassword,
+                organizationName: org?.name || 'Impacto Cuántico',
+                visionName: registration.SchoolProduct.name,
+              }).catch(err => console.error('Error enviando notificación de bienvenida:', err));
+            }
 
-                payerUser = await prisma.usuario.create({
-                  data: {
-                    nombre: registration.nombre,
-                    email: registration.email.toLowerCase(),
-                    telefono: registration.telefono || null,
-                    password: hashedPassword,
-                    organizationId: registration.organizationId,
-                    isActive: true,
-                    rol: 'PARTICIPANTE',
-                    referralCode,
-                  },
-                  select: { id: true, nombre: true, referralCode: true }
-                });
-                console.log('✅ [MercadoPago] Usuario creado:', payerUser.id, payerUser.referralCode);
+            // ====== GENERAR TICKET CODE ======
+            const ticketCode = `TKT-${registration.id}-${Date.now().toString(36).toUpperCase()}`;
 
-                // 📱 Enviar WhatsApp de bienvenida con plantilla quantum_confirmar
-                const org = await prisma.organization.findUnique({
-                  where: { id: registration.organizationId },
-                  select: { name: true }
-                });
-                
-                sendWelcomeNotifications({
-                  userId: payerUser.id,
-                  email: registration.email.toLowerCase(),
-                  telefono: registration.telefono || '',
-                  nombre: registration.nombre,
-                  password: defaultPassword,
-                  organizationName: org?.name || 'Impacto Cuántico',
-                  visionName: registration.SchoolProduct.name,
-                }).catch(err => console.error('Error enviando notificación de bienvenida:', err));
+            // Actualizar registro como pagado
+            await prisma.eventRegistration.update({
+              where: { id: registration.id },
+              data: {
+                status: EventRegistrationStatus.REGISTERED,
+                paymentStatus: 'PAID',
+                amountPaid: new Decimal(amountPaid),
+                paidAt: new Date(),
+                ticketCode,
+                userId: payerUser.id,
               }
+            });
+            console.log('🎫 [MercadoPago] Ticket generado:', ticketCode);
 
-              // ====== GENERAR TICKET CODE ======
-              const ticketCode = `TKT-${registration.id}-${Date.now().toString(36).toUpperCase()}`;
+            // Incrementar contador de inscritos
+            await prisma.schoolProduct.update({
+              where: { id: registration.productId },
+              data: {
+                currentEnrollment: { increment: 1 },
+                updatedAt: new Date(),
+              }
+            });
 
-              // Actualizar registro como pagado
-              await prisma.eventRegistration.update({
-                where: { id: registration.id },
-                data: {
-                  status: EventRegistrationStatus.REGISTERED,
-                  paymentStatus: 'PAID',
-                  amountPaid: new Decimal(amountPaid),
-                  paidAt: new Date(),
-                  ticketCode,
-                  userId: payerUser.id,
+            // Procesar comisión si fue invitado por alguien graduado
+            if (inviterInfo?.isGraduated && amountPaid > 0) {
+              const commissionAmount = amountPaid * WORKSHOP_COMMISSION_RATE;
+              
+              // Verificar si ya existe la comisión
+              const existingCommission = await prisma.ambassador_wallet_transactions.findFirst({
+                where: {
+                  ambassadorId: inviterInfo.id,
+                  referredUserId: payerUser.id,
+                  productType: AmbassadorProductType.WORKSHOP,
                 }
               });
-              console.log('🎫 [MercadoPago] Ticket generado:', ticketCode);
 
-              // Incrementar contador de inscritos
-              await prisma.schoolProduct.update({
-                where: { id: registration.productId },
-                data: {
-                  currentEnrollment: { increment: 1 },
-                  updatedAt: new Date(),
-                }
-              });
-
-              // Procesar comisión si fue invitado por alguien graduado
-              if (inviterInfo?.isGraduated && amountPaid > 0) {
-                const commissionAmount = amountPaid * WORKSHOP_COMMISSION_RATE;
-                
-                // Verificar si ya existe la comisión
-                const existingCommission = await prisma.ambassador_wallet_transactions.findFirst({
-                  where: {
+              if (!existingCommission) {
+                await prisma.ambassador_wallet_transactions.create({
+                  data: {
                     ambassadorId: inviterInfo.id,
                     referredUserId: payerUser.id,
                     productType: AmbassadorProductType.WORKSHOP,
+                    saleAmount: new Decimal(amountPaid),
+                    commissionPercent: new Decimal(WORKSHOP_COMMISSION_RATE),
+                    commissionAmount: new Decimal(commissionAmount),
+                    status: 'CLEARED',
+                    notes: `Comisión por referido: ${registration.nombre} - ${registration.SchoolProduct.name}`,
+                    organizationId: registration.organizationId,
+                    visionId: registration.SchoolProduct.visionId,
                   }
                 });
 
-                if (!existingCommission) {
-                  await prisma.ambassador_wallet_transactions.create({
-                    data: {
-                      ambassadorId: inviterInfo.id,
-                      referredUserId: payerUser.id,
-                      productType: AmbassadorProductType.WORKSHOP,
-                      saleAmount: new Decimal(amountPaid),
-                      commissionPercent: new Decimal(WORKSHOP_COMMISSION_RATE),
-                      commissionAmount: new Decimal(commissionAmount),
-                      status: 'CLEARED',
-                      notes: `Comisión por referido: ${registration.nombre} - ${registration.SchoolProduct.name}`,
-                      organizationId: registration.organizationId,
-                      visionId: registration.SchoolProduct.visionId,
-                    }
-                  });
-
-                  await prisma.usuario.update({
-                    where: { id: inviterInfo.id },
-                    data: {
-                      ambassadorBalance: { increment: commissionAmount }
-                    }
-                  });
-                  console.log(`✅ [MercadoPago] Comisión de $${commissionAmount.toFixed(2)} creada para ${inviterInfo.nombre}`);
-                }
+                await prisma.usuario.update({
+                  where: { id: inviterInfo.id },
+                  data: {
+                    ambassadorBalance: { increment: commissionAmount }
+                  }
+                });
+                console.log(`✅ [MercadoPago] Comisión de $${commissionAmount.toFixed(2)} creada para ${inviterInfo.nombre}`);
               }
-
-              // Procesar factura si es requerida
-              const invoiceResult = await processInvoice(registration, amountPaid, 'mercadopago');
-
-              return NextResponse.json({
-                success: true,
-                data: {
-                  eventName: registration.SchoolProduct.name,
-                  userName: registration.nombre,
-                  userEmail: registration.email,
-                  startDate: registration.SchoolProduct.startDate,
-                  location: registration.SchoolProduct.location,
-                  ticketCode,
-                  userId: payerUser.id,
-                  invoice: invoiceResult,
-                  productImage: registration.SchoolProduct.imageUrl,
-                }
-              });
             }
+
+            // Procesar factura si es requerida
+            const invoiceResult = await processInvoice(registration, amountPaid, 'mercadopago');
+
+            return NextResponse.json({
+              success: true,
+              data: {
+                eventName: registration.SchoolProduct.name,
+                userName: registration.nombre,
+                userEmail: registration.email,
+                startDate: registration.SchoolProduct.startDate,
+                location: registration.SchoolProduct.location,
+                ticketCode,
+                userId: payerUser.id,
+                invoice: invoiceResult,
+                productImage: registration.SchoolProduct.imageUrl,
+              }
+            });
           }
         }
       } catch (mpError) {
