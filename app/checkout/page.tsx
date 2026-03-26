@@ -658,7 +658,7 @@ function CheckoutContent() {
   if (loading || !registrationData) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
       </div>
     );
   }
@@ -679,13 +679,7 @@ function CheckoutContent() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* Background Effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 -right-40 w-96 h-96 bg-cyan-500 opacity-5 blur-[120px] rounded-full"></div>
-        <div className="absolute bottom-20 -left-40 w-96 h-96 bg-purple-500 opacity-5 blur-[120px] rounded-full"></div>
-      </div>
-
-      <div className="relative z-10 container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <button
@@ -698,30 +692,30 @@ function CheckoutContent() {
           
           {/* Progress */}
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step === 'ticket' ? 'bg-cyan-500 text-white' : 'bg-cyan-500/20 text-cyan-400'
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              step === 'ticket' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'
             }`}>1</div>
-            <div className={`w-12 h-1 ${step === 'ticket' ? 'bg-slate-700' : 'bg-cyan-500'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step === 'payment' ? 'bg-cyan-500 text-white' : step === 'confirm' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-700 text-slate-500'
+            <div className={`w-12 h-0.5 ${step !== 'ticket' ? 'bg-white' : 'bg-slate-700'}`}></div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              step === 'payment' ? 'bg-white text-slate-900' : step === 'confirm' ? 'bg-slate-800 text-slate-400' : 'bg-slate-800 text-slate-500'
             }`}>2</div>
-            <div className={`w-12 h-1 ${step === 'confirm' ? 'bg-cyan-500' : 'bg-slate-700'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step === 'confirm' ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-slate-500'
+            <div className={`w-12 h-0.5 ${step === 'confirm' ? 'bg-white' : 'bg-slate-700'}`}></div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              step === 'confirm' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-500'
             }`}>3</div>
           </div>
         </div>
 
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-cyan-900/30 to-purple-900/30 border border-cyan-500/30 rounded-2xl p-6 mb-8">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8">
           <h1 className="text-2xl font-bold mb-2">
             ¡Hola, {registrationData.nombre.split(' ')[0]}! 👋
           </h1>
-          <p className="text-slate-300">
+          <p className="text-slate-400">
             Ya casi terminas. Selecciona tu plan y completa el pago para unirte a{' '}
-            <span className="text-cyan-400 font-bold">{registrationData.organizationName}</span>
+            <span className="text-white font-semibold">{registrationData.organizationName}</span>
             {registrationData.visionName && (
-              <> en la visión <span className="text-purple-400 font-bold">{registrationData.visionName}</span></>
+              <> en la visión <span className="text-white font-semibold">{registrationData.visionName}</span></>
             )}
           </p>
         </div>
@@ -749,49 +743,49 @@ function CheckoutContent() {
                 {/* BASIC ONLY */}
                 <button
                   onClick={() => setTicketSelection('BASIC_ONLY')}
-                  className={`text-left p-6 rounded-2xl border-2 transition-all ${
+                  className={`text-left p-6 rounded-2xl border transition-all ${
                     ticketSelection === 'BASIC_ONLY'
-                      ? 'border-yellow-500 bg-yellow-500/10 shadow-lg shadow-yellow-500/20'
-                      : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
+                      ? 'border-white bg-slate-900'
+                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`p-3 rounded-xl ${
-                      ticketSelection === 'BASIC_ONLY' ? 'bg-yellow-500/20' : 'bg-slate-800'
+                      ticketSelection === 'BASIC_ONLY' ? 'bg-white/10' : 'bg-slate-800'
                     }`}>
-                      <Ticket className={ticketSelection === 'BASIC_ONLY' ? 'text-yellow-400' : 'text-slate-400'} size={32} />
+                      <Ticket className={ticketSelection === 'BASIC_ONLY' ? 'text-white' : 'text-slate-500'} size={32} />
                     </div>
                     <div>
                       <h3 className={`font-bold text-lg ${
-                        ticketSelection === 'BASIC_ONLY' ? 'text-yellow-400' : 'text-white'
+                        ticketSelection === 'BASIC_ONLY' ? 'text-white' : 'text-slate-300'
                       }`}>
                         BÁSICO
                       </h3>
-                      <p className="text-sm text-slate-400">Nivel Básico</p>
+                      <p className="text-sm text-slate-500">Nivel Básico</p>
                     </div>
                   </div>
                   
                   <ul className="space-y-2 mb-6">
-                    <li className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={16} className="text-green-400" />
+                    <li className="flex items-center gap-2 text-sm text-slate-400">
+                      <CheckCircle size={16} className="text-slate-500" />
                       Acceso al nivel BÁSICO completo
                     </li>
-                    <li className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={16} className="text-green-400" />
+                    <li className="flex items-center gap-2 text-sm text-slate-400">
+                      <CheckCircle size={16} className="text-slate-500" />
                       3 dias de entrenamiento
                     </li>
-                    <li className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={16} className="text-green-400" />
+                    <li className="flex items-center gap-2 text-sm text-slate-400">
+                      <CheckCircle size={16} className="text-slate-500" />
                       Acceso a mentorías grupales
                     </li>
-                    <li className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={16} className="text-green-400" />
+                    <li className="flex items-center gap-2 text-sm text-slate-400">
+                      <CheckCircle size={16} className="text-slate-500" />
                       Entrenador certificado
                     </li>
                   </ul>
                   
                   <div className="text-right">
-                    <span className="text-3xl font-black text-yellow-400">
+                    <span className="text-3xl font-bold text-white">
                       ${prices?.BASIC.toLocaleString()}
                     </span>
                     <span className="text-slate-500 text-sm ml-1">MXN</span>
@@ -801,73 +795,73 @@ function CheckoutContent() {
                 {/* FULL VISION */}
                 <button
                   onClick={() => setTicketSelection('FULL_VISION')}
-                  className={`text-left p-6 rounded-2xl border-2 transition-all relative overflow-hidden ${
+                  className={`text-left p-6 rounded-2xl border transition-all relative overflow-hidden ${
                     ticketSelection === 'FULL_VISION'
-                      ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
-                      : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
+                      ? 'border-white bg-slate-900'
+                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
                   }`}
                 >
                   {/* Best Value Badge */}
                   <div className="absolute top-4 right-4">
-                    <span className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full">
-                      ⭐ MEJOR VALOR
+                    <span className="px-3 py-1 bg-white text-slate-900 text-xs font-bold rounded-full">
+                      RECOMENDADO
                     </span>
                   </div>
                   
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`p-3 rounded-xl ${
-                      ticketSelection === 'FULL_VISION' ? 'bg-purple-500/20' : 'bg-slate-800'
+                      ticketSelection === 'FULL_VISION' ? 'bg-white/10' : 'bg-slate-800'
                     }`}>
-                      <Crown className={ticketSelection === 'FULL_VISION' ? 'text-purple-400' : 'text-slate-400'} size={32} />
+                      <Crown className={ticketSelection === 'FULL_VISION' ? 'text-white' : 'text-slate-500'} size={32} />
                     </div>
                     <div>
                       <h3 className={`font-bold text-lg ${
-                        ticketSelection === 'FULL_VISION' ? 'text-purple-400' : 'text-white'
+                        ticketSelection === 'FULL_VISION' ? 'text-white' : 'text-slate-300'
                       }`}>
                         JORNADA COMPLETA
                       </h3>
-                      <p className="text-sm text-slate-400">Visión Completa</p>
+                      <p className="text-sm text-slate-500">Visión Completa</p>
                     </div>
                   </div>
                   
                   <ul className="space-y-2 mb-4">
-                    <li className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={16} className="text-green-400" />
+                    <li className="flex items-center gap-2 text-sm text-slate-400">
+                      <CheckCircle size={16} className="text-slate-500" />
                       Acceso a 3 niveles (BÁSICO, AVANZADO, TU VIDA)
                     </li>
-                    <li className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={16} className="text-green-400" />
+                    <li className="flex items-center gap-2 text-sm text-slate-400">
+                      <CheckCircle size={16} className="text-slate-500" />
                       +10 semanas de entrenamiento
                     </li>
-                    <li className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={16} className="text-green-400" />
+                    <li className="flex items-center gap-2 text-sm text-slate-400">
+                      <CheckCircle size={16} className="text-slate-500" />
                       Mentorías 1:1 con expertos
                     </li>
-                    <li className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={16} className="text-green-400" />
+                    <li className="flex items-center gap-2 text-sm text-slate-400">
+                      <CheckCircle size={16} className="text-slate-500" />
                       Acceso a comunidad premium
                     </li>
                   </ul>
                   
-                  {/* Quantum Matter License - Highlighted */}
-                  <div className="mb-6 p-3 rounded-xl bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/40">
+                  {/* Quantum Matter License */}
+                  <div className="mb-6 p-3 rounded-xl bg-slate-800 border border-slate-700">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg">🚀</span>
-                      <span className="text-purple-300 font-bold text-sm">INCLUYE LICENCIA EXCLUSIVA</span>
+                      <span className="text-slate-300 font-bold text-sm">INCLUYE LICENCIA EXCLUSIVA</span>
                     </div>
                     <p className="text-white text-sm font-medium">
-                      Software <span className="text-purple-400 font-bold">Quantum Matter</span>
+                      Software <span className="text-white font-bold">Quantum Matter</span>
                     </p>
-                    <p className="text-slate-400 text-xs mt-1">
+                    <p className="text-slate-500 text-xs mt-1">
                       Mentoría Virtual + Seguimiento de Metas Asistido por IA
                     </p>
                   </div>
                   
                   <div className="text-right">
-                    <span className="text-slate-500 text-sm line-through mr-2">
+                    <span className="text-slate-600 text-sm line-through mr-2">
                       ${prices ? (prices.FULL_VISION + 5000).toLocaleString() : '---'}
                     </span>
-                    <span className="text-3xl font-black text-purple-400">
+                    <span className="text-3xl font-bold text-white">
                       ${prices?.FULL_VISION.toLocaleString()}
                     </span>
                     <span className="text-slate-500 text-sm ml-1">MXN</span>
@@ -877,7 +871,7 @@ function CheckoutContent() {
 
               <button
                 onClick={goNext}
-                className="w-full mt-8 py-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                className="w-full mt-8 py-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl transition-all flex items-center justify-center gap-2"
               >
                 Continuar al Pago
                 <ArrowRight size={20} />
@@ -896,33 +890,33 @@ function CheckoutContent() {
               <h2 className="text-xl font-bold mb-6">Método de Pago</h2>
               
               {/* Payment Summary Card */}
-              <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-xl p-5 mb-6">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Wallet className="text-cyan-400" size={20} />
+                    <Wallet className="text-slate-400" size={20} />
                     <span className="font-bold text-white">Resumen de Pago</span>
                   </div>
-                  <span className="text-sm text-slate-400">
+                  <span className="text-sm text-slate-500">
                     {ticketSelection === 'FULL_VISION' ? 'Jornada Completa' : 'Básico'}
                   </span>
                 </div>
                 
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between text-slate-300">
+                  <div className="flex justify-between text-slate-400">
                     <span>Precio total:</span>
-                    <span className="font-bold">${getTotalAmount().toLocaleString()} MXN</span>
+                    <span className="font-bold text-white">${getTotalAmount().toLocaleString()} MXN</span>
                   </div>
                   {appliedPayments.length > 0 && (
-                    <div className="flex justify-between text-green-400">
+                    <div className="flex justify-between text-slate-400">
                       <span>Pagos aplicados:</span>
-                      <span className="font-bold">-${getTotalPaid().toLocaleString()} MXN</span>
+                      <span className="font-bold text-white">-${getTotalPaid().toLocaleString()} MXN</span>
                     </div>
                   )}
-                  <div className="pt-2 border-t border-slate-700 flex justify-between">
-                    <span className={getRemainingBalance() > 0 ? 'text-yellow-400' : 'text-green-400'}>
+                  <div className="pt-2 border-t border-slate-800 flex justify-between">
+                    <span className="text-slate-400">
                       {getRemainingBalance() > 0 ? 'Saldo pendiente:' : '✓ Pagado:'}
                     </span>
-                    <span className={`font-bold text-lg ${getRemainingBalance() > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                    <span className="font-bold text-lg text-white">
                       ${getRemainingBalance().toLocaleString()} MXN
                     </span>
                   </div>
@@ -930,27 +924,27 @@ function CheckoutContent() {
               </div>
 
               {/* Invoice (Factura) Section */}
-              <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 mb-6">
+              <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-6">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2 bg-amber-500/20 rounded-lg flex-shrink-0">
-                      <Receipt className="w-5 h-5 text-amber-400" />
+                    <div className="p-2 bg-slate-800 rounded-lg flex-shrink-0">
+                      <Receipt className="w-5 h-5 text-slate-400" />
                     </div>
                     <div>
                       <span className="text-white font-medium">¿Necesitas factura?</span>
-                      <p className="text-xs text-slate-400">Proporciona tus datos fiscales</p>
+                      <p className="text-xs text-slate-500">Proporciona tus datos fiscales</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setRequiresInvoice(!requiresInvoice)}
                     className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-                      requiresInvoice ? 'bg-cyan-500' : 'bg-slate-600'
+                      requiresInvoice ? 'bg-white' : 'bg-slate-700'
                     }`}
                   >
                     <span 
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-md ${
-                        requiresInvoice ? 'translate-x-6' : 'translate-x-0'
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform shadow-md ${
+                        requiresInvoice ? 'translate-x-6 bg-slate-900' : 'translate-x-0 bg-slate-400'
                       }`}
                     />
                   </button>
@@ -958,65 +952,65 @@ function CheckoutContent() {
 
                 {/* Formulario fiscal (si requiere) */}
                 {requiresInvoice && (
-                  <div className="mt-4 space-y-4 p-4 bg-slate-800/50 rounded-xl border border-amber-500/30">
-                    <p className="text-amber-400 text-xs font-medium flex items-center gap-2">
+                  <div className="mt-4 space-y-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                    <p className="text-slate-400 text-xs font-medium flex items-center gap-2">
                       <Shield className="w-4 h-4" />
                       Datos exactamente como aparecen en tu Constancia de Situación Fiscal
                     </p>
 
                     {loadingCatalogs ? (
                       <div className="flex items-center justify-center py-4">
-                        <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
+                        <Loader2 className="w-6 h-6 text-white animate-spin" />
                       </div>
                     ) : (
                       <>
                         {/* RFC */}
                         <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1">RFC *</label>
+                          <label className="block text-sm font-medium text-slate-400 mb-1">RFC *</label>
                           <input
                             type="text"
                             value={invoiceData.rfc}
                             onChange={(e) => setInvoiceData({ ...invoiceData, rfc: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 13) })}
                             placeholder="XAXX010101000"
                             maxLength={13}
-                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors font-mono uppercase"
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-white transition-colors font-mono uppercase"
                           />
-                          <p className="text-xs text-slate-500 mt-1">{invoiceData.rfc.length}/13 caracteres</p>
+                          <p className="text-xs text-slate-600 mt-1">{invoiceData.rfc.length}/13 caracteres</p>
                         </div>
 
                         {/* Razón Social */}
                         <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1">Razón Social *</label>
+                          <label className="block text-sm font-medium text-slate-400 mb-1">Razón Social *</label>
                           <input
                             type="text"
                             value={invoiceData.name}
                             onChange={(e) => setInvoiceData({ ...invoiceData, name: e.target.value.toUpperCase() })}
                             placeholder="NOMBRE COMPLETO O EMPRESA"
-                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors uppercase"
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-white transition-colors uppercase"
                           />
-                          <p className="text-xs text-slate-500 mt-1">Sin S.A. de C.V., exactamente como aparece en tu constancia</p>
+                          <p className="text-xs text-slate-600 mt-1">Sin S.A. de C.V., exactamente como aparece en tu constancia</p>
                         </div>
 
                         {/* Código Postal */}
                         <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1">Código Postal Fiscal *</label>
+                          <label className="block text-sm font-medium text-slate-400 mb-1">Código Postal Fiscal *</label>
                           <input
                             type="text"
                             value={invoiceData.zipCode}
                             onChange={(e) => setInvoiceData({ ...invoiceData, zipCode: e.target.value.replace(/\D/g, '').slice(0, 5) })}
                             placeholder="00000"
                             maxLength={5}
-                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors font-mono"
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-white transition-colors font-mono"
                           />
                         </div>
 
                         {/* Régimen Fiscal */}
                         <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1">Régimen Fiscal *</label>
+                          <label className="block text-sm font-medium text-slate-400 mb-1">Régimen Fiscal *</label>
                           <select
                             value={invoiceData.regime}
                             onChange={(e) => setInvoiceData({ ...invoiceData, regime: e.target.value })}
-                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-white transition-colors"
                           >
                             <option value="">Selecciona tu régimen fiscal</option>
                             {satCatalogs?.regimenFiscal.map((r) => (
@@ -1029,11 +1023,11 @@ function CheckoutContent() {
 
                         {/* Uso de CFDI */}
                         <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1">Uso de CFDI *</label>
+                          <label className="block text-sm font-medium text-slate-400 mb-1">Uso de CFDI *</label>
                           <select
                             value={invoiceData.cfdiUse}
                             onChange={(e) => setInvoiceData({ ...invoiceData, cfdiUse: e.target.value })}
-                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-white transition-colors"
                           >
                             <option value="">Selecciona el uso</option>
                             {satCatalogs?.usoCfdi.map((u) => (
@@ -1051,9 +1045,9 @@ function CheckoutContent() {
 
               {/* Applied Payments */}
               {appliedPayments.length > 0 && (
-                <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 mb-6">
-                  <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
-                    <CheckCircle size={16} className="text-green-400" />
+                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-6">
+                  <h4 className="text-sm font-bold text-slate-400 mb-3 flex items-center gap-2">
+                    <CheckCircle size={16} className="text-white" />
                     Pagos Aplicados ({appliedPayments.length})
                   </h4>
                   <div className="space-y-2">
@@ -1061,22 +1055,22 @@ function CheckoutContent() {
                       <div key={payment.id} className="flex items-center justify-between bg-slate-800/50 rounded-lg p-3">
                         <div className="flex items-center gap-3">
                           {payment.type === 'GIFT_CODE' || payment.type === 'CASH_PAYMENT' ? (
-                            <Banknote className="text-green-400" size={18} />
+                            <Banknote className="text-slate-400" size={18} />
                           ) : (
-                            <CreditCard className="text-cyan-400" size={18} />
+                            <CreditCard className="text-slate-400" size={18} />
                           )}
                           <div>
                             <p className="text-sm font-medium text-white">{payment.description}</p>
                             {payment.code && (
-                              <p className="text-xs text-slate-500 font-mono">{payment.code}</p>
+                              <p className="text-xs text-slate-600 font-mono">{payment.code}</p>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-green-400 font-bold">${payment.amount.toLocaleString()}</span>
+                          <span className="text-white font-bold">${payment.amount.toLocaleString()}</span>
                           <button
                             onClick={() => removePayment(payment.id)}
-                            className="p-1 hover:bg-red-500/20 rounded text-red-400 hover:text-red-300 transition-colors"
+                            className="p-1 hover:bg-slate-700 rounded text-slate-500 hover:text-white transition-colors"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -1093,21 +1087,21 @@ function CheckoutContent() {
                 <button
                   onClick={() => setPaymentMethod('STRIPE')}
                   disabled={getRemainingBalance() === 0}
-                  className={`p-4 rounded-xl border-2 transition-all relative ${
+                  className={`p-4 rounded-xl border transition-all relative ${
                     paymentMethod === 'STRIPE'
-                      ? 'border-cyan-500 bg-cyan-500/10'
-                      : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
+                      ? 'border-white bg-white/5'
+                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
                   } ${getRemainingBalance() === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {getRemainingBalance() > 0 && paymentMethod === 'STRIPE' && (
                     <div className="absolute -top-2 -right-2">
-                      <span className="text-[10px] bg-cyan-500 text-white px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-[10px] bg-white text-slate-900 px-2 py-0.5 rounded-full font-bold">
                         ${getRemainingBalance().toLocaleString()}
                       </span>
                     </div>
                   )}
-                  <CreditCard className={`mx-auto mb-2 ${paymentMethod === 'STRIPE' ? 'text-cyan-400' : 'text-slate-400'}`} size={24} />
-                  <span className={`text-sm font-medium ${paymentMethod === 'STRIPE' ? 'text-cyan-400' : 'text-slate-300'}`}>
+                  <CreditCard className={`mx-auto mb-2 ${paymentMethod === 'STRIPE' ? 'text-white' : 'text-slate-500'}`} size={24} />
+                  <span className={`text-sm font-medium ${paymentMethod === 'STRIPE' ? 'text-white' : 'text-slate-400'}`}>
                     Tarjeta
                   </span>
                 </button>
@@ -1116,21 +1110,21 @@ function CheckoutContent() {
                 <button
                   onClick={() => setPaymentMethod('MERCADOPAGO')}
                   disabled={getRemainingBalance() === 0}
-                  className={`p-4 rounded-xl border-2 transition-all relative ${
+                  className={`p-4 rounded-xl border transition-all relative ${
                     paymentMethod === 'MERCADOPAGO'
-                      ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
+                      ? 'border-white bg-white/5'
+                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
                   } ${getRemainingBalance() === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {getRemainingBalance() > 0 && paymentMethod === 'MERCADOPAGO' && (
                     <div className="absolute -top-2 -right-2">
-                      <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-[10px] bg-white text-slate-900 px-2 py-0.5 rounded-full font-bold">
                         ${getRemainingBalance().toLocaleString()}
                       </span>
                     </div>
                   )}
-                  <Wallet className={`mx-auto mb-2 ${paymentMethod === 'MERCADOPAGO' ? 'text-blue-400' : 'text-slate-400'}`} size={24} />
-                  <span className={`text-sm font-medium ${paymentMethod === 'MERCADOPAGO' ? 'text-blue-400' : 'text-slate-300'}`}>
+                  <Wallet className={`mx-auto mb-2 ${paymentMethod === 'MERCADOPAGO' ? 'text-white' : 'text-slate-500'}`} size={24} />
+                  <span className={`text-sm font-medium ${paymentMethod === 'MERCADOPAGO' ? 'text-white' : 'text-slate-400'}`}>
                     Mercado Pago
                   </span>
                 </button>
@@ -1138,24 +1132,24 @@ function CheckoutContent() {
                 {/* Código de Descuento */}
                 <button
                   onClick={() => setPaymentMethod('GIFT_CODE')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
+                  className={`p-4 rounded-xl border transition-all ${
                     paymentMethod === 'GIFT_CODE'
-                      ? 'border-green-500 bg-green-500/10'
-                      : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
+                      ? 'border-white bg-white/5'
+                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
                   }`}
                 >
-                  <QrCode className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-400'}`} size={24} />
-                  <span className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-300'}`}>
-                    Código de descuento
+                  <QrCode className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-white' : 'text-slate-500'}`} size={24} />
+                  <span className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-white' : 'text-slate-400'}`}>
+                    Código
                   </span>
                 </button>
               </div>
 
               {/* Gift Code Input */}
               {paymentMethod === 'GIFT_CODE' && (
-                <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-6">
+                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
                   <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                    <Banknote className="text-green-400" size={20} />
+                    <Banknote className="text-slate-400" size={20} />
                     Agregar Código de Referencia
                   </h3>
                   
@@ -1168,13 +1162,13 @@ function CheckoutContent() {
                         setCodeError('');
                         setValidatedCode(null);
                       }}
-                      placeholder="GOLDEN-XXXXXXXX"
-                      className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white uppercase tracking-widest font-mono text-sm focus:border-yellow-500 outline-none"
+                      placeholder="CODIGO-XXXXXXXX"
+                      className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white uppercase tracking-widest font-mono text-sm focus:border-white outline-none"
                     />
                     <button
                       onClick={validateGiftCode}
                       disabled={validatingCode}
-                      className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                      className="px-6 py-3 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
                     >
                       {validatingCode ? (
                         <Loader2 className="animate-spin mx-auto" size={20} />
@@ -1192,10 +1186,10 @@ function CheckoutContent() {
                   )}
 
                   {validatedCode && (
-                    <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg">
+                    <div className="mt-4 p-4 bg-slate-800 border border-slate-700 rounded-lg">
                       <div className="flex items-center gap-3">
-                        <Loader2 className="text-green-400 animate-spin" size={24} />
-                        <span className="font-bold text-green-400">¡Código válido! Agregando...</span>
+                        <Loader2 className="text-white animate-spin" size={24} />
+                        <span className="font-bold text-white">¡Código válido! Agregando...</span>
                       </div>
                     </div>
                   )}
@@ -1204,46 +1198,46 @@ function CheckoutContent() {
 
               {/* Bank Transfer Info */}
               {paymentMethod === 'TRANSFER' && (
-                <div className="bg-slate-900/50 border border-purple-500/50 rounded-xl p-6">
+                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
                   <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                    <Building2 className="text-purple-400" size={20} />
+                    <Building2 className="text-slate-400" size={20} />
                     Pago por Transferencia Bancaria
                   </h3>
                   
                   {bankConfig && bankConfig.bankName ? (
                     <div className="space-y-4">
                       <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                        <p className="text-slate-400 text-sm mb-1">Banco</p>
+                        <p className="text-slate-500 text-sm mb-1">Banco</p>
                         <p className="text-white font-bold">{bankConfig.bankName}</p>
                       </div>
                       
                       <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                        <p className="text-slate-400 text-sm mb-1">CLABE Interbancaria</p>
+                        <p className="text-slate-500 text-sm mb-1">CLABE Interbancaria</p>
                         <p className="text-white font-mono font-bold tracking-wider">{bankConfig.bankAccountClabe}</p>
                       </div>
                       
                       <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                        <p className="text-slate-400 text-sm mb-1">Beneficiario</p>
+                        <p className="text-slate-500 text-sm mb-1">Beneficiario</p>
                         <p className="text-white font-bold">{bankConfig.bankAccountHolder}</p>
                       </div>
                       
                       <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                        <p className="text-slate-400 text-sm mb-1">Monto a Transferir</p>
-                        <p className="text-purple-400 font-bold text-xl">${getTotalAmount().toLocaleString()} MXN</p>
+                        <p className="text-slate-500 text-sm mb-1">Monto a Transferir</p>
+                        <p className="text-white font-bold text-xl">${getTotalAmount().toLocaleString()} MXN</p>
                       </div>
                       
                       {bankConfig.transferWhatsappNumber && (
-                        <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-4">
-                          <p className="text-purple-300 text-sm">
-                            <strong>Importante:</strong> Después de realizar la transferencia, envía tu comprobante de pago al WhatsApp <span className="text-white font-bold">{bankConfig.transferWhatsappNumber}</span> junto con tu nombre completo para activar tu cuenta.
+                        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+                          <p className="text-slate-400 text-sm">
+                            <strong className="text-white">Importante:</strong> Después de realizar la transferencia, envía tu comprobante de pago al WhatsApp <span className="text-white font-bold">{bankConfig.transferWhatsappNumber}</span> junto con tu nombre completo para activar tu cuenta.
                           </p>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4">
-                      <p className="text-yellow-300 text-sm">
-                        <strong>Nota:</strong> La organización no ha configurado datos bancarios para transferencias. Por favor, contacta al administrador o elige otro método de pago.
+                    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+                      <p className="text-slate-400 text-sm">
+                        <strong className="text-white">Nota:</strong> La organización no ha configurado datos bancarios para transferencias. Por favor, contacta al administrador o elige otro método de pago.
                       </p>
                     </div>
                   )}
@@ -1252,15 +1246,15 @@ function CheckoutContent() {
 
               {/* Card Payment Info */}
               {paymentMethod === 'STRIPE' && getRemainingBalance() > 0 && (
-                <div className="bg-slate-900/50 border border-cyan-500/50 rounded-xl p-6">
+                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
                   <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                    <CreditCard className="text-cyan-400" size={20} />
+                    <CreditCard className="text-slate-400" size={20} />
                     Pagar con Tarjeta
                   </h3>
-                  <p className="text-slate-300 mb-4">
-                    Pagarás <span className="text-cyan-400 font-bold">${getRemainingBalance().toLocaleString()} MXN</span> con tarjeta de crédito/débito.
+                  <p className="text-slate-400 mb-4">
+                    Pagarás <span className="text-white font-bold">${getRemainingBalance().toLocaleString()} MXN</span> con tarjeta de crédito/débito.
                   </p>
-                  <p className="text-slate-400 text-sm">
+                  <p className="text-slate-500 text-sm">
                     Serás redirigido a la pasarela de pago segura para completar tu transacción.
                   </p>
                 </div>
@@ -1269,7 +1263,7 @@ function CheckoutContent() {
               <button
                 onClick={goNext}
                 disabled={appliedPayments.length === 0 && getRemainingBalance() > 0 && paymentMethod !== 'STRIPE' && paymentMethod !== 'MERCADOPAGO' && paymentMethod !== 'TRANSFER'}
-                className="w-full mt-8 py-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-8 py-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {getRemainingBalance() > 0 && paymentMethod === 'STRIPE' ? (
                   <>
@@ -1308,22 +1302,22 @@ function CheckoutContent() {
             >
               <h2 className="text-xl font-bold mb-6">Confirma tu Compra</h2>
               
-              <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-6 mb-6">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
                 <h3 className="font-bold text-white mb-4">Resumen del Pedido</h3>
                 
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center pb-4 border-b border-slate-700">
+                  <div className="flex justify-between items-center pb-4 border-b border-slate-800">
                     <div className="flex items-center gap-3">
                       {ticketSelection === 'FULL_VISION' ? (
-                        <Crown className="text-purple-400" size={24} />
+                        <Crown className="text-slate-400" size={24} />
                       ) : (
-                        <Ticket className="text-yellow-400" size={24} />
+                        <Ticket className="text-slate-400" size={24} />
                       )}
                       <div>
                         <p className="font-bold text-white">
                           {ticketSelection === 'FULL_VISION' ? 'JORNADA COMPLETA' : 'BÁSICO'}
                         </p>
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-slate-500">
                           {ticketSelection === 'FULL_VISION' 
                             ? 'Visión Completa (3 niveles)' 
                             : 'Nivel Básico'}
@@ -1404,23 +1398,23 @@ function CheckoutContent() {
               </div>
 
               {/* Security Note */}
-              <div className="flex items-start gap-3 p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-xl mb-8">
-                <Shield className="text-cyan-400 mt-0.5" size={20} />
+              <div className="flex items-start gap-3 p-4 bg-slate-900 border border-slate-800 rounded-xl mb-8">
+                <Shield className="text-slate-400 mt-0.5" size={20} />
                 <div className="text-sm">
-                  <p className="font-bold text-cyan-400">Compra Segura</p>
-                  <p className="text-slate-300">Tu información está protegida con encriptación de nivel bancario.</p>
+                  <p className="font-bold text-white">Compra Segura</p>
+                  <p className="text-slate-500">Tu información está protegida con encriptación de nivel bancario.</p>
                 </div>
               </div>
 
               {/* Mostrar enlace manual si la redirección automática falla */}
               {paymentUrl && (
-                <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                  <p className="text-yellow-400 font-bold mb-2">🔗 Si no fuiste redirigido automáticamente:</p>
+                <div className="mb-6 p-4 bg-slate-900 border border-slate-800 rounded-xl">
+                  <p className="text-white font-bold mb-2">🔗 Si no fuiste redirigido automáticamente:</p>
                   <a 
                     href={paymentUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block w-full py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-lg text-center transition-all"
+                    className="block w-full py-3 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-lg text-center transition-all"
                   >
                     Click aquí para ir a pagar →
                   </a>
@@ -1430,7 +1424,7 @@ function CheckoutContent() {
               <button
                 onClick={handlePayment}
                 disabled={processing}
-                className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {processing ? (
                   <>
@@ -1460,7 +1454,7 @@ export default function CheckoutPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
       </div>
     }>
       <CheckoutContent />
