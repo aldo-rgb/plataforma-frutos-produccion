@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
     const reports = await prisma.bugReport.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        Usuario: { select: { id: true, name: true, email: true } },
-        ResolvedByUser: { select: { id: true, name: true } },
+        Usuario: { select: { id: true, nombre: true, email: true } },
+        ResolvedByUser: { select: { id: true, nombre: true } },
       },
     });
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       dbId: r.id,
       description: r.description,
       screenshotUrl: r.screenshotUrl,
-      userName: r.Usuario.name || 'Anónimo',
+      userName: r.Usuario.nombre || 'Anónimo',
       userEmail: r.Usuario.email,
       userId: r.userId,
       pageUrl: r.pageUrl,
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       createdAt: r.createdAt.toISOString(),
       resolvedAt: r.resolvedAt?.toISOString() || null,
       notes: r.adminNotes,
-      resolvedBy: r.ResolvedByUser?.name || null,
+      resolvedBy: r.ResolvedByUser?.nombre || null,
     }));
 
     return NextResponse.json({ reports: mapped });
