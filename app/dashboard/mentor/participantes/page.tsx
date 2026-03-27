@@ -150,13 +150,6 @@ export default function MisParticipantes() {
             Gestiona el progreso de tus {participantes.length} alumnos asignados
           </p>
         </div>
-        <Link 
-          href="/dashboard/mentor/asignar-participante"
-          className="bg-purple-600 hover:bg-purple-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-all hover:scale-105 flex items-center gap-2"
-        >
-          <User size={18} />
-          Asignar Nuevo
-        </Link>
       </div>
 
       {/* Estadísticas Rápidas */}
