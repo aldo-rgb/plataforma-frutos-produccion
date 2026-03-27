@@ -144,7 +144,8 @@ export async function POST(request: Request) {
         fechaInicio: inicio,
         fechaFin: fin,
         motivo,
-        descripcion: descripcion || null
+        descripcion: descripcion || null,
+        updatedAt: new Date()
       }
     });
 
