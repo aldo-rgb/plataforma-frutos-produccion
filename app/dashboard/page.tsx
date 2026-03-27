@@ -17,7 +17,6 @@ import RankingWidget from "@/components/dashboard/RankingWidget";
 import PendingMentorReviewsWidget from "@/components/dashboard/PendingMentorReviewsWidget";
 import MedicalFormWidget from "@/components/dashboard/MedicalFormWidget";
 import IdentityHeroSection from "@/components/dashboard/identity/IdentityHeroSection";
-import PendingTicketBanner from "@/components/dashboard/PendingTicketBanner";
 import BitacoraAlertWidget from "@/components/dashboard/BitacoraAlertWidget";
 import LegacyCaptureBlockingModal from '@/components/dashboard/LegacyCaptureBlockingModal';
 import ParticipantSurveyBanner from '@/components/surveys/ParticipantSurveyBanner';
@@ -741,11 +740,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* MODAL DE LEGACY CAPTURE (ÚLTIMO DÍA)        */}
       {/* ============================================ */}
       <LegacyCaptureBlockingModal />
-
-      {/* ============================================ */}
-      {/* BANNER DE PAGO PENDIENTE (Al final)         */}
-      {/* ============================================ */}
-      <PendingTicketBanner />
 
       {/* Aquí abajo irían tus Widgets de "Avance General" y "Evidencias" */}
       {/* ... */}
