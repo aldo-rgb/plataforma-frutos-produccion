@@ -186,6 +186,15 @@ export async function POST(request: Request) {
     const prefix = nombreLimpio.substring(0, 3).padEnd(3, 'X');
     generatedReferralCode = `${prefix}${timestamp}${random}`;
 
+    // 🐺 LOBO SOLITARIO: Si viene SIN organización, marcar perfil como completado
+    // ya que no requieren pasar por /dashboard/completar-perfil
+    const isLoboSolitario = !finalOrganizationId;
+    const shouldMarkProfileCompleted = isLoboSolitario;
+    
+    if (isLoboSolitario) {
+      logger.debug('🐺 Registro de Lobo Solitario detectado - marcando profileCompleted: true');
+    }
+
     // Crear usuario
     const newUser = await prisma.usuario.create({
       data: {
@@ -203,6 +212,8 @@ export async function POST(request: Request) {
         invitedBy: invitedById,
         invitedByText: invitedByText,
         referralCode: generatedReferralCode,
+        // 🐺 Marcar perfil completado para Lobos Solitarios
+        profileCompleted: shouldMarkProfileCompleted,
         // Campos opcionales del formulario extendido
         ...(apodo && { apodo }),
         ...(horarioLlamada && { horarioLlamada }),
