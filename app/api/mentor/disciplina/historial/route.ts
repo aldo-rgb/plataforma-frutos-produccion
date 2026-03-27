@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         programEnrollmentId: enrollment.id,
         type: 'DISCIPLINE'
       },
-      orderBy: { scheduledAt: 'desc' },
+      orderBy: { weekNumber: 'asc' },
       select: {
         id: true,
         scheduledAt: true,
