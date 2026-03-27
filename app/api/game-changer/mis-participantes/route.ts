@@ -16,10 +16,11 @@ export async function GET() {
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true }
+      select: { id: true, rol: true, esGameChanger: true }
     });
 
-    if (usuario?.rol !== 'GAMECHANGER') {
+    // Permitir si es rol GAMECHANGER o tiene flag esGameChanger (mentores que son GC)
+    if (!usuario || (usuario.rol !== 'GAMECHANGER' && !usuario.esGameChanger)) {
       return NextResponse.json({ error: 'Solo Game Changers pueden acceder' }, { status: 403 });
     }
 

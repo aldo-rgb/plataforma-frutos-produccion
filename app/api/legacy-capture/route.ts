@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
         id: true, 
         nombre: true, 
         rol: true,
-        profileImage: true 
+        profileImage: true,
+        esGameChanger: true 
       }
     });
 
@@ -39,8 +40,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verificar rol de GC o Admin
-    if (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR' && usuario.rol !== 'SUPER_ADMIN') {
+    // Verificar rol de GC o Admin (incluye flag esGameChanger para mentores que son GC)
+    if (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR' && usuario.rol !== 'SUPER_ADMIN' && !usuario.esGameChanger) {
       return NextResponse.json(
         { error: "No tienes permisos de Game Changer" },
         { status: 403 }
@@ -214,10 +215,10 @@ export async function POST(request: NextRequest) {
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true }
+      select: { id: true, rol: true, esGameChanger: true }
     });
 
-    if (!usuario || (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR')) {
+    if (!usuario || (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR' && !usuario.esGameChanger)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
@@ -391,10 +392,10 @@ export async function PUT(request: NextRequest) {
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true }
+      select: { id: true, rol: true, esGameChanger: true }
     });
 
-    if (!usuario || (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR')) {
+    if (!usuario || (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR' && !usuario.esGameChanger)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

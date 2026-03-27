@@ -15,10 +15,11 @@ export async function GET(request: NextRequest) {
 
     const user = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true }
+      select: { id: true, rol: true, esGameChanger: true }
     });
 
-    if (!user || user.rol !== 'GAMECHANGER') {
+    // Permitir si es rol GAMECHANGER o tiene flag esGameChanger (mentores que son GC)
+    if (!user || (user.rol !== 'GAMECHANGER' && !user.esGameChanger)) {
       return NextResponse.json({ pendingSurveys: [] });
     }
 

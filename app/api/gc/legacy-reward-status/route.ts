@@ -24,15 +24,15 @@ export async function GET(request: NextRequest) {
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, nombre: true, rol: true }
+      select: { id: true, nombre: true, rol: true, esGameChanger: true }
     });
 
     if (!usuario) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Verificar que sea GC
-    if (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR' && usuario.rol !== 'SUPER_ADMIN') {
+    // Verificar que sea GC (por rol o por flag esGameChanger)
+    if (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR' && usuario.rol !== 'SUPER_ADMIN' && !usuario.esGameChanger) {
       return NextResponse.json({ pendingRewards: [] });
     }
 

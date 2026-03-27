@@ -15,10 +15,11 @@ export async function POST(request: NextRequest) {
 
     const gc = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true, nombre: true }
+      select: { id: true, rol: true, nombre: true, esGameChanger: true }
     });
 
-    if (!gc || gc.rol !== 'GAMECHANGER') {
+    // Permitir si es rol GAMECHANGER o tiene flag esGameChanger (mentores que son GC)
+    if (!gc || (gc.rol !== 'GAMECHANGER' && !gc.esGameChanger)) {
       return NextResponse.json({ error: 'Solo Game Changers pueden asignar llamadas' }, { status: 403 });
     }
 
@@ -111,10 +112,11 @@ export async function GET(request: NextRequest) {
 
     const gc = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true }
+      select: { id: true, rol: true, esGameChanger: true }
     });
 
-    if (!gc || gc.rol !== 'GAMECHANGER') {
+    // Permitir si es rol GAMECHANGER o tiene flag esGameChanger (mentores que son GC)
+    if (!gc || (gc.rol !== 'GAMECHANGER' && !gc.esGameChanger)) {
       return NextResponse.json({ error: 'Solo Game Changers' }, { status: 403 });
     }
 

@@ -22,13 +22,13 @@ export async function GET(
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    // Verificar que el usuario es GAMECHANGER
+    // Verificar que el usuario es GAMECHANGER (por rol o por flag esGameChanger)
     const gamechanger = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true }
+      select: { id: true, rol: true, esGameChanger: true }
     });
 
-    if (!gamechanger || gamechanger.rol !== 'GAMECHANGER') {
+    if (!gamechanger || (gamechanger.rol !== 'GAMECHANGER' && !gamechanger.esGameChanger)) {
       return NextResponse.json({ error: 'No tienes permisos de GameChanger' }, { status: 403 });
     }
 

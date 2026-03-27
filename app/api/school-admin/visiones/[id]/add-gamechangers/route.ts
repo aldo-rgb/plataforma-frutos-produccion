@@ -209,13 +209,20 @@ export async function POST(
             }
           });
 
-          // Actualizar el usuario a rol GAMECHANGER y flag esGameChanger
+          // Actualizar el usuario: solo cambiar rol si NO es MENTOR (los mentores mantienen su rol)
+          // Siempre actualizar flag esGameChanger
+          const updateData: { esGameChanger: boolean; rol?: string } = {
+            esGameChanger: true
+          };
+          
+          // Solo cambiar rol a GAMECHANGER si NO es MENTOR ni LIDER
+          if (user.rol !== 'MENTOR' && user.rol !== 'LIDER') {
+            updateData.rol = 'GAMECHANGER';
+          }
+          
           await prisma.usuario.update({
             where: { id: userId },
-            data: {
-              rol: 'GAMECHANGER',
-              esGameChanger: true
-            }
+            data: updateData
           });
 
           // Lógica de licencias diferente según el nivel
@@ -482,13 +489,20 @@ export async function POST(
     // Incorporar usuarios LOBO_SOLITARIO (sin organización) a la organización y convertirlos en GAMECHANGER
     const convertedLobos: any[] = [];
     for (const user of usersWithoutOrg) {
+      // Solo cambiar rol a GAMECHANGER si NO es MENTOR ni LIDER
+      const loboUpdateData: { organizationId: number; tier: string; esGameChanger: boolean; rol?: string } = {
+        organizationId: director.organizationId!,
+        tier: 'STANDARD',
+        esGameChanger: true
+      };
+      
+      if (user.rol !== 'MENTOR' && user.rol !== 'LIDER') {
+        loboUpdateData.rol = 'GAMECHANGER';
+      }
+      
       const updatedUser = await prisma.usuario.update({
         where: { id: user.id },
-        data: { 
-          organizationId: director.organizationId,
-          rol: 'GAMECHANGER',
-          tier: 'STANDARD'
-        },
+        data: loboUpdateData,
         select: { id: true, email: true, nombre: true, telefono: true }
       });
       convertedLobos.push(updatedUser);
@@ -535,13 +549,25 @@ export async function POST(
           } 
         });
         
-        // Actualizar el usuario a rol GAMECHANGER y flag esGameChanger
+        // Actualizar el usuario: solo cambiar rol si NO es MENTOR ni LIDER
+        // Los mentores mantienen su rol pero se marcan como esGameChanger
+        // Necesitamos obtener el rol actual del usuario
+        const currentUser = await prisma.usuario.findUnique({
+          where: { id: user.id },
+          select: { rol: true }
+        });
+        
+        const finalUpdateData: { esGameChanger: boolean; rol?: string } = {
+          esGameChanger: true
+        };
+        
+        if (currentUser?.rol !== 'MENTOR' && currentUser?.rol !== 'LIDER') {
+          finalUpdateData.rol = 'GAMECHANGER';
+        }
+        
         await prisma.usuario.update({
           where: { id: user.id },
-          data: {
-            rol: 'GAMECHANGER',
-            esGameChanger: true
-          }
+          data: finalUpdateData
         });
         
         results.push(user.email);

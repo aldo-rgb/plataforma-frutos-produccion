@@ -18,8 +18,13 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Verificar que sea GAMECHANGER
-    if (session.user.rol !== 'GAMECHANGER') {
+    // Verificar que sea GAMECHANGER (por rol o por flag esGameChanger)
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, rol: true, esGameChanger: true }
+    });
+    
+    if (!usuario || (usuario.rol !== 'GAMECHANGER' && !usuario.esGameChanger)) {
       return NextResponse.json({ error: 'No tienes permisos para acceder a este recurso' }, { status: 403 });
     }
 

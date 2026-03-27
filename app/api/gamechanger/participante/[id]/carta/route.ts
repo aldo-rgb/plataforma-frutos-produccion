@@ -11,7 +11,13 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.rol !== 'GAMECHANGER') {
+    // Verificar que sea GAMECHANGER (por rol o por flag esGameChanger)
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: session?.user?.id },
+      select: { id: true, rol: true, esGameChanger: true }
+    });
+    
+    if (!session?.user || !usuario || (usuario.rol !== 'GAMECHANGER' && !usuario.esGameChanger)) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
