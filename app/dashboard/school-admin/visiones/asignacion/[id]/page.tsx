@@ -110,6 +110,7 @@ export default function AsignacionMentoresPage() {
 
   const [vision, setVision] = useState<Vision | null>(null);
   const [cicloInfo, setCicloInfo] = useState<CicloInfo | null>(null);
+  const [participantesAsistieron, setParticipantesAsistieron] = useState<number>(0);
   const [mentoresAsignados, setMentoresAsignados] = useState<MentorAsignado[]>([]);
   const [mentoresDisponibles, setMentoresDisponibles] = useState<Mentor[]>([]);
   const [lideresDisponibles, setLideresDisponibles] = useState<Mentor[]>([]);
@@ -152,6 +153,7 @@ export default function AsignacionMentoresPage() {
         const data = await visionRes.json();
         setVision(data.vision);
         setCicloInfo(data.cicloInfo);
+        setParticipantesAsistieron(data.participantesAsistieron || 0);
         // No setear mentoresAsignados aquí, se hará con mentoresRes
       }
 
@@ -454,7 +456,7 @@ export default function AsignacionMentoresPage() {
                         <Users className="w-6 h-6 text-[#FFD700]" />
                         <div>
                           <p className="text-xs text-slate-400 uppercase tracking-wider">Participantes</p>
-                          <p className="text-2xl font-bold text-white">{(vision?._count?.VisionParticipante || 0) + (vision?._count?.VisionGameChanger || 0)} <span className="text-sm text-slate-400">en la visión</span></p>
+                          <p className="text-2xl font-bold text-white">{participantesAsistieron} <span className="text-sm text-slate-400">asistieron</span></p>
                         </div>
                       </div>
                     </div>

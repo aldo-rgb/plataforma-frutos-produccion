@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { processBacklogForAllPaidLevels, createBacklogTickets } from '@/lib/backlog-ticket';
 import { triggerEnrollmentTaskCompletion } from '@/lib/enrollment-task-trigger';
+import { releaseMentorScheduleOnDrop } from '@/lib/mentor-schedule';
 import logger from '@/lib/logger';
 
 // Roles permitidos para actualizar asistencia
@@ -271,6 +272,8 @@ export async function POST(
     // Si es BACKLOG o DROP, genera tickets desde el nivel afectado hacia arriba
     // ========================================
     let courtesyTicketResult = null;
+    let mentorScheduleResult = null;
+    
     if ((attendanceStatus === 'BACKLOG' || attendanceStatus === 'DROP') && organizationId) {
       logger.debug(`🎫 Procesando tickets ${attendanceStatus} para usuario ${updatedEnrollment.userId} desde nivel ${updatedEnrollment.level}...`);
       
@@ -290,6 +293,21 @@ export async function POST(
         }
       } else {
         logger.debug(`⚠️ No se pudieron crear tickets: ${courtesyTicketResult.error}`);
+      }
+    }
+
+    // ========================================
+    // LIBERAR ESPACIOS DE MENTOR - Solo para DROP
+    // Cancela las llamadas pendientes con el mentor
+    // ========================================
+    if (attendanceStatus === 'DROP') {
+      mentorScheduleResult = await releaseMentorScheduleOnDrop(
+        updatedEnrollment.userId,
+        visionId
+      );
+      
+      if (mentorScheduleResult.success && mentorScheduleResult.callsCancelled > 0) {
+        logger.debug(`📅 ${mentorScheduleResult.callsCancelled} llamada(s) de mentor canceladas para usuario ${updatedEnrollment.userId}`);
       }
     }
 
@@ -323,7 +341,11 @@ export async function POST(
       licenseConsumed: licenseConsumed,
       licensesWentNegative: licensesWentNegative,
       checkInRecordCreated: checkInRecordCreated,
-      enrollmentTaskCompleted: enrollmentTaskCompleted
+      enrollmentTaskCompleted: enrollmentTaskCompleted,
+      mentorSchedule: mentorScheduleResult ? {
+        callsCancelled: mentorScheduleResult.callsCancelled,
+        mentorsAffected: mentorScheduleResult.mentorsAffected
+      } : null
     });
 
   } catch (error: any) {

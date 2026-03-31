@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { releaseMentorScheduleOnDrop } from '@/lib/mentor-schedule';
 
 // API para que el GameChanger marque a un participante como DROP (abandonó el entrenamiento)
 
@@ -131,6 +132,19 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // ========================================
+    // LIBERAR ESPACIOS DE MENTOR
+    // Cancelar todas las llamadas pendientes del usuario con su mentor
+    // ========================================
+    const mentorScheduleResult = await releaseMentorScheduleOnDrop(
+      member.Usuario_SmallGroupMember_userIdToUsuario.id,
+      visionId
+    );
+    
+    if (mentorScheduleResult.success && mentorScheduleResult.callsCancelled > 0) {
+      logger.debug(`📅 ${mentorScheduleResult.callsCancelled} llamada(s) de mentor canceladas para usuario ${member.Usuario_SmallGroupMember_userIdToUsuario.id}`);
+    }
+
     logger.debug(`🚫 Participante ${member.Usuario_SmallGroupMember_userIdToUsuario.nombre} marcado como DROP en ${groupLevel} por GC ${gameChanger.nombre}`);
 
     return NextResponse.json({
@@ -141,6 +155,10 @@ export async function POST(request: NextRequest) {
         nombre: member.Usuario_SmallGroupMember_userIdToUsuario.nombre,
         status: 'DROP',
         level: groupLevel
+      },
+      mentorSchedule: {
+        callsCancelled: mentorScheduleResult.callsCancelled,
+        mentorsAffected: mentorScheduleResult.mentorsAffected
       }
     });
 

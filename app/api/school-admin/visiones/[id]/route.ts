@@ -524,6 +524,15 @@ export async function GET(
       };
     }
 
+    // Contar participantes que ASISTIERON (PL level con attendanceStatus = 'ATTENDED')
+    const participantesAsistieron = await prisma.vision_enrollments.count({
+      where: {
+        visionId: visionId,
+        level: 'PL',
+        attendanceStatus: 'ATTENDED'
+      }
+    });
+
     // Enriquecer mentores con cálculos de costo y tipo
     const mentoresConCostos = mentoresAsignados.map(mentor => {
       const usuario = mentor.Usuario_VisionMentor_mentorIdToUsuario;
@@ -569,6 +578,7 @@ export async function GET(
       isCoreVision, // Si es visión CORE (tiene los 3 niveles)
       mentoresAsignados: mentoresConCostos,
       cicloInfo,
+      participantesAsistieron, // Conteo de participantes PL que asistieron
       productos: productos.map(p => ({
         ...p,
         // Incluir explícitamente Trainer y Coordinator (mapeando nombres de relación Prisma)
