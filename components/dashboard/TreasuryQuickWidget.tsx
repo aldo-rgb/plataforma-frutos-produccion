@@ -952,6 +952,7 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
   // Función para generar código de pago
   // Para BASIC: primero registra nuevo usuario con padrino, luego genera código
   // Para ADVANCED: registra pago de avanzado con ticket y enrollment
+  // Para código libre (sin visión): genera código directamente con monto y referencia
   // Para otros niveles: genera código de pago directamente
   const handleGenerarCodigo = async () => {
     if (!cobroForm.amount || parseFloat(cobroForm.amount) <= 0) {
@@ -959,10 +960,59 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
       return;
     }
 
+    // Validación para código libre (sin visión)
+    if (!cobroForm.visionId && !cobroForm.reference) {
+      showNotification('error', 'Ingresa una referencia para el código');
+      return;
+    }
+
     setLoading(true);
     try {
       let participanteId = cobroForm.participanteId || null;
       let reference = cobroForm.reference;
+
+      // Si NO hay visión seleccionada, generar código libre directamente
+      if (!cobroForm.visionId) {
+        const res = await fetch('/api/treasury/payment-codes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: parseFloat(cobroForm.amount),
+            reference: cobroForm.reference,
+            visionId: null,
+            participanteId: null
+          })
+        });
+
+        const data = await res.json();
+        
+        if (data.success) {
+          const paymentCode = data.paymentCode;
+          
+          if (data.organization) {
+            setOrgInfo(data.organization);
+          }
+          
+          setGeneratedCode({ 
+            id: paymentCode.id,
+            code: paymentCode.code,
+            amount: Number(paymentCode.amount) || 0,
+            reference: paymentCode.reference || `Cobro $${cobroForm.amount}`,
+            status: paymentCode.status,
+            createdAt: paymentCode.createdAt,
+            visionName: undefined
+          });
+          setShowCodeModal(true);
+          
+          setCobroForm({ amount: '', reference: '', visionId: '', participanteId: '' });
+          showNotification('success', '¡Código de efectivo generado!');
+          fetchInitialData();
+        } else {
+          showNotification('error', data.error || 'Error al generar código');
+        }
+        setLoading(false);
+        return;
+      }
       
       // Si es pago BÁSICO, primero registrar al nuevo usuario
       if (selectedLevel === 'BASIC') {
@@ -1659,9 +1709,9 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
 
             {/* NUEVO FLUJO DE COBRO ESTRUCTURADO */}
             
-            {/* PASO 1: Selector de Visión */}
+            {/* PASO 1: Selector de Visión (opcional para código de efectivo libre) */}
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">1️⃣ Registrar a Visión *</label>
+              <label className="text-xs text-slate-400 mb-1 block">1️⃣ Registrar a Visión (opcional)</label>
               <select
                 value={cobroForm.visionId}
                 onChange={(e) => {
@@ -1673,7 +1723,7 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                 }}
                 className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:border-green-500/50 focus:outline-none"
               >
-                <option value="">Selecciona una visión...</option>
+                <option value="">Sin visión (código de efectivo libre)</option>
                 {visiones.map(v => (
                   <option key={v.id} value={v.id}>
                     🎯 {v.nombre}
@@ -1681,6 +1731,39 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                 ))}
               </select>
             </div>
+
+            {/* Monto libre cuando NO hay visión seleccionada */}
+            {!cobroForm.visionId && (
+              <div className="space-y-3 p-4 bg-green-500/5 border border-green-500/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-green-400">💵</span>
+                  <label className="text-xs text-green-400 font-medium">Código de Efectivo Libre</label>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Monto *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={cobroForm.amount}
+                      onChange={(e) => setCobroForm({ ...cobroForm, amount: e.target.value })}
+                      className="w-full pl-8 pr-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-green-500/50 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Referencia *</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Pago de mensualidad, Donación, etc."
+                    value={cobroForm.reference}
+                    onChange={(e) => setCobroForm({ ...cobroForm, reference: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-green-500/50 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* PASO 2: Selector de Participante - Solo cuando hay visión seleccionada */}
             {cobroForm.visionId && (
@@ -1953,8 +2036,8 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               </div>
             )}
 
-            {/* Campo de Monto (readonly, se llena automático) */}
-            {selectedPriceOption && (
+            {/* Campo de Monto (readonly, se llena automático) - Solo cuando hay visión */}
+            {cobroForm.visionId && selectedPriceOption && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">Monto</label>
@@ -1978,22 +2061,25 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               </div>
             )}
 
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">Referencia</label>
-              <input
-                type="text"
-                placeholder="Ej: Inscripción Juan Pérez"
-                value={cobroForm.reference}
-                onChange={(e) => setCobroForm({ ...cobroForm, reference: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-green-500/50 focus:outline-none"
-              />
-            </div>
+            {/* Campo de Referencia - Solo cuando hay visión seleccionada */}
+            {cobroForm.visionId && (
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Referencia</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Inscripción Juan Pérez"
+                  value={cobroForm.reference}
+                  onChange={(e) => setCobroForm({ ...cobroForm, reference: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-green-500/50 focus:outline-none"
+                />
+              </div>
+            )}
 
             {/* Botón según modo de pago */}
             {paymentMode === 'cash' ? (
               <button
                 onClick={handleGenerarCodigo}
-                disabled={loading || !cobroForm.amount || !!activePOSTransaction}
+                disabled={loading || !cobroForm.amount || !!activePOSTransaction || (!cobroForm.visionId && !cobroForm.reference)}
                 className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
               >
                 {loading ? (
@@ -2001,7 +2087,11 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                 ) : (
                   <>
                     <QrCode size={20} />
-                    {selectedLevel === 'BASIC' ? '✨ Registrar Nuevo Participante' : 'Generar Código de Cobro'}
+                    {!cobroForm.visionId 
+                      ? '💵 Generar Código de Efectivo' 
+                      : selectedLevel === 'BASIC' 
+                        ? '✨ Registrar Nuevo Participante' 
+                        : 'Generar Código de Cobro'}
                   </>
                 )}
               </button>
