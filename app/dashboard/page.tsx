@@ -20,9 +20,9 @@ import IdentityHeroSection from "@/components/dashboard/identity/IdentityHeroSec
 import BitacoraAlertWidget from "@/components/dashboard/BitacoraAlertWidget";
 import LegacyCaptureBlockingModal from '@/components/dashboard/LegacyCaptureBlockingModal';
 import ParticipantSurveyBanner from '@/components/surveys/ParticipantSurveyBanner';
-import AmbassadorWalletWidget from '@/components/dashboard/AmbassadorWalletWidget';
 import TrainingsCarouselWidget from '@/components/dashboard/identity/widgets/TrainingsCarouselWidget';
 import MyBusinessWidget from '@/components/dashboard/MyBusinessWidget';
+import MyCommissionsWidget from '@/components/dashboard/MyCommissionsWidget';
 
 interface DashboardPageProps {
   searchParams: Promise<{ view?: string }>;
@@ -618,14 +618,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <TrainingsCarouselWidget />
 
       {/* ============================================ */}
+      {/* MIS COMISIONES: Staff + Ambassador          */}
+      {/* Solo se muestra si el usuario tiene comisiones */}
+      {/* ============================================ */}
+      <MyCommissionsWidget />
+
+      {/* ============================================ */}
       {/* SALTOS CUÁNTICOS - Objetivos por Área        */}
       {/* ============================================ */}
       <SaltosCuanticosWidget />
 
       {/* ============================================ */}
-      {/* ZONA MEDIA: KPIs + Programa Intensivo        */}
+      {/* ZONA MEDIA: KPIs                             */}
       {/* ============================================ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* TARJETA 1: PUNTOS CUÁNTICOS CON RECOMENDACIÓN IA */}
         <QuantumPointsWidget 
           puntosCuanticos={usuario.puntosCuanticos}
@@ -637,93 +643,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         {/* TARJETA 2: TOP RANKING CON TU POSICIÓN */}
         <RankingWidget />
-
-        {/* TARJETA 3: Condicional - Programa Intensivo Card, Invitación o Enrollment Status */}
-        {isAuthorized && hasDisciplineProgram && programData ? (
-          // MODO EJECUCIÓN: Programa Intensivo (Card Compacta) - Solo si tiene suscripción activa
-          <IntensiveProgramCard 
-            week={programData.currentWeek}
-            totalWeeks={programData.totalWeeks}
-            nextCallDate={programData.nextCallDate}
-            attendance={programData.attendance}
-            missedCalls={programData.missedCalls}
-          />
-        ) : isAuthorized && !hasDisciplineProgram ? (
-          // Usuario con carta aprobada pero SIN programa intensivo - Mostrar invitación
-          <IntensiveProgramInvite totalWeeks={totalWeeks} totalCalls={totalCalls} />
-        ) : hasDisciplineProgram && programData ? (
-          // Usuario CON programa pero sin carta aprobada - Mostrar status de enrollment
-          <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl hover:border-purple-500/50 transition-colors group relative overflow-hidden">
-            <div className="flex items-start justify-between mb-4 relative z-10">
-              <div className="p-3 bg-purple-500/10 rounded-xl group-hover:bg-purple-500/20 transition-colors">
-                <Target className="w-6 h-6 text-purple-500" />
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block">Mi Programa</span>
-                <a href="/dashboard/program/enroll" className="text-xs text-purple-400 cursor-pointer hover:underline">Ver Detalles</a>
-              </div>
-            </div>
-            <div className="relative z-10 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Strikes</span>
-                <span className={`text-lg font-bold ${programData.missedCalls >= 2 ? 'text-red-400' : programData.missedCalls === 1 ? 'text-yellow-400' : 'text-green-400'}`}>
-                  {programData.missedCalls}/3
-                </span>
-              </div>
-              {programData.nextCallDate ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">Próxima Sesión</span>
-                  <span className="text-sm font-medium text-slate-100">
-                    {new Date(programData.nextCallDate).toLocaleDateString('es-MX', { 
-                      month: 'short', 
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">Estado</span>
-                  <span className="text-sm font-medium text-yellow-400">Sin sesiones agendadas</span>
-                </div>
-              )}
-              <div className="pt-2">
-                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500" 
-                    style={{ width: `${(programData.currentWeek / programData.totalWeeks) * 100}%` }}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-1">Semana {programData.currentWeek} de {programData.totalWeeks}</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          // MODO ONBOARDING: Usuario sin programa - Botón para inscribirse
-          <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl hover:border-purple-500/50 transition-colors group relative overflow-hidden">
-            <div className="flex items-start justify-between mb-4 relative z-10">
-              <div className="p-3 bg-purple-500/10 rounded-xl group-hover:bg-purple-500/20 transition-colors">
-                <Target className="w-6 h-6 text-purple-500" />
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block">Programa</span>
-              </div>
-            </div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-1 text-slate-100 font-bold text-xl mb-3">
-                Inscríbete <ArrowRight className="w-4 h-4 text-purple-500" />
-              </div>
-              <p className="text-sm text-slate-400 mb-4">Agenda tus sesiones semanales y comienza tu programa de mentoría.</p>
-              <a 
-                href="/dashboard/program/enroll"
-                className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-sm font-medium rounded-lg transition-all"
-              >
-                Agendar Sesiones
-              </a>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ============================================ */}
