@@ -1666,12 +1666,37 @@ export default function CartaWizardRelacional() {
               {/* Botón para restaurar desde servidor */}
               {estado === 'BORRADOR' && (
                 <button
-                  onClick={() => {
-                    setErrorModal({
-                      show: true,
-                      title: '🔄 Restaurar desde Servidor',
-                      message: '¿Deseas restaurar tu carta desde el servidor?\n\n✅ Esto cargará los datos guardados en la base de datos.\n\n⚠️ El borrador local será reemplazado por los datos del servidor.\n\nÚsalo si perdiste tu progreso o si el borrador local tiene errores.'
-                    });
+                  onClick={async () => {
+                    // Verificar qué datos hay en el servidor antes de restaurar
+                    try {
+                      const res = await fetch('/api/carta/preview');
+                      const data = await res.json();
+                      
+                      if (!data.hasData) {
+                        setErrorModal({
+                          show: true,
+                          title: '⚠️ Sin datos en servidor',
+                          message: 'No hay datos guardados en el servidor para restaurar.\n\nTu carta actual está vacía en la base de datos. El borrador local es tu único progreso.\n\n💡 Tip: Continúa editando y el sistema guardará automáticamente.'
+                        });
+                        return;
+                      }
+                      
+                      const previewText = data.preview
+                        .map((p: { name: string; serPreview?: string }) => `• ${p.name}: ${p.serPreview || '(sin declaración)'}`)
+                        .join('\n');
+                      
+                      setErrorModal({
+                        show: true,
+                        title: '🔄 Restaurar desde Servidor',
+                        message: `Se encontraron ${data.areasConDatos} áreas con datos guardados:\n\n${previewText}\n\n⚠️ El borrador local será reemplazado.\n¿Deseas continuar?`
+                      });
+                    } catch (error) {
+                      setErrorModal({
+                        show: true,
+                        title: '🔄 Restaurar desde Servidor',
+                        message: '¿Deseas restaurar tu carta desde el servidor?\n\n✅ Esto cargará los datos guardados en la base de datos.\n\n⚠️ El borrador local será reemplazado por los datos del servidor.'
+                      });
+                    }
                   }}
                   className="text-xs bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 transition-colors px-2 sm:px-3 py-1.5 rounded-lg border border-blue-500/30 flex items-center gap-1.5 whitespace-nowrap"
                   title="Restaurar datos desde el servidor"
