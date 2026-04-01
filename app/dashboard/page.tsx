@@ -652,7 +652,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* ============================================ */}
       {/* PROGRAMA INTENSIVO BANNER (Solo Onboarding)  */}
       {/* ============================================ */}
-      {!isAuthorized && <ProgramStatusWidget />}
+      {/* Widget grande removido - usar MyProgramWidget en su lugar */}
 
       {/* ============================================ */}
       {/* MODAL DE CAMBIO DE ORGANIZACIÓN             */}
