@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Target, Phone, X, Calendar, Clock, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatInTimeZone } from 'date-fns-tz';
 
 interface CallSession {
   id: number;
@@ -31,6 +32,8 @@ interface ProgramData {
   } | null;
   allSessions: CallSession[];
 }
+
+const MEXICO_TZ = 'America/Mexico_City';
 
 export default function MyProgramWidget() {
   const [data, setData] = useState<ProgramData | null>(null);
@@ -60,6 +63,16 @@ export default function MyProgramWidget() {
     if (data?.mentor?.telefono) {
       window.open(`tel:${data.mentor.telefono}`, '_self');
     }
+  };
+
+  // Helper para formatear hora en zona horaria de México
+  const formatTimeInMexico = (dateStr: string) => {
+    return formatInTimeZone(new Date(dateStr), MEXICO_TZ, 'HH:mm');
+  };
+
+  // Helper para formatear fecha completa en zona horaria de México
+  const formatDateInMexico = (dateStr: string) => {
+    return formatInTimeZone(new Date(dateStr), MEXICO_TZ, "EEEE d 'de' MMMM", { locale: es });
   };
 
   if (loading) {
@@ -135,10 +148,7 @@ export default function MyProgramWidget() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-400">Próxima Sesión</span>
               <span className="text-sm font-medium text-slate-100">
-                {new Date(data.nextSession.scheduledAt).toLocaleDateString('es-MX', { 
-                  day: 'numeric',
-                  month: 'short'
-                })}, {data.nextSession.time}
+                {formatInTimeZone(new Date(data.nextSession.scheduledAt), MEXICO_TZ, "d MMM", { locale: es })}, {formatTimeInMexico(data.nextSession.scheduledAt)}
               </span>
             </div>
           ) : (
@@ -198,7 +208,7 @@ export default function MyProgramWidget() {
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {/* Info del Mentor */}
               {data.mentor && (
-                <div className="bg-slate-800/50 rounded-xl p-4 mb-4">
+                <div className="bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-700">
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Tu Mentor</p>
                   <p className="text-white font-medium">{data.mentor.nombre}</p>
                   {data.mentor.telefono && (
@@ -241,7 +251,8 @@ export default function MyProgramWidget() {
                 {data.allSessions && data.allSessions.length > 0 ? (
                   data.allSessions.map((session, index) => {
                     const sessionDate = new Date(session.scheduledAt);
-                    const isPast = sessionDate < new Date();
+                    const now = new Date();
+                    const isPast = sessionDate < now;
                     
                     return (
                       <div 
@@ -260,13 +271,13 @@ export default function MyProgramWidget() {
                               Sesión #{session.weekNumber || index + 1}
                             </p>
                             <p className="text-xs text-slate-400">
-                              {format(sessionDate, "EEEE d 'de' MMMM", { locale: es })}
+                              {formatDateInMexico(session.scheduledAt)}
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-bold text-slate-200">
-                            {format(sessionDate, 'HH:mm')}
+                            {formatTimeInMexico(session.scheduledAt)}
                           </p>
                           <p className={`text-xs ${
                             session.status === 'COMPLETED' ? 'text-green-400' :
