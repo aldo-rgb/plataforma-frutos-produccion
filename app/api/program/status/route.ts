@@ -29,7 +29,8 @@ export async function GET() {
           select: {
             id: true,
             nombre: true,
-            imagen: true
+            imagen: true,
+            telefono: true
           }
         }
       },
@@ -82,6 +83,32 @@ export async function GET() {
       orderBy: { scheduledAt: 'asc' }
     });
 
+    // Obtener TODAS las sesiones para el modal
+    const allSessions = await prisma.callBooking.findMany({
+      where: {
+        programEnrollmentId: enrollment.id
+      },
+      select: {
+        id: true,
+        scheduledAt: true,
+        status: true,
+        weekNumber: true,
+        attendanceStatus: true
+      },
+      orderBy: { scheduledAt: 'asc' }
+    });
+
+    // Mapear sesiones con status correcto
+    const mappedSessions = allSessions.map((s, index) => ({
+      id: s.id,
+      scheduledAt: s.scheduledAt.toISOString(),
+      status: s.attendanceStatus === 'PRESENT' ? 'COMPLETED' : 
+              s.attendanceStatus === 'ABSENT' ? 'MISSED' :
+              s.status === 'CANCELLED' ? 'CANCELLED' :
+              s.scheduledAt < new Date() ? 'MISSED' : s.status,
+      weekNumber: s.weekNumber || index + 1
+    }));
+
     // Contar sesiones completadas
     const completedSessions = await prisma.callBooking.count({
       where: {
@@ -120,7 +147,7 @@ export async function GET() {
         minutes,
         seconds,
         totalHours: diff / (1000 * 60 * 60),
-        isUrgent: hours < 24 // Menos de 24 horas
+        isUrgent: hours < 24
       };
     }
 
@@ -144,7 +171,7 @@ export async function GET() {
           month: '2-digit',
           day: '2-digit',
           timeZone: 'America/Mexico_City'
-        }).split('/').reverse().join('-'), // Convertir DD/MM/YYYY a YYYY-MM-DD
+        }).split('/').reverse().join('-'),
         time: nextSession.scheduledAt.toLocaleTimeString('es-MX', { 
           hour: '2-digit', 
           minute: '2-digit',
@@ -155,6 +182,7 @@ export async function GET() {
         scheduledAt: nextSession.scheduledAt,
         timeUntil: timeUntilNext
       } : null,
+      allSessions: mappedSessions,
       startDate,
       endDate,
       isSuspended: enrollment.status === 'SUSPENDED'

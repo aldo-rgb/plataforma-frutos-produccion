@@ -23,6 +23,7 @@ import ParticipantSurveyBanner from '@/components/surveys/ParticipantSurveyBanne
 import TrainingsCarouselWidget from '@/components/dashboard/identity/widgets/TrainingsCarouselWidget';
 import MyBusinessWidget from '@/components/dashboard/MyBusinessWidget';
 import MyCommissionsWidget from '@/components/dashboard/MyCommissionsWidget';
+import MyProgramWidget from '@/components/dashboard/MyProgramWidget';
 
 interface DashboardPageProps {
   searchParams: Promise<{ view?: string }>;
@@ -574,7 +575,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* Para graduados: Grid de 2 columnas con Carta y Mi Negocio */}
       {/* Para no graduados: Solo muestra CartaWizardWidget */}
       {(usuario.isGraduated || usuario.graduatedAt) ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <CartaWizardWidget 
             hasCompletedCarta={hasCompletedCarta}
             cartaStatus={carta?.estado as any}
@@ -631,7 +632,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* ============================================ */}
       {/* ZONA MEDIA: KPIs                             */}
       {/* ============================================ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* TARJETA 1: PUNTOS CUÁNTICOS CON RECOMENDACIÓN IA */}
         <QuantumPointsWidget 
           puntosCuanticos={usuario.puntosCuanticos}
@@ -643,6 +644,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         {/* TARJETA 2: TOP RANKING CON TU POSICIÓN */}
         <RankingWidget />
+
+        {/* TARJETA 3: MI PROGRAMA CON MODAL DE LLAMADAS */}
+        <MyProgramWidget />
       </div>
 
       {/* ============================================ */}
