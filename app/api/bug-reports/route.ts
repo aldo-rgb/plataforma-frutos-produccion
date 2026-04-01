@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const userRole = (session.user as any).role;
+    const userRole = (session.user as any).rol;
     if (userRole !== 'ADMIN' && userRole !== 'ADMINISTRADOR' && userRole !== 'SCHOOL_ADMIN' && userRole !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
@@ -128,7 +128,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const userRole = (session.user as any).role;
+    const userRole = (session.user as any).rol;
     if (userRole !== 'ADMIN' && userRole !== 'ADMINISTRADOR' && userRole !== 'SCHOOL_ADMIN' && userRole !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
@@ -192,7 +192,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const userRole = (session.user as any).role;
+    const userRole = (session.user as any).rol;
     if (userRole !== 'ADMIN' && userRole !== 'ADMINISTRADOR' && userRole !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
