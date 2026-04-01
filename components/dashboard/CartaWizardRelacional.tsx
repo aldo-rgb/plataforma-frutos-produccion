@@ -1662,6 +1662,23 @@ export default function CartaWizardRelacional() {
                   🗑️ <span className="hidden sm:inline">Limpiar</span>
                 </button>
               )}
+
+              {/* Botón para restaurar desde servidor */}
+              {estado === 'BORRADOR' && (
+                <button
+                  onClick={() => {
+                    setErrorModal({
+                      show: true,
+                      title: '🔄 Restaurar desde Servidor',
+                      message: '¿Deseas restaurar tu carta desde el servidor?\n\n✅ Esto cargará los datos guardados en la base de datos.\n\n⚠️ El borrador local será reemplazado por los datos del servidor.\n\nÚsalo si perdiste tu progreso o si el borrador local tiene errores.'
+                    });
+                  }}
+                  className="text-xs bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 transition-colors px-2 sm:px-3 py-1.5 rounded-lg border border-blue-500/30 flex items-center gap-1.5 whitespace-nowrap"
+                  title="Restaurar datos desde el servidor"
+                >
+                  🔄 <span className="hidden sm:inline">Restaurar</span>
+                </button>
+              )}
               
               <div className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap ${
                 estado === 'APROBADA' ? 'bg-green-500/20 text-green-400' :
@@ -2889,6 +2906,30 @@ export default function CartaWizardRelacional() {
                     className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:shadow-lg hover:scale-105 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-xl transition-all text-sm sm:text-base"
                   >
                     Sí, Limpiar
+                  </button>
+                </div>
+              ) : errorModal.title.includes('🔄') ? (
+                /* Botones para restaurar desde servidor */
+                <div className="flex gap-2 sm:gap-3 w-full mt-2">
+                  <button
+                    onClick={() => setErrorModal({ show: false, title: '', message: '' })}
+                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-xl transition-all text-sm sm:text-base"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      // Limpiar localStorage
+                      const localStorageKey = `carta-wizard-draft-${userEmail}`;
+                      localStorage.removeItem(localStorageKey);
+                      localStorage.removeItem('carta-wizard-draft');
+                      setErrorModal({ show: false, title: '', message: '' });
+                      // Recargar para forzar carga desde servidor
+                      window.location.reload();
+                    }}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-lg hover:scale-105 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-xl transition-all text-sm sm:text-base"
+                  >
+                    Sí, Restaurar
                   </button>
                 </div>
               ) : (
