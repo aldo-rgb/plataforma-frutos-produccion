@@ -1046,7 +1046,7 @@ export default function ProgramEnrollPage() {
               {/* Días */}
               <div>
                 <label className="block text-slate-400 text-sm mb-3">Selecciona el día</label>
-                <div className="grid grid-cols-7 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {getDiasDisponibles().map((dayIndex) => (
                     <button
                       key={dayIndex}
@@ -1058,15 +1058,15 @@ export default function ProgramEnrollPage() {
                         });
                       }}
                       className={`
-                        p-3 rounded-lg border-2 transition-all text-center
+                        px-3 py-2 sm:p-3 rounded-lg border-2 transition-all text-center min-w-[60px] sm:min-w-[70px]
                         ${slot1.dayOfWeek === dayIndex 
                           ? 'bg-purple-500 border-purple-400 text-white shadow-lg shadow-purple-500/50' 
                           : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-purple-500/50 hover:text-white'
                         }
                       `}
                     >
-                      <div className="text-xs font-medium">{DIAS_SEMANA_CORTO[dayIndex]}</div>
-                      <div className="text-[10px] mt-0.5 opacity-70">{DIAS_SEMANA[dayIndex]}</div>
+                      <div className="text-xs font-bold">{DIAS_SEMANA_CORTO[dayIndex]}</div>
+                      <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-70 truncate">{DIAS_SEMANA[dayIndex]}</div>
                     </button>
                   ))}
                 </div>
@@ -1115,7 +1115,7 @@ export default function ProgramEnrollPage() {
               {/* Días */}
               <div>
                 <label className="block text-slate-400 text-sm mb-3">Selecciona el día</label>
-                <div className="grid grid-cols-7 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {getDiasDisponibles().map((dayIndex) => (
                     <button
                       key={dayIndex}
@@ -1127,15 +1127,15 @@ export default function ProgramEnrollPage() {
                         });
                       }}
                       className={`
-                        p-3 rounded-lg border-2 transition-all text-center
+                        px-3 py-2 sm:p-3 rounded-lg border-2 transition-all text-center min-w-[60px] sm:min-w-[70px]
                         ${slot2.dayOfWeek === dayIndex 
                           ? 'bg-blue-500 border-blue-400 text-white shadow-lg shadow-blue-500/50' 
                           : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-blue-500/50 hover:text-white'
                         }
                       `}
                     >
-                      <div className="text-xs font-medium">{DIAS_SEMANA_CORTO[dayIndex]}</div>
-                      <div className="text-[10px] mt-0.5 opacity-70">{DIAS_SEMANA[dayIndex]}</div>
+                      <div className="text-xs font-bold">{DIAS_SEMANA_CORTO[dayIndex]}</div>
+                      <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-70 truncate">{DIAS_SEMANA[dayIndex]}</div>
                     </button>
                   ))}
                 </div>
