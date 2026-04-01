@@ -18,22 +18,24 @@ export async function GET() {
       select: {
         id: true,
         estado: true,
-        updatedAt: true,
-        finanzasSer: true,
+        fechaActualizacion: true,
+        // Metas (objetivos)
+        finanzasMeta: true,
+        relacionesMeta: true,
+        talentosMeta: true,
+        saludMeta: true,
+        pazMentalMeta: true,
+        ocioMeta: true,
+        servicioTransMeta: true,
+        servicioComunMeta: true,
+        // Declaraciones (SER)
         finanzasDeclaracion: true,
-        relacionesSer: true,
         relacionesDeclaracion: true,
-        talentosSer: true,
         talentosDeclaracion: true,
-        saludSer: true,
         saludDeclaracion: true,
-        pazMentalSer: true,
         pazMentalDeclaracion: true,
-        ocioSer: true,
         ocioDeclaracion: true,
-        servicioTransSer: true,
         servicioTransDeclaracion: true,
-        servicioComunSer: true,
         servicioComunDeclaracion: true,
       }
     });
@@ -46,29 +48,73 @@ export async function GET() {
     }
 
     const areas = [
-      { key: 'finanzas', name: 'Finanzas', ser: carta.finanzasSer, obj: carta.finanzasDeclaracion },
-      { key: 'relaciones', name: 'Relaciones', ser: carta.relacionesSer, obj: carta.relacionesDeclaracion },
-      { key: 'talentos', name: 'Talentos', ser: carta.talentosSer, obj: carta.talentosDeclaracion },
-      { key: 'salud', name: 'Salud', ser: carta.saludSer, obj: carta.saludDeclaracion },
-      { key: 'pazMental', name: 'Paz Mental', ser: carta.pazMentalSer, obj: carta.pazMentalDeclaracion },
-      { key: 'ocio', name: 'Ocio', ser: carta.ocioSer, obj: carta.ocioDeclaracion },
-      { key: 'servicioTrans', name: 'Servicio Trans.', ser: carta.servicioTransSer, obj: carta.servicioTransDeclaracion },
-      { key: 'servicioComun', name: 'Servicio Comun.', ser: carta.servicioComunSer, obj: carta.servicioComunDeclaracion },
+      { 
+        key: 'finanzas', 
+        name: 'Finanzas', 
+        meta: carta.finanzasMeta, 
+        declaracion: carta.finanzasDeclaracion 
+      },
+      { 
+        key: 'relaciones', 
+        name: 'Relaciones', 
+        meta: carta.relacionesMeta, 
+        declaracion: carta.relacionesDeclaracion 
+      },
+      { 
+        key: 'talentos', 
+        name: 'Talentos', 
+        meta: carta.talentosMeta, 
+        declaracion: carta.talentosDeclaracion 
+      },
+      { 
+        key: 'salud', 
+        name: 'Salud', 
+        meta: carta.saludMeta, 
+        declaracion: carta.saludDeclaracion 
+      },
+      { 
+        key: 'pazMental', 
+        name: 'Paz Mental', 
+        meta: carta.pazMentalMeta, 
+        declaracion: carta.pazMentalDeclaracion 
+      },
+      { 
+        key: 'ocio', 
+        name: 'Ocio', 
+        meta: carta.ocioMeta, 
+        declaracion: carta.ocioDeclaracion 
+      },
+      { 
+        key: 'servicioTrans', 
+        name: 'Servicio Trans.', 
+        meta: carta.servicioTransMeta, 
+        declaracion: carta.servicioTransDeclaracion 
+      },
+      { 
+        key: 'servicioComun', 
+        name: 'Servicio Comun.', 
+        meta: carta.servicioComunMeta, 
+        declaracion: carta.servicioComunDeclaracion 
+      },
     ];
 
-    const areasConDatos = areas.filter(a => a.ser || a.obj);
+    // Filtrar áreas que tienen algún dato
+    const areasConDatos = areas.filter(a => a.meta || a.declaracion);
 
     return NextResponse.json({
       hasData: areasConDatos.length > 0,
       estado: carta.estado,
-      updatedAt: carta.updatedAt,
+      updatedAt: carta.fechaActualizacion,
       areasConDatos: areasConDatos.length,
       preview: areasConDatos.map(a => ({
         area: a.key,
         name: a.name,
-        hasSer: !!a.ser,
-        hasObj: !!a.obj,
-        serPreview: a.ser ? a.ser.substring(0, 80) + (a.ser.length > 80 ? '...' : '') : null,
+        hasMeta: !!a.meta,
+        hasDeclaracion: !!a.declaracion,
+        // Mostrar la declaración (SER) como preview, o la meta si no hay declaración
+        serPreview: a.declaracion 
+          ? (a.declaracion.substring(0, 80) + (a.declaracion.length > 80 ? '...' : ''))
+          : (a.meta ? `Meta: ${a.meta.substring(0, 60)}${a.meta.length > 60 ? '...' : ''}` : null),
       }))
     });
 
