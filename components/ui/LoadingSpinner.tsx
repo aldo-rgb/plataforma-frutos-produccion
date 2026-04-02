@@ -17,14 +17,18 @@ export default function LoadingSpinner({
 
   return (
     <div className={`flex flex-col items-center justify-center ${className}`}>
-      <div className={`${sizeClasses[size]} relative flex items-center justify-center`}>
+      <div className={`${sizeClasses[size]} relative flex items-center justify-center bg-transparent`}>
         {/* Video del logo animado */}
         <video 
           autoPlay 
           loop 
           muted 
           playsInline
-          className="w-full h-full object-contain mix-blend-screen"
+          className="w-full h-full object-contain"
+          style={{ 
+            mixBlendMode: 'screen',
+            backgroundColor: 'transparent'
+          }}
         >
           <source src="/videos/logo-loading.mp4" type="video/mp4" />
         </video>

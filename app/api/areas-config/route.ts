@@ -91,6 +91,18 @@ export async function GET(req: NextRequest) {
     // Obtener tier del usuario
     const userTier = targetUser?.tier || 'FREE';
     
+    // Verificar si el usuario tiene mentor asignado (ProgramEnrollment activo)
+    const programEnrollment = await prisma.programEnrollment.findFirst({
+      where: { 
+        userId: userId,
+        status: 'ACTIVE'
+      },
+      select: { mentorId: true }
+    });
+    const hasMentor = !!programEnrollment?.mentorId;
+    
+    
+    
     // Obtener brandColor de la organización
     const brandColor = targetUser?.Organization_Usuario_organizationIdToOrganization?.brandColor || '#6366F1';
 
@@ -324,7 +336,8 @@ export async function GET(req: NextRequest) {
         visionEndDate: visionConfig.endDate,
         userLevel, // Incluir nivel del usuario en la respuesta
         userTier, // Incluir tier del usuario
-        brandColor // Color corporativo de la organización
+        brandColor, // Color corporativo de la organización
+        hasMentor // Si tiene mentor asignado
       });
     }
 
@@ -343,7 +356,8 @@ export async function GET(req: NextRequest) {
         perteneceAGrupo: false,
         isDefault: true,
         userTier,
-        brandColor
+        brandColor,
+        hasMentor
       });
     }
 
@@ -353,7 +367,8 @@ export async function GET(req: NextRequest) {
       perteneceAGrupo,
       isDefault: false,
       userTier,
-      brandColor
+      brandColor,
+      hasMentor
     });
 
   } catch (error: any) {

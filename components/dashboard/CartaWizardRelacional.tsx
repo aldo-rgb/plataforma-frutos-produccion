@@ -569,7 +569,7 @@ export default function CartaWizardRelacional() {
           // Cargar declaraciones del ser
           const loadedDeclaracionesSer: Record<string, string> = {};
           areasFiltradas.forEach(area => {
-            loadedDeclaracionesSer[area.key] = data.carta[`${area.key}Declaracion`] || '';
+            loadedDeclaracionesSer[area.key] = data.carta[`${area.key}Ser`] || '';
           });
           setDeclaracionesSer(loadedDeclaracionesSer);
           
@@ -598,18 +598,6 @@ export default function CartaWizardRelacional() {
             metasPorArea: {},
             metasConfiguradas: []
           });
-          
-          // Cargar el paso del wizard donde se quedó el usuario
-          if (data.carta.wizardStep && data.carta.wizardStep > 1) {
-            console.log('📍 Restaurando wizardStep desde servidor:', data.carta.wizardStep);
-            setCurrentStep(data.carta.wizardStep);
-          }
-          
-          // Cargar el paso del wizard donde se quedó el usuario
-          if (data.carta.wizardStep && data.carta.wizardStep > 1) {
-            console.log('📍 Restaurando wizardStep desde servidor:', data.carta.wizardStep);
-            setCurrentStep(data.carta.wizardStep);
-          }
         }
       }
     } catch (error) {
@@ -695,7 +683,7 @@ export default function CartaWizardRelacional() {
       
       // Guardar declaraciones del ser (solo áreas activas)
       areasActivas.forEach(area => {
-        cartaData[`${area.key}Declaracion`] = declaracionesSer[area.key] || '';
+        cartaData[`${area.key}Ser`] = declaracionesSer[area.key] || '';
       });
       
       // Guardar identidades (convertir array a string por ahora)
@@ -1697,12 +1685,10 @@ export default function CartaWizardRelacional() {
                         .map((p: { name: string; serPreview?: string }) => `• ${p.name}: ${p.serPreview || '(sin declaración)'}`)
                         .join('\n');
                       
-                      const stepInfo = data.wizardStep ? `\n📍 Progreso guardado: Paso ${data.wizardStep} de 5` : '';
-                      
                       setErrorModal({
                         show: true,
                         title: '🔄 Restaurar desde Servidor',
-                        message: `Se encontraron ${data.areasConDatos} áreas con datos guardados:${stepInfo}\n\n${previewText}\n\n⚠️ El borrador local será reemplazado.\n¿Deseas continuar?`
+                        message: `Se encontraron ${data.areasConDatos} áreas con datos guardados:\n\n${previewText}\n\n⚠️ El borrador local será reemplazado.\n¿Deseas continuar?`
                       });
                     } catch (error) {
                       setErrorModal({
@@ -2936,9 +2922,26 @@ export default function CartaWizardRelacional() {
                   </button>
                   <button
                     onClick={() => {
+                      // Limpiar TODAS las claves de localStorage relacionadas con carta-wizard
+                      const keysToRemove: string[] = [];
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && (key.startsWith('carta-wizard') || key.includes('quantum-draft'))) {
+                          keysToRemove.push(key);
+                        }
+                      }
+                      keysToRemove.forEach(key => {
+                        console.log(`🗑️ Eliminando localStorage key: ${key}`);
+                        localStorage.removeItem(key);
+                      });
+                      
+                      // También eliminar las claves específicas por si acaso
                       const localStorageKey = `carta-wizard-draft-${userEmail}`;
                       localStorage.removeItem(localStorageKey);
                       localStorage.removeItem('carta-wizard-draft');
+                      localStorage.removeItem('carta-wizard-draft-guest');
+                      
+                      console.log('✅ Borrador limpiado completamente');
                       setErrorModal({ show: false, title: '', message: '' });
                       window.location.reload();
                     }}
