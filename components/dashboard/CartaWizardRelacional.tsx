@@ -598,6 +598,18 @@ export default function CartaWizardRelacional() {
             metasPorArea: {},
             metasConfiguradas: []
           });
+          
+          // Cargar el paso del wizard donde se quedó el usuario
+          if (data.carta.wizardStep && data.carta.wizardStep > 1) {
+            console.log('📍 Restaurando wizardStep desde servidor:', data.carta.wizardStep);
+            setCurrentStep(data.carta.wizardStep);
+          }
+          
+          // Cargar el paso del wizard donde se quedó el usuario
+          if (data.carta.wizardStep && data.carta.wizardStep > 1) {
+            console.log('📍 Restaurando wizardStep desde servidor:', data.carta.wizardStep);
+            setCurrentStep(data.carta.wizardStep);
+          }
         }
       }
     } catch (error) {
@@ -1685,10 +1697,12 @@ export default function CartaWizardRelacional() {
                         .map((p: { name: string; serPreview?: string }) => `• ${p.name}: ${p.serPreview || '(sin declaración)'}`)
                         .join('\n');
                       
+                      const stepInfo = data.wizardStep ? `\n📍 Progreso guardado: Paso ${data.wizardStep} de 5` : '';
+                      
                       setErrorModal({
                         show: true,
                         title: '🔄 Restaurar desde Servidor',
-                        message: `Se encontraron ${data.areasConDatos} áreas con datos guardados:\n\n${previewText}\n\n⚠️ El borrador local será reemplazado.\n¿Deseas continuar?`
+                        message: `Se encontraron ${data.areasConDatos} áreas con datos guardados:${stepInfo}\n\n${previewText}\n\n⚠️ El borrador local será reemplazado.\n¿Deseas continuar?`
                       });
                     } catch (error) {
                       setErrorModal({

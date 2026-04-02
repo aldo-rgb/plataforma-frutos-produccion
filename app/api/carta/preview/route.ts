@@ -19,6 +19,8 @@ export async function GET() {
         id: true,
         estado: true,
         fechaActualizacion: true,
+        wizardStep: true,
+        wizardCompletedAt: true,
         // Metas (objetivos)
         finanzasMeta: true,
         relacionesMeta: true,
@@ -102,16 +104,18 @@ export async function GET() {
     const areasConDatos = areas.filter(a => a.meta || a.declaracion);
 
     return NextResponse.json({
-      hasData: areasConDatos.length > 0,
+      hasData: areasConDatos.length > 0 || (carta.wizardStep && carta.wizardStep > 1),
       estado: carta.estado,
       updatedAt: carta.fechaActualizacion,
+      wizardStep: carta.wizardStep || 1,
+      wizardCompletedAt: carta.wizardCompletedAt,
       areasConDatos: areasConDatos.length,
       preview: areasConDatos.map(a => ({
         area: a.key,
         name: a.name,
         hasMeta: !!a.meta,
         hasDeclaracion: !!a.declaracion,
-        // Mostrar la declaración (SER) como preview, o la meta si no hay declaración
+        // Mostrar la declaración como preview, o la meta si no hay declaración
         serPreview: a.declaracion 
           ? (a.declaracion.substring(0, 80) + (a.declaracion.length > 80 ? '...' : ''))
           : (a.meta ? `Meta: ${a.meta.substring(0, 60)}${a.meta.length > 60 ? '...' : ''}` : null),
