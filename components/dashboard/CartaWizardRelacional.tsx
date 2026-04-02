@@ -569,7 +569,7 @@ export default function CartaWizardRelacional() {
           // Cargar declaraciones del ser
           const loadedDeclaracionesSer: Record<string, string> = {};
           areasFiltradas.forEach(area => {
-            loadedDeclaracionesSer[area.key] = data.carta[`${area.key}Ser`] || '';
+            loadedDeclaracionesSer[area.key] = data.carta[`${area.key}Declaracion`] || '';
           });
           setDeclaracionesSer(loadedDeclaracionesSer);
           
@@ -683,7 +683,7 @@ export default function CartaWizardRelacional() {
       
       // Guardar declaraciones del ser (solo áreas activas)
       areasActivas.forEach(area => {
-        cartaData[`${area.key}Ser`] = declaracionesSer[area.key] || '';
+        cartaData[`${area.key}Declaracion`] = declaracionesSer[area.key] || '';
       });
       
       // Guardar identidades (convertir array a string por ahora)
