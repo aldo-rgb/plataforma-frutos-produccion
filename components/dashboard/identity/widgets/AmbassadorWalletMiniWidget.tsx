@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Gift, Copy, Check, Share2, Info, X, Sparkles, GraduationCap, Users, Percent, Calendar, DollarSign, ArrowRight } from 'lucide-react';
+import { Gift, Copy, Check, Share2, Info, X, Sparkles, GraduationCap, Users, Percent, Calendar, DollarSign, ArrowRight, User, Clock, CheckCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface WalletData {
@@ -25,11 +25,31 @@ interface WalletData {
   };
 }
 
+interface Transaction {
+  id: number;
+  referredUser: {
+    id: number;
+    nombre: string;
+    email: string;
+    imagen: string | null;
+  } | null;
+  productType: string;
+  productLabel: string;
+  saleAmount: number;
+  commissionPercent: number;
+  commissionAmount: number;
+  status: string;
+  statusLabel: string;
+  notes: string | null;
+  createdAt: string;
+}
+
 export default function AmbassadorWalletMiniWidget() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<WalletData | null>(null);
   const [copied, setCopied] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     fetchWalletData();
@@ -195,7 +215,7 @@ ${link}`
             </button>
           </div>
           <button
-            onClick={() => setShowInfoModal(true)}
+            onClick={() => setShowDetailModal(true)}
             className="w-full mt-2 text-[10px] text-purple-400 hover:text-purple-300 transition-colors flex items-center justify-center gap-1"
           >
             <Info className="w-3 h-3" />
@@ -204,13 +224,227 @@ ${link}`
         </div>
       </div>
 
-      {/* Modal de información de comisiones */}
+      {/* Modal de información general de comisiones */}
       <AnimatePresence>
         {showInfoModal && (
           <CommissionInfoModal onClose={() => setShowInfoModal(false)} />
         )}
       </AnimatePresence>
+
+      {/* Modal de detalle de comisiones (lista de referidos) */}
+      <AnimatePresence>
+        {showDetailModal && (
+          <CommissionDetailModal 
+            onClose={() => setShowDetailModal(false)} 
+            stats={data.stats}
+          />
+        )}
+      </AnimatePresence>
     </>
+  );
+}
+
+// Modal con LISTA DETALLADA de referidos y comisiones
+function CommissionDetailModal({ onClose, stats }: { onClose: () => void; stats: WalletData['stats'] }) {
+  const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      const res = await fetch('/api/ambassador/transactions');
+      const result = await res.json();
+      if (result.success) {
+        setTransactions(result.transactions);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatMXN = (amount: number) => {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-MX', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const getProductIcon = (productType: string) => {
+    if (productType === 'WORKSHOP') {
+      return <Calendar className="w-4 h-4 text-pink-400" />;
+    }
+    return <GraduationCap className="w-4 h-4 text-cyan-400" />;
+  };
+
+  const getProductColor = (productType: string) => {
+    if (productType === 'WORKSHOP') return 'pink';
+    return 'cyan';
+  };
+
+  const getStatusBadge = (status: string, statusLabel: string) => {
+    const colors: Record<string, string> = {
+      'PENDING': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+      'CLEARED': 'bg-green-500/20 text-green-400 border-green-500/30',
+      'WITHDRAWN': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      'SPENT': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    };
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-[10px] border ${colors[status] || colors['PENDING']}`}>
+        {statusLabel}
+      </span>
+    );
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-gradient-to-br from-slate-900 to-slate-950 border border-purple-500/30 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-slate-900/95 backdrop-blur-sm border-b border-purple-500/20 p-4 sm:p-6 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-500/20 rounded-xl">
+              <Users className="w-6 h-6 text-purple-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Mis Comisiones</h2>
+              <p className="text-sm text-purple-300/70">Lista de invitados y ganancias</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
+        </div>
+
+        {/* Resumen rápido */}
+        <div className="grid grid-cols-3 gap-3 p-4 bg-slate-800/30 border-b border-slate-700/50 flex-shrink-0">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-green-400">{stats.totalReferrals}</p>
+            <p className="text-xs text-slate-400">Referidos</p>
+          </div>
+          <div className="text-center border-x border-slate-700/50">
+            <p className="text-2xl font-bold text-emerald-400">{formatMXN(stats.totalEarned)}</p>
+            <p className="text-xs text-slate-400">Total Ganado</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-purple-400">{formatMXN(stats.available)}</p>
+            <p className="text-xs text-slate-400">Disponible</p>
+          </div>
+        </div>
+
+        {/* Lista de transacciones */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400">Aún no tienes referidos</p>
+              <p className="text-sm text-slate-500 mt-1">¡Comparte tu código y empieza a ganar!</p>
+            </div>
+          ) : (
+            transactions.map((transaction) => (
+              <div 
+                key={transaction.id}
+                className={`bg-slate-800/50 border border-${getProductColor(transaction.productType)}-500/20 rounded-xl p-4`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  {/* Info del referido */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-10 h-10 rounded-full bg-${getProductColor(transaction.productType)}-500/20 flex items-center justify-center flex-shrink-0`}>
+                      {transaction.referredUser?.imagen ? (
+                        <img 
+                          src={transaction.referredUser.imagen} 
+                          alt={transaction.referredUser.nombre}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className={`w-5 h-5 text-${getProductColor(transaction.productType)}-400`} />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-white truncate">
+                        {transaction.referredUser?.nombre || 'Usuario'}
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1">
+                          {getProductIcon(transaction.productType)}
+                          <span className={`text-xs text-${getProductColor(transaction.productType)}-400`}>
+                            {transaction.productLabel}
+                          </span>
+                        </div>
+                        {getStatusBadge(transaction.status, transaction.statusLabel)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comisión */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-lg font-bold text-green-400">
+                      +{formatMXN(transaction.commissionAmount)}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {transaction.commissionPercent * 100}% de {formatMXN(transaction.saleAmount)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Notas y fecha */}
+                <div className="mt-2 pt-2 border-t border-slate-700/50 flex items-center justify-between">
+                  <p className="text-xs text-slate-500 truncate flex-1 mr-2">
+                    {transaction.notes || 'Comisión por referido'}
+                  </p>
+                  <div className="flex items-center gap-1 text-xs text-slate-500 flex-shrink-0">
+                    <Clock className="w-3 h-3" />
+                    {formatDate(transaction.createdAt)}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="bg-slate-900/95 backdrop-blur-sm border-t border-purple-500/20 p-4 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-xl transition-all"
+          >
+            Cerrar
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -286,100 +520,6 @@ function CommissionInfoModal({ onClose }: { onClose: () => void }) {
             </div>
           </section>
 
-          {/* Comisiones por Visión */}
-          <section>
-            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-cyan-400" />
-              Comisiones por Entrenamientos de Visión
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Básico */}
-              <div className="bg-gradient-to-br from-cyan-900/20 to-cyan-900/10 border border-cyan-500/30 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-cyan-400 font-semibold">Básico</span>
-                  <span className="text-2xl font-bold text-white">20%</span>
-                </div>
-                <p className="text-xs text-slate-400">El primer paso de transformación</p>
-                <div className="mt-2 pt-2 border-t border-cyan-500/20">
-                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $6,500</p>
-                  <p className="text-sm text-green-400 font-semibold">Ganas $1,300</p>
-                </div>
-              </div>
-
-              {/* Combo */}
-              <div className="bg-gradient-to-br from-purple-900/20 to-purple-900/10 border border-purple-500/30 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-purple-400 font-semibold">Jornada Completa</span>
-                  <span className="text-2xl font-bold text-white">20%</span>
-                </div>
-                <p className="text-xs text-slate-400">Básico + Avanzado + PL juntos</p>
-                <div className="mt-2 pt-2 border-t border-purple-500/20">
-                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $23,000</p>
-                  <p className="text-sm text-green-400 font-semibold">Ganas $4,600</p>
-                </div>
-              </div>
-
-              {/* Avanzado */}
-              <div className="bg-gradient-to-br from-amber-900/20 to-amber-900/10 border border-amber-500/30 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-amber-400 font-semibold">Avanzado</span>
-                  <span className="text-2xl font-bold text-white">10%</span>
-                </div>
-                <p className="text-xs text-slate-400">Breakthrough - El siguiente nivel</p>
-                <div className="mt-2 pt-2 border-t border-amber-500/20">
-                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $7,500</p>
-                  <p className="text-sm text-green-400 font-semibold">Ganas $750</p>
-                </div>
-              </div>
-
-              {/* PL */}
-              <div className="bg-gradient-to-br from-yellow-900/20 to-yellow-900/10 border border-yellow-500/30 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-yellow-400 font-semibold">Liderato (PL)</span>
-                  <span className="text-2xl font-bold text-white">10%</span>
-                </div>
-                <p className="text-xs text-slate-400">El camino del líder</p>
-                <div className="mt-2 pt-2 border-t border-yellow-500/20">
-                  <p className="text-xs text-slate-500">Ejemplo: Si pagan $7,000</p>
-                  <p className="text-sm text-green-400 font-semibold">Ganas $700</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Comisiones por Talleres */}
-          <section>
-            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-pink-400" />
-              Comisiones por Talleres Extras
-            </h3>
-            <div className="bg-gradient-to-br from-pink-900/20 to-pink-900/10 border border-pink-500/30 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <span className="text-pink-400 font-semibold">Todos los Talleres</span>
-                  <p className="text-xs text-slate-400 mt-1">El Camino del Lider, Parejas, y más</p>
-                </div>
-                <span className="text-2xl font-bold text-white">20%</span>
-              </div>
-              
-              <div className="bg-slate-800/50 rounded-lg p-3 space-y-2">
-                <p className="text-sm text-slate-300">
-                  <strong className="text-white">¿Cómo invitar a talleres?</strong>
-                </p>
-                <ul className="text-xs text-slate-400 space-y-1 ml-4 list-disc">
-                  <li>Comparte el link del taller con tu código de referido</li>
-                  <li>Cuando se registren, deben seleccionar tu nombre en &quot;¿Quién te invitó?&quot;</li>
-                  <li>La comisión se acredita cuando completan el pago</li>
-                </ul>
-              </div>
-
-              <div className="mt-3 pt-3 border-t border-pink-500/20 flex items-center justify-between">
-                <p className="text-xs text-slate-500">Ejemplo: Taller de $2,500</p>
-                <p className="text-sm text-green-400 font-semibold">Ganas $500</p>
-              </div>
-            </div>
-          </section>
-
           {/* Resumen de porcentajes */}
           <section>
             <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
@@ -420,38 +560,6 @@ function CommissionInfoModal({ onClose }: { onClose: () => void }) {
             </div>
           </section>
 
-          {/* Cómo usar tu dinero */}
-          <section>
-            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-400" />
-              ¿Cómo Usar Tu Dinero?
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="bg-slate-800/50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 bg-emerald-500/20 rounded-lg">
-                    <DollarSign className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <span className="font-medium text-white">Retiro Bancario</span>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Transfiere tu saldo a tu cuenta CLABE. El proceso toma 1-3 días hábiles.
-                </p>
-              </div>
-              <div className="bg-slate-800/50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 bg-purple-500/20 rounded-lg">
-                    <Gift className="w-4 h-4 text-purple-400" />
-                  </div>
-                  <span className="font-medium text-white">Crédito en Compras</span>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Usa tu saldo para pagar entrenamientos, talleres o productos (próximamente).
-                </p>
-              </div>
-            </div>
-          </section>
-
           {/* Tips */}
           <section className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/20 rounded-xl p-4">
             <h4 className="font-semibold text-white mb-2">💡 Tips para Maximizar tus Ganancias</h4>
@@ -467,10 +575,6 @@ function CommissionInfoModal({ onClose }: { onClose: () => void }) {
               <li className="flex items-start gap-2">
                 <ArrowRight className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
                 <span>Usa WhatsApp para compartir tu link - es más personal y efectivo.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <ArrowRight className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
-                <span>Recuerda: no es vender, es compartir algo que transformó tu vida.</span>
               </li>
             </ul>
           </section>
