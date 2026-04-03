@@ -94,6 +94,7 @@ function CheckoutContent() {
   // Get registration data from sessionStorage
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
   const [prices, setPrices] = useState<PriceConfig | null>(null);
+  const [basePrices, setBasePrices] = useState<PriceConfig | null>(null); // Precios base para becas de porcentaje
   const [bankConfig, setBankConfig] = useState<BankConfig | null>(null);
   const [brandColor, setBrandColor] = useState<string>('#6366F1');
   const [loading, setLoading] = useState(true);
@@ -244,6 +245,8 @@ function CheckoutContent() {
       
       if (data.success) {
         setPrices(data.prices);
+        // Set base prices for scholarship percentage calculations
+        setBasePrices(data.basePrices || data.prices);
         // Set bank config if available
         if (data.bankConfig) {
           setBankConfig(data.bankConfig);
@@ -254,21 +257,25 @@ function CheckoutContent() {
         }
       } else {
         // Use default prices
-        setPrices({
+        const defaultPrices = {
           BASIC: 3500,
           ADVANCED: 4500,
           PL: 5500,
           FULL_VISION: 12000,
-        });
+        };
+        setPrices(defaultPrices);
+        setBasePrices(defaultPrices);
       }
     } catch (e) {
       console.error('Error fetching prices:', e);
-      setPrices({
+      const defaultPrices = {
         BASIC: 3500,
         ADVANCED: 4500,
         PL: 5500,
         FULL_VISION: 12000,
-      });
+      };
+      setPrices(defaultPrices);
+      setBasePrices(defaultPrices);
     } finally {
       setLoading(false);
     }
@@ -342,10 +349,13 @@ function CheckoutContent() {
       description = '🎫 Básico - Nivel Inicial Gratis';
     } else if (codeData.type === 'GOLDEN_DISCOUNT') {
       // GOLDEN_DISCOUNT gives a percentage discount on BASIC
-      const discountAmount = Math.round(prices.BASIC * ((codeData.discountPercentage || 0) / 100));
+      // IMPORTANTE: El descuento se aplica sobre el PRECIO BASE, no el precio promocional
+      // Esto evita doble descuento (promoción + beca)
+      const basePrice = basePrices?.BASIC || prices.BASIC;
+      const discountAmount = Math.round(basePrice * ((codeData.discountPercentage || 0) / 100));
       const remaining = prices.BASIC - currentPaid;
       codeValue = Math.min(discountAmount, Math.max(0, remaining));
-      description = `🎫 Golden ${codeData.discountPercentage}% - Descuento`;
+      description = `🎫 Beca ${codeData.discountPercentage}% (sobre precio base $${basePrice.toLocaleString()})`;
     } else if (codeData.type === 'PLATINUM') {
       // PLATINUM covers full FULL_VISION price - calculate against FULL price, not current selection
       const remaining = prices.FULL_VISION - currentPaid;
