@@ -69,9 +69,9 @@ export async function GET(request: Request) {
         }
       },
       include: {
-        availability: {
+        GCAvailability: {
           include: {
-            gameChanger: {
+            Usuario: {
               select: {
                 id: true,
                 nombre: true,
@@ -81,7 +81,7 @@ export async function GET(request: Request) {
             }
           }
         },
-        squad: {
+        SmallGroup: {
           select: {
             id: true,
             name: true
@@ -93,8 +93,8 @@ export async function GET(request: Request) {
       }
     });
 
-    logger.debug(`📞 Llamadas mentoría para usuario ${user.id}:`, mentorCalls.length);
-    logger.debug(`📞 Llamadas GC para usuario ${user.id}:`, gcCalls.length);
+    logger.debug(\`📞 Llamadas mentoría para usuario \${user.id}:\`, mentorCalls.length);
+    logger.debug(\`📞 Llamadas GC para usuario \${user.id}:\`, gcCalls.length);
 
     // Formatear llamadas de mentoría
     const formattedMentorCalls = mentorCalls.map((call: any) => {
@@ -132,20 +132,20 @@ export async function GET(request: Request) {
         endTime: slot.endTime,
         status: slot.status,
         assignedByGC: slot.assignedByGC,
-        gameChanger: slot.availability?.gameChanger ? {
-          id: slot.availability.gameChanger.id,
-          nombre: slot.availability.gameChanger.nombre,
-          imagen: slot.availability.gameChanger.profileImage,
-          telefono: slot.availability.gameChanger.telefono
+        gameChanger: slot.GCAvailability?.Usuario ? {
+          id: slot.GCAvailability.Usuario.id,
+          nombre: slot.GCAvailability.Usuario.nombre,
+          imagen: slot.GCAvailability.Usuario.profileImage,
+          telefono: slot.GCAvailability.Usuario.telefono
         } : null,
-        squad: slot.squad
+        squad: slot.SmallGroup
       };
     });
 
     // Combinar y ordenar por fecha
     const allCalls = [...formattedMentorCalls, ...formattedGCCalls].sort((a, b) => {
-      const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`);
-      const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`);
+      const dateA = new Date(\`\${a.scheduledDate}T\${a.scheduledTime}\`);
+      const dateB = new Date(\`\${b.scheduledDate}T\${b.scheduledTime}\`);
       return dateA.getTime() - dateB.getTime();
     });
 
