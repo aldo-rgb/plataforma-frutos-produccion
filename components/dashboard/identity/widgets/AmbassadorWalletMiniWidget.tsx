@@ -18,6 +18,10 @@ interface WalletData {
     available: number;
     totalEarned: number;
     totalReferrals: number;
+    trainingEarned: number;
+    workshopEarned: number;
+    trainingReferrals: number;
+    workshopReferrals: number;
   };
 }
 
@@ -121,21 +125,47 @@ ${link}`
           </button>
         </div>
 
-        {/* Balance y stats en una fila */}
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-purple-300/60 text-xs">Saldo</p>
-            <p className="text-xl font-bold text-white">{formatMXN(data.user.balance)}</p>
-          </div>
-          <div className="flex gap-3 text-center">
+        {/* Balance y stats - LAYOUT ACTUALIZADO */}
+        <div className="flex flex-col gap-2 mb-3">
+          {/* Fila 1: Saldo y Referidos */}
+          <div className="flex items-center justify-between">
             <div>
+              <p className="text-purple-300/60 text-xs">Saldo</p>
+              <p className="text-xl font-bold text-white">{formatMXN(data.user.balance)}</p>
+            </div>
+            <div className="text-center">
               <p className="text-lg font-bold text-green-400">{data.stats.totalReferrals}</p>
               <p className="text-[10px] text-purple-300/60">Referidos</p>
             </div>
-            <div>
-              <p className="text-lg font-bold text-purple-300">{formatMXN(data.stats.totalEarned)}</p>
-              <p className="text-[10px] text-purple-300/60">Ganado</p>
+          </div>
+          
+          {/* Fila 2: Ganado por tipo (Entrenamientos y Talleres) */}
+          <div className="grid grid-cols-2 gap-2 bg-slate-800/30 rounded-lg p-2">
+            {/* Entrenamientos */}
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-0.5">
+                <GraduationCap className="w-3 h-3 text-cyan-400" />
+                <p className="text-[9px] text-cyan-400 font-medium">Entrenamientos</p>
+              </div>
+              <p className="text-sm font-bold text-white">{formatMXN(data.stats.trainingEarned || 0)}</p>
+              <p className="text-[9px] text-purple-300/50">({data.stats.trainingReferrals || 0} refs)</p>
             </div>
+            
+            {/* Talleres */}
+            <div className="text-center border-l border-slate-700/50">
+              <div className="flex items-center justify-center gap-1 mb-0.5">
+                <Calendar className="w-3 h-3 text-pink-400" />
+                <p className="text-[9px] text-pink-400 font-medium">Talleres</p>
+              </div>
+              <p className="text-sm font-bold text-white">{formatMXN(data.stats.workshopEarned || 0)}</p>
+              <p className="text-[9px] text-purple-300/50">({data.stats.workshopReferrals || 0} refs)</p>
+            </div>
+          </div>
+          
+          {/* Total ganado */}
+          <div className="text-center bg-gradient-to-r from-emerald-900/20 to-green-900/20 border border-emerald-500/20 rounded-lg py-1.5">
+            <p className="text-[10px] text-emerald-400/70">Total Ganado</p>
+            <p className="text-lg font-bold text-emerald-400">{formatMXN(data.stats.totalEarned)}</p>
           </div>
         </div>
 

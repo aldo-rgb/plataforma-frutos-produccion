@@ -280,7 +280,7 @@ export async function processAmbassadorCommission(params: {
  * Obtiene el resumen del wallet de un embajador
  */
 export async function getAmbassadorWalletSummary(ambassadorId: number) {
-  const [user, transactions, stats] = await Promise.all([
+  const [user, transactions, stats, productTypeStats] = await Promise.all([
     // Usuario con balance y organización
     prisma.usuario.findUnique({
       where: { id: ambassadorId },
@@ -315,9 +315,17 @@ export async function getAmbassadorWalletSummary(ambassadorId: number) {
       }
     }),
     
-    // Estadísticas
+    // Estadísticas por status
     prisma.ambassador_wallet_transactions.groupBy({
       by: ['status'],
+      where: { ambassadorId },
+      _sum: { commissionAmount: true },
+      _count: { id: true }
+    }),
+    
+    // Estadísticas por tipo de producto (training vs workshop)
+    prisma.ambassador_wallet_transactions.groupBy({
+      by: ['productType'],
       where: { ambassadorId },
       _sum: { commissionAmount: true },
       _count: { id: true }
@@ -328,13 +336,17 @@ export async function getAmbassadorWalletSummary(ambassadorId: number) {
     return null;
   }
 
-  // Procesar stats
+  // Procesar stats por status
   const statsMap = {
     available: 0,
     withdrawn: 0,
     spent: 0,
     totalEarned: 0,
-    totalReferrals: 0
+    totalReferrals: 0,
+    trainingEarned: 0,      // BASIC, COMBO, ADVANCED, PL
+    workshopEarned: 0,      // WORKSHOP
+    trainingReferrals: 0,
+    workshopReferrals: 0
   };
 
   for (const stat of stats) {
@@ -348,6 +360,21 @@ export async function getAmbassadorWalletSummary(ambassadorId: number) {
       statsMap.withdrawn = amount;
     } else if (stat.status === 'SPENT') {
       statsMap.spent = amount;
+    }
+  }
+
+  // Procesar stats por tipo de producto
+  for (const stat of productTypeStats) {
+    const amount = Number(stat._sum.commissionAmount) || 0;
+    const count = stat._count.id;
+    
+    if (stat.productType === 'WORKSHOP') {
+      statsMap.workshopEarned += amount;
+      statsMap.workshopReferrals += count;
+    } else {
+      // BASIC, COMBO, ADVANCED, PL son todos entrenamientos
+      statsMap.trainingEarned += amount;
+      statsMap.trainingReferrals += count;
     }
   }
 
