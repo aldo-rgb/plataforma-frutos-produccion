@@ -83,6 +83,73 @@ export function RegistrationForm({
   const [selectedReferral, setSelectedReferral] = useState<ReferralUser | null>(referralUser);
   const [showNoPasteModal, setShowNoPasteModal] = useState(false);
   const [ageWarning, setAgeWarning] = useState<'none' | 'needs_tutor' | 'too_young'>('none');
+  
+  // Estados para validación de email y teléfono existentes
+  const [emailExists, setEmailExists] = useState(false);
+  const [phoneExists, setPhoneExists] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
+
+  // Verificar si email ya existe
+  useEffect(() => {
+    const checkEmail = async () => {
+      if (!formData.email || formData.email.trim().length < 5 || !formData.email.includes('@')) {
+        setEmailExists(false);
+        return;
+      }
+
+      setCheckingEmail(true);
+      try {
+        const response = await fetch('/api/public/check-exists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setEmailExists(data.emailExists);
+        }
+      } catch (error) {
+        console.error('Error checking email:', error);
+      } finally {
+        setCheckingEmail(false);
+      }
+    };
+
+    const debounce = setTimeout(checkEmail, 500);
+    return () => clearTimeout(debounce);
+  }, [formData.email]);
+
+  // Verificar si teléfono ya existe
+  useEffect(() => {
+    const checkPhone = async () => {
+      const cleanPhone = formData.phone?.replace(/\D/g, '') || '';
+      if (cleanPhone.length < 10) {
+        setPhoneExists(false);
+        return;
+      }
+
+      setCheckingPhone(true);
+      try {
+        const response = await fetch('/api/public/check-exists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: formData.phone })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setPhoneExists(data.phoneExists);
+        }
+      } catch (error) {
+        console.error('Error checking phone:', error);
+      } finally {
+        setCheckingPhone(false);
+      }
+    };
+
+    const debounce = setTimeout(checkPhone, 500);
+    return () => clearTimeout(debounce);
+  }, [formData.phone]);
 
   // Validar edad cuando cambia
   useEffect(() => {
@@ -357,6 +424,27 @@ export function RegistrationForm({
               placeholder={t('personalInfo.phonePlaceholder')}
               required
             />
+            {/* Mensaje de error si el teléfono ya existe */}
+            {phoneExists && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-2"
+              >
+                <span className="text-red-400">⚠️</span>
+                <p className="text-red-400 text-sm font-medium">
+                  {locale === 'es' 
+                    ? 'Este número de teléfono ya está registrado. Si ya tienes cuenta, inicia sesión.'
+                    : 'This phone number is already registered. If you already have an account, please log in.'}
+                </p>
+              </motion.div>
+            )}
+            {checkingPhone && (
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-[#00F0FF]"></div>
+                <span>{locale === 'es' ? 'Verificando teléfono...' : 'Checking phone...'}</span>
+              </div>
+            )}
           </FormSection>
 
           {/* Sección: Contacto */}
@@ -369,6 +457,27 @@ export function RegistrationForm({
               placeholder={t('contact.emailPlaceholder')}
               required
             />
+            {/* Mensaje de error si el email ya existe */}
+            {emailExists && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-2"
+              >
+                <span className="text-red-400">⚠️</span>
+                <p className="text-red-400 text-sm font-medium">
+                  {locale === 'es' 
+                    ? 'Este correo electrónico ya está registrado. Si ya tienes cuenta, inicia sesión.'
+                    : 'This email is already registered. If you already have an account, please log in.'}
+                </p>
+              </motion.div>
+            )}
+            {checkingEmail && (
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-[#00F0FF]"></div>
+                <span>{locale === 'es' ? 'Verificando correo...' : 'Checking email...'}</span>
+              </div>
+            )}
             <InputField
               label={t('contact.confirmEmail')}
               type="email"
@@ -499,15 +608,15 @@ export function RegistrationForm({
           {/* Submit */}
           <motion.button
             type="submit"
-            disabled={submitting || ageWarning === 'too_young' || !nextVision}
-            whileHover={{ scale: submitting || ageWarning === 'too_young' || !nextVision ? 1 : 1.02 }}
-            whileTap={{ scale: submitting || ageWarning === 'too_young' || !nextVision ? 1 : 0.98 }}
+            disabled={submitting || ageWarning === 'too_young' || !nextVision || emailExists || phoneExists}
+            whileHover={{ scale: submitting || ageWarning === 'too_young' || !nextVision || emailExists || phoneExists ? 1 : 1.02 }}
+            whileTap={{ scale: submitting || ageWarning === 'too_young' || !nextVision || emailExists || phoneExists ? 1 : 0.98 }}
             className="w-full py-4 rounded-xl font-bold text-lg text-[#050B14] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              background: (ageWarning === 'too_young' || !nextVision)
+              background: (ageWarning === 'too_young' || !nextVision || emailExists || phoneExists)
                 ? 'linear-gradient(135deg, #666 0%, #444 100%)'
                 : 'linear-gradient(135deg, #00F0FF 0%, #0099CC 100%)',
-              boxShadow: (ageWarning === 'too_young' || !nextVision)
+              boxShadow: (ageWarning === 'too_young' || !nextVision || emailExists || phoneExists)
                 ? 'none'
                 : '0 0 30px rgba(0, 240, 255, 0.4)',
             }}
@@ -516,9 +625,13 @@ export function RegistrationForm({
               ? t('submitting') 
               : !nextVision 
                 ? (locale === 'es' ? '🚫 Sin programa disponible' : '🚫 No program available')
-                : ageWarning === 'too_young' 
-                  ? (locale === 'es' ? '🚫 Registro no disponible' : '🚫 Registration unavailable') 
-                  : t('submit')}
+                : emailExists
+                  ? (locale === 'es' ? '⚠️ Correo ya registrado' : '⚠️ Email already registered')
+                  : phoneExists
+                    ? (locale === 'es' ? '⚠️ Teléfono ya registrado' : '⚠️ Phone already registered')
+                    : ageWarning === 'too_young' 
+                      ? (locale === 'es' ? '🚫 Registro no disponible' : '🚫 Registration unavailable') 
+                      : t('submit')}
           </motion.button>
         </form>
       </motion.div>
