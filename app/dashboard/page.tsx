@@ -24,6 +24,7 @@ import TrainingsCarouselWidget from '@/components/dashboard/identity/widgets/Tra
 import MyBusinessWidget from '@/components/dashboard/MyBusinessWidget';
 import MyCommissionsWidget from '@/components/dashboard/MyCommissionsWidget';
 import MyProgramWidget from '@/components/dashboard/MyProgramWidget';
+import EnrollProgramWidget from '@/components/dashboard/EnrollProgramWidget';
 
 interface DashboardPageProps {
   searchParams: Promise<{ view?: string }>;
@@ -650,9 +651,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       {/* ============================================ */}
-      {/* PROGRAMA INTENSIVO BANNER (Solo Onboarding)  */}
+      {/* INSCRÍBETE AL PROGRAMA - Widget Compacto     */}
+      {/* Muestra invitación o estado del programa     */}
       {/* ============================================ */}
-      {/* Widget grande removido - usar MyProgramWidget en su lugar */}
+      <EnrollProgramWidget />
 
       {/* ============================================ */}
       {/* MODAL DE CAMBIO DE ORGANIZACIÓN             */}
