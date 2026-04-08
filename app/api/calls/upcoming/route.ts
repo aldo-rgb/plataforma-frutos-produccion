@@ -93,8 +93,8 @@ export async function GET(request: Request) {
       }
     });
 
-    logger.debug(\`📞 Llamadas mentoría para usuario \${user.id}:\`, mentorCalls.length);
-    logger.debug(\`📞 Llamadas GC para usuario \${user.id}:\`, gcCalls.length);
+    logger.debug(`📞 Llamadas mentoría para usuario ${user.id}:`, mentorCalls.length);
+    logger.debug(`📞 Llamadas GC para usuario ${user.id}:`, gcCalls.length);
 
     // Formatear llamadas de mentoría
     const formattedMentorCalls = mentorCalls.map((call: any) => {
@@ -144,8 +144,8 @@ export async function GET(request: Request) {
 
     // Combinar y ordenar por fecha
     const allCalls = [...formattedMentorCalls, ...formattedGCCalls].sort((a, b) => {
-      const dateA = new Date(\`\${a.scheduledDate}T\${a.scheduledTime}\`);
-      const dateB = new Date(\`\${b.scheduledDate}T\${b.scheduledTime}\`);
+      const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`);
+      const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`);
       return dateA.getTime() - dateB.getTime();
     });
 
