@@ -41,21 +41,21 @@ export async function GET(request: Request) {
     // Definir el rango de fechas según el filtro
     let dateFilter: any = {};
     
-    // Para 'today', buscar llamadas de las últimas 24 horas
+    // Para 'today', buscar llamadas de los últimos 3 días (para no perder historial reciente)
     const now = new Date();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
     logger.debug('📊 Filtro de fecha:', {
       filter,
       now: now.toISOString(),
-      yesterday: yesterday.toISOString(),
+      threeDaysAgo: threeDaysAgo.toISOString(),
     });
 
     if (filter === 'today') {
-      // Llamadas de las últimas 24 horas
+      // Llamadas de los últimos 3 días (para incluir historial reciente del entrenamiento)
       dateFilter = {
         attemptedAt: {
-          gte: yesterday,
+          gte: threeDaysAgo,
         },
       };
     } else if (filter === 'risk') {
