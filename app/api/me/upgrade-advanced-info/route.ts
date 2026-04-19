@@ -415,15 +415,16 @@ export async function GET() {
       },
     }) : null;
 
-    // Fecha límite de promoción: 11 PM del último día del avanzado
+    // Fecha límite de promoción: 11 PM del último día del BÁSICO (no del avanzado)
+    // Los precios promocionales son válidos mientras el participante está cursando básico
     let promoDeadlineDate: string | null = null;
-    if (currentVision?.advancedEndDate) {
-      const advancedEnd = currentVision.advancedEndDate instanceof Date 
-        ? currentVision.advancedEndDate 
-        : new Date(currentVision.advancedEndDate);
+    if (currentVision?.endDate) {
+      const basicEnd = currentVision.endDate instanceof Date 
+        ? currentVision.endDate 
+        : new Date(currentVision.endDate);
       
-      // Crear fecha con hora 23:00 (11 PM) del último día del avanzado
-      const promoDeadline = new Date(advancedEnd);
+      // Crear fecha con hora 23:00 (11 PM) del último día del básico
+      const promoDeadline = new Date(basicEnd);
       promoDeadline.setHours(23, 0, 0, 0); // 11 PM
       promoDeadlineDate = promoDeadline.toISOString();
     }
