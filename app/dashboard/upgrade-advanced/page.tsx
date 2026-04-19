@@ -68,6 +68,8 @@ interface PriceConfig {
   COMBO: number;         // Precio promo combo
   COMBO_BASE: number;    // Precio base combo
   APARTADO_SALDO: number; // Crédito a favor si pagó apartado
+  APARTADO_PAGO1?: number | null; // 1er pago del apartado (hoy)
+  APARTADO_PAGO2?: number | null; // 2do pago del apartado (después)
 }
 
 // Opciones de paquete según el panorama
@@ -209,8 +211,9 @@ export default function UpgradeAdvancedPage() {
       case 'COMBO_BASE':
         return prices.COMBO_BASE;
       case 'APARTADO':
-        // Apartado: Hoy paga Combo promo ($9,000)
-        return prices.COMBO;
+        // Apartado: Hoy paga el primer pago (pago1)
+        // Si hay pago1 configurado, usar ese valor, sino usar COMBO como fallback
+        return prices.APARTADO_PAGO1 || prices.COMBO;
       case 'PL_BASE':
         // Durante avanzado: usar precio promo ($9,000)
         return prices.PL;
@@ -234,7 +237,8 @@ export default function UpgradeAdvancedPage() {
   const getPendingDebt = (): number => {
     if (!prices) return 0;
     if (selectedPackage === 'APARTADO') {
-      return prices.PL; // Debe pagar el promo de PL antes del inicio de avanzado
+      // Deuda = pago2 configurado, o PL como fallback
+      return prices.APARTADO_PAGO2 || prices.PL;
     }
     if (selectedPackage === 'PL_APARTADO') {
       // Restante = precio COMBO_BASE - precio promo Avanzado - lo que paga ahora de apartado
@@ -893,7 +897,8 @@ export default function UpgradeAdvancedPage() {
                   )}
                 </button>
 
-                {/* Opción 3: Apartado */}
+                {/* Opción 3: Apartado - Solo mostrar si hay pago1 y pago2 configurados */}
+                {prices?.APARTADO_PAGO1 && prices?.APARTADO_PAGO2 && (
                 <button
                   onClick={() => setSelectedPackage('APARTADO')}
                   className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
@@ -913,19 +918,20 @@ export default function UpgradeAdvancedPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      {/* Apartado: Hoy = Combo promo, Después = PL promo */}
-                      <p className="text-lg font-bold text-cyan-400">Hoy: ${formatPrice(prices?.COMBO || 9000)}</p>
-                      <p className="text-sm text-slate-400">Después: ${formatPrice(prices?.PL || 5500)}</p>
+                      {/* Apartado: Usar los valores configurados de pago1 y pago2 */}
+                      <p className="text-lg font-bold text-cyan-400">Hoy: ${formatPrice(prices.APARTADO_PAGO1)}</p>
+                      <p className="text-sm text-slate-400">Después: ${formatPrice(prices.APARTADO_PAGO2)}</p>
                     </div>
                   </div>
                   {selectedPackage === 'APARTADO' && (
                     <div className="mt-3 pt-2 border-t border-cyan-500/30 space-y-1">
-                      <p className="text-xs text-cyan-400">✓ Hoy pagas Combo promo (${formatPrice(prices?.COMBO || 9000)})</p>
-                      <p className="text-xs text-slate-400">✓ Antes del inicio pagas TU VIDA promo (${formatPrice(prices?.PL || 5500)})</p>
-                      <p className="text-xs text-emerald-400">✓ Total: ${formatPrice((prices?.COMBO || 9000) + (prices?.PL || 5500))} - ¡Precio de Combo Base asegurado!</p>
+                      <p className="text-xs text-cyan-400">✓ Hoy pagas el 1er pago (${formatPrice(prices.APARTADO_PAGO1)})</p>
+                      <p className="text-xs text-slate-400">✓ Antes del inicio pagas el 2do pago (${formatPrice(prices.APARTADO_PAGO2)})</p>
+                      <p className="text-xs text-emerald-400">✓ Total: ${formatPrice(prices.APARTADO_PAGO1 + prices.APARTADO_PAGO2)} - ¡Precio de Combo asegurado!</p>
                     </div>
                   )}
                 </button>
+                )}
               </>
             )}
 

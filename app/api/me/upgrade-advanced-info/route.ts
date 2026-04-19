@@ -267,9 +267,19 @@ export async function GET() {
 
     const priceMap: Record<string, number> = {};
     const basePriceMap: Record<string, number> = {};
+    // Para guardar pago1 y pago2 del combo
+    let comboPago1: number | null = null;
+    let comboPago2: number | null = null;
+    
     defaultPrices.forEach((p) => {
       priceMap[p.levelType] = p.promoPrice ?? p.basePrice;
       basePriceMap[p.levelType] = p.basePrice;
+      
+      // Extraer pago1 y pago2 del COMBO_ADV_PL
+      if (p.levelType === 'COMBO_ADV_PL') {
+        comboPago1 = p.pago1 ? Number(p.pago1) : null;
+        comboPago2 = p.pago2 ? Number(p.pago2) : null;
+      }
     });
     
     // DEBUG: Log price maps
@@ -278,6 +288,8 @@ export async function GET() {
       defaultPricesCount: defaultPrices.length,
       priceMap,
       basePriceMap,
+      comboPago1,
+      comboPago2,
     });
 
     // Precios individuales
@@ -432,13 +444,18 @@ export async function GET() {
       PL_BASE: plBasePrice,                  
       COMBO: comboPrice,                   
       COMBO_BASE: comboBasePrice,          
-      APARTADO_SALDO: apartadoSaldo,       
+      APARTADO_SALDO: apartadoSaldo,
+      // Pago en 2 partes - si está configurado
+      APARTADO_PAGO1: comboPago1,  // 1er pago (hoy)
+      APARTADO_PAGO2: comboPago2,  // 2do pago (después)
     };
     console.log('🔍 DEBUG final prices:', {
       panorama,
       finalPrices,
       comboPromoConfigured,
       comboBaseConfigured,
+      comboPago1,
+      comboPago2,
     });
 
     return NextResponse.json({
