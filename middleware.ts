@@ -16,13 +16,18 @@ export default withAuth(
       return NextResponse.redirect(new URL('/auth/change-password', req.url))
     }
 
-    // CASO 2: Usuario sin perfil completo (Fase 2) - solo PARTICIPANTES
+    // CASO 2: Usuario sin perfil completo (Fase 2) - solo PARTICIPANTES con organización
+    // Lobos solitarios (sin organizationId) NO requieren completar perfil
     const esParticipante = token?.rol === 'PARTICIPANTE'
     const perfilIncompleto = !token?.profileCompleted
+    const tieneOrganizacion = !!token?.organizationId
     const noEstaEnCompletarPerfil = path !== '/dashboard/completar-perfil'
     
+    // Solo redirigir a completar-perfil si tiene organización (viene de un centro)
+    // Los lobos solitarios (sin org) no necesitan completar este formulario
     if (esParticipante && 
         perfilIncompleto && 
+        tieneOrganizacion &&
         !token?.requirePasswordChange &&
         noEstaEnCompletarPerfil &&
         path.startsWith('/dashboard') &&
